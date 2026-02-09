@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Mail, Facebook, Twitter, Youtube } from "lucide-react";
+import logo from "@/assets/dataeel-logo.png";
 
 const footerLinks = {
   product: [
@@ -37,11 +38,7 @@ export const Footer = () => {
           {/* Brand Column */}
           <div className="lg:col-span-2">
             <Link to="/" className="inline-block mb-6">
-              <div className="flex items-baseline">
-                <span className="text-3xl font-bold font-heading">DATA</span>
-                <span className="text-3xl font-bold text-neon-green font-heading">EEL</span>
-                <span className="text-xs ml-0.5 text-foreground/60">®</span>
-              </div>
+              <img src={logo} alt="DATAEEL® - Horse Racing Simplified" className="h-12 w-auto" />
             </Link>
             <p className="text-base text-muted-foreground italic mb-4">Horse Racing Simplified®</p>
             <p className="text-foreground/50 mb-6 max-w-sm leading-relaxed">

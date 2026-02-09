@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
+import logo from "@/assets/dataeel-logo.png";
 import { motion, AnimatePresence } from "framer-motion";
 
 const navItems = [
@@ -47,14 +48,8 @@ export const Header = () => {
     >
       <div className="container mx-auto px-4 flex items-center justify-between">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2">
-          <div className="flex items-baseline">
-            <span className="text-2xl font-bold tracking-tight text-foreground font-heading">
-              DATA
-            </span>
-            <span className="text-2xl font-bold text-neon-green font-heading">EEL</span>
-            <span className="text-xs ml-0.5 text-foreground/60">®</span>
-          </div>
+        <Link to="/" className="flex items-center">
+          <img src={logo} alt="DATAEEL® - Horse Racing Simplified" className="h-10 w-auto" />
         </Link>
 
         {/* Desktop Navigation */}
