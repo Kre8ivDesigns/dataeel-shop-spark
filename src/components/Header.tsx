@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Shield } from "lucide-react";
 import logo from "@/assets/dataeel-logo.png";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
   { label: "Home", href: "/" },
@@ -19,12 +20,11 @@ const navItems = [
 export const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const location = useLocation();
+  const { user, isAdmin, signOut } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -33,120 +33,115 @@ export const Header = () => {
     setIsMobileMenuOpen(false);
     if (href.startsWith("#")) {
       const element = document.querySelector(href);
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth" });
-      }
+      if (element) element.scrollIntoView({ behavior: "smooth" });
     }
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
+
+  const renderNavLink = (item: { label: string; href: string }, mobile = false) => {
+    const cls = mobile
+      ? "block text-foreground font-medium py-2 hover:text-primary transition-colors"
+      : "nav-link";
+
+    if (item.href.startsWith("/")) {
+      return (
+        <Link key={item.label} to={item.href} onClick={() => setIsMobileMenuOpen(false)} className={cls}>
+          {item.label}
+        </Link>
+      );
+    }
+    return (
+      <a
+        key={item.label}
+        href={item.href}
+        onClick={(e) => {
+          if (item.href.startsWith("#")) { e.preventDefault(); }
+          handleNavClick(item.href);
+        }}
+        className={cls}
+      >
+        {item.label}
+      </a>
+    );
   };
 
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled
-          ? "bg-background/95 backdrop-blur-md border-b border-border py-3"
-          : "bg-transparent py-5"
+        isScrolled ? "bg-background/95 backdrop-blur-md border-b border-border py-3" : "bg-transparent py-5"
       }`}
     >
       <div className="container mx-auto px-4 flex items-center justify-between">
-        {/* Logo */}
         <Link to="/" className="flex items-center">
-          <img src={logo} alt="DATAEEL® - Horse Racing Simplified" className="h-10 w-auto" />
+          <img src={logo} alt="DATAEEL®" className="h-10 w-auto" />
         </Link>
 
-        {/* Desktop Navigation */}
         <nav className="hidden lg:flex items-center gap-8">
-          {navItems.map((item) =>
-            item.href.startsWith("/") && !item.href.startsWith("/#") ? (
-              <Link
-                key={item.label}
-                to={item.href}
-                className="nav-link"
-              >
-                {item.label}
-              </Link>
-            ) : (
-              <a
-                key={item.label}
-                href={item.href}
-                onClick={(e) => {
-                  if (item.href.startsWith("#")) {
-                    e.preventDefault();
-                    handleNavClick(item.href);
-                  }
-                }}
-                className="nav-link"
-              >
-                {item.label}
-              </a>
-            )
-          )}
+          {navItems.map((item) => renderNavLink(item))}
         </nav>
 
-        {/* Utility Nav */}
-        <div className="hidden lg:flex items-center gap-4">
-          <Button
-            variant="ghost"
-            className="font-medium text-foreground/80 hover:text-foreground hover:bg-muted"
-          >
-            Login
-          </Button>
-          <Button className="bg-primary text-primary-foreground hover:brightness-110 font-semibold px-6 shadow-neon">
-            Get Started
-          </Button>
+        <div className="hidden lg:flex items-center gap-3">
+          {isAdmin && (
+            <Link to="/admin">
+              <Button variant="ghost" size="sm" className="text-primary gap-1.5">
+                <Shield className="h-4 w-4" /> Admin
+              </Button>
+            </Link>
+          )}
+          {user ? (
+            <Button variant="ghost" onClick={handleSignOut} className="font-medium text-foreground/80 hover:text-foreground hover:bg-muted">
+              Sign Out
+            </Button>
+          ) : (
+            <>
+              <Link to="/auth">
+                <Button variant="ghost" className="font-medium text-foreground/80 hover:text-foreground hover:bg-muted">
+                  Login
+                </Button>
+              </Link>
+              <Link to="/auth">
+                <Button className="bg-primary text-primary-foreground hover:brightness-110 font-semibold px-6">
+                  Get Started
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
 
-        {/* Mobile Menu Button */}
-        <button
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="lg:hidden p-2 rounded-lg text-foreground"
-        >
+        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="lg:hidden p-2 rounded-lg text-foreground">
           {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
 
-      {/* Mobile Menu */}
       <AnimatePresence>
         {isMobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden bg-card border-t border-border"
-          >
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="lg:hidden bg-card border-t border-border">
             <div className="container mx-auto px-4 py-6 space-y-4">
-              {navItems.map((item) =>
-                item.href.startsWith("/") && !item.href.startsWith("/#") ? (
-                  <Link
-                    key={item.label}
-                    to={item.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="block text-foreground font-medium py-2 hover:text-neon-green transition-colors"
-                  >
-                    {item.label}
-                  </Link>
-                ) : (
-                  <a
-                    key={item.label}
-                    href={item.href}
-                    onClick={(e) => {
-                      if (item.href.startsWith("#")) {
-                        e.preventDefault();
-                      }
-                      handleNavClick(item.href);
-                    }}
-                    className="block text-foreground font-medium py-2 hover:text-neon-green transition-colors"
-                  >
-                    {item.label}
-                  </a>
-                )
+              {navItems.map((item) => renderNavLink(item, true))}
+              {isAdmin && (
+                <Link to="/admin" onClick={() => setIsMobileMenuOpen(false)} className="block text-primary font-medium py-2">
+                  <Shield className="h-4 w-4 inline mr-1.5" /> Admin Dashboard
+                </Link>
               )}
               <div className="pt-4 border-t border-border space-y-3">
-                <Button variant="outline" className="w-full border-secondary text-foreground">
-                  Login
-                </Button>
-                <Button className="w-full bg-primary text-primary-foreground font-semibold">
-                  Get Started
-                </Button>
+                {user ? (
+                  <Button variant="outline" className="w-full border-secondary text-foreground" onClick={handleSignOut}>
+                    Sign Out
+                  </Button>
+                ) : (
+                  <>
+                    <Link to="/auth" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button variant="outline" className="w-full border-secondary text-foreground">Login</Button>
+                    </Link>
+                    <Link to="/auth" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button className="w-full bg-primary text-primary-foreground font-semibold">Get Started</Button>
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </motion.div>
