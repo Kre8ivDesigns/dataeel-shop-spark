@@ -1,25 +1,32 @@
 import { motion } from "framer-motion";
-import { MapPin, Download, Trophy, ArrowRight } from "lucide-react";
+import { UserPlus, MapPin, Download, Trophy, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 const steps = [
   {
-    icon: MapPin,
+    icon: UserPlus,
     number: "01",
+    title: "Register for FREE",
+    description: "Registration is FREE and gives you access to see which racetracks are running with EEL RaceCards this week. Also get access to theDATA EEL™ newsletter.",
+  },
+  {
+    icon: MapPin,
+    number: "02",
     title: "Choose Your Track",
-    description: "Select from 28+ racetracks across the U.S. and Canada. We cover all major venues every race day.",
+    description: "Select from 28+ racetracks across the U.S. and Canada. We cover all major venues every race day including Churchill Downs, Santa Anita, Gulfstream Park, and more.",
   },
   {
     icon: Download,
-    number: "02",
-    title: "Download Your RaceCard",
-    description: "Get instant access to your EEL RaceCard – a simple PDF with algorithmic predictions for every race.",
+    number: "03",
+    title: "Buy Credits & Download",
+    description: "Purchase credits from the Dashboard menu after login. 1 Credit = 1 full day of EEL RaceCard predictions for any track. Simple PDF download, instant access.",
   },
   {
     icon: Trophy,
-    number: "03",
+    number: "04",
     title: "Enjoy the Races",
-    description: "No software, no learning curve. Just follow the picks and have fun at the track or from home.",
+    description: "No software, no learning curve. Just follow the Concert™ and Aptitude™ picks and enjoy a simplified and honest approach to Horse Racing.",
   },
 ];
 
@@ -53,12 +60,12 @@ export const HowItWorks = () => {
         >
           <span className="badge-neon mb-4 inline-block">How It Works</span>
           <h2 className="section-title mb-4">
-            Three Simple Steps to{" "}
+            Four Simple Steps to{" "}
             <span className="text-neon">Winning Picks</span>
           </h2>
           <p className="section-subtitle">
-            No complicated handicapping. No hours of research. Just algorithmic predictions
-            delivered straight to you.
+            Horse Racing Simplified® – No complicated handicapping. No hours of research.
+            Just algorithmic predictions delivered straight to you.
           </p>
         </motion.div>
 
@@ -68,15 +75,10 @@ export const HowItWorks = () => {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="grid md:grid-cols-3 gap-8 lg:gap-12 max-w-5xl mx-auto"
+          className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto"
         >
           {steps.map((step, index) => (
             <motion.div key={step.number} variants={itemVariants} className="relative">
-              {/* Connector */}
-              {index < steps.length - 1 && (
-                <div className="hidden md:block absolute top-16 left-full w-full h-0.5 bg-gradient-to-r from-border via-primary/30 to-border -translate-x-1/2 z-0" />
-              )}
-
               <div className="card-dark relative z-10 h-full text-center group">
                 {/* Step Number */}
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-3 py-1 bg-primary text-primary-foreground text-xs font-bold rounded-full">
@@ -84,13 +86,13 @@ export const HowItWorks = () => {
                 </div>
 
                 {/* Icon */}
-                <div className="w-20 h-20 mx-auto mb-6 rounded-xl flex items-center justify-center bg-primary/10 transition-transform duration-200 group-hover:scale-110">
-                  <step.icon className="h-10 w-10 text-primary" />
+                <div className="w-16 h-16 mx-auto mb-5 rounded-xl flex items-center justify-center bg-primary/10 transition-transform duration-200 group-hover:scale-110">
+                  <step.icon className="h-8 w-8 text-primary" />
                 </div>
 
                 {/* Content */}
-                <h3 className="text-xl font-bold text-foreground mb-3 font-heading">{step.title}</h3>
-                <p className="text-muted-foreground leading-relaxed">{step.description}</p>
+                <h3 className="text-lg font-bold text-foreground mb-3 font-heading">{step.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{step.description}</p>
               </div>
             </motion.div>
           ))}
@@ -104,15 +106,17 @@ export const HowItWorks = () => {
           transition={{ duration: 0.6, delay: 0.6 }}
           className="text-center mt-16"
         >
-          <Button
-            size="lg"
-            className="btn-neon text-lg px-8 py-6 h-auto"
-          >
-            Get Started
-            <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
+          <Link to="/racecards">
+            <Button
+              size="lg"
+              className="btn-neon text-lg px-8 py-6 h-auto"
+            >
+              Get Started
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </Link>
           <p className="text-sm text-muted-foreground mt-4">
-            Just $5 for a full day of predictions at any track
+            Registration is FREE · 1 Credit per RaceCard
           </p>
         </motion.div>
       </div>
