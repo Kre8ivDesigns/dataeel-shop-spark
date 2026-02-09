@@ -20,12 +20,12 @@ const faqs = [
   {
     question: "What tracks do you cover?",
     answer:
-      "We cover 30+ racetracks across the United States and Canada, including all major venues like Churchill Downs, Santa Anita, Gulfstream Park, Saratoga, Del Mar, and many more.",
+      "We cover 28+ racetracks across the United States and Canada, including all major venues like Churchill Downs, Santa Anita, Gulfstream Park, Saratoga, Del Mar, and many more.",
   },
   {
     question: "How do the algorithms work?",
     answer:
-      "Our proprietary algorithms—Concert and Aptitude—analyze historical race data from Equibase®. Concert focuses on pace scenarios and class patterns, while Aptitude evaluates form, fitness, and track bias. Together, they provide a well-rounded prediction system.",
+      "Our proprietary algorithms—Concert and Aptitude—analyze historical race data from Equibase®. Concert focuses on past live performance and race pressure, while Aptitude evaluates inherent ability and future potential. Together, they provide a well-rounded prediction system.",
   },
   {
     question: "Do I need any special software?",
@@ -46,7 +46,7 @@ const faqs = [
 
 export const FAQ = () => {
   return (
-    <section id="faq" className="py-24 bg-muted/30">
+    <section id="faq" className="py-24 bg-card">
       <div className="container mx-auto px-4">
         {/* Header */}
         <motion.div
@@ -55,11 +55,9 @@ export const FAQ = () => {
           viewport={{ once: true }}
           className="text-center mb-12"
         >
-          <span className="inline-block px-4 py-1.5 rounded-full bg-navy/10 text-navy text-sm font-semibold mb-4">
-            FAQ
-          </span>
+          <span className="badge-neon mb-4 inline-block">FAQ</span>
           <h2 className="section-title mb-4">
-            Frequently Asked <span className="text-racing-green">Questions</span>
+            Frequently Asked <span className="text-neon">Questions</span>
           </h2>
           <p className="section-subtitle">
             Everything you need to know about DATAEEL and our prediction service.
@@ -79,9 +77,9 @@ export const FAQ = () => {
               <AccordionItem
                 key={index}
                 value={`item-${index}`}
-                className="bg-white rounded-xl px-6 shadow-sm border-none"
+                className="bg-muted rounded-xl px-6 border-none"
               >
-                <AccordionTrigger className="text-left font-semibold text-charcoal hover:text-racing-green py-5">
+                <AccordionTrigger className="text-left font-semibold text-foreground hover:text-primary py-5">
                   {faq.question}
                 </AccordionTrigger>
                 <AccordionContent className="text-muted-foreground pb-5">

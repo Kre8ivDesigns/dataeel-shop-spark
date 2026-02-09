@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Check, Zap, Crown, Star, ArrowLeft, Shield, CreditCard, Clock } from "lucide-react";
+import { Check, Zap, Crown, ArrowLeft, Shield, CreditCard, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
@@ -117,16 +117,21 @@ const PricingPage = () => {
       <Header />
 
       {/* Hero Section */}
-      <section className="pt-32 pb-16 bg-navy relative overflow-hidden">
+      <section
+        className="pt-32 pb-16 relative overflow-hidden"
+        style={{
+          background: "linear-gradient(135deg, hsl(232 59% 8%) 0%, hsl(214 52% 20%) 100%)",
+        }}
+      >
         <div className="absolute inset-0">
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-racing-green/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-gold/10 rounded-full blur-3xl" />
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-warning/5 rounded-full blur-3xl" />
         </div>
 
         <div className="container mx-auto px-4 relative">
           <Link
             to="/"
-            className="inline-flex items-center gap-2 text-white/60 hover:text-white mb-8 transition-colors"
+            className="inline-flex items-center gap-2 text-foreground/50 hover:text-foreground mb-8 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Home
@@ -137,14 +142,12 @@ const PricingPage = () => {
             animate={{ opacity: 1, y: 0 }}
             className="text-center max-w-3xl mx-auto"
           >
-            <span className="inline-block px-4 py-1.5 rounded-full bg-racing-green/20 text-racing-green text-sm font-semibold mb-4">
-              Simple Pricing
-            </span>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6">
+            <span className="badge-neon mb-4 inline-block">Simple Pricing</span>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6 font-heading tracking-tight">
               Credit Packages for{" "}
-              <span className="text-racing-green">Every Bettor</span>
+              <span className="text-neon">Every Bettor</span>
             </h1>
-            <p className="text-lg text-white/70 max-w-2xl mx-auto">
+            <p className="text-lg text-foreground/60 max-w-2xl mx-auto">
               Buy credits, use them anytime. One credit = one full day of predictions
               for any track. No subscriptions, no hidden fees.
             </p>
@@ -153,7 +156,7 @@ const PricingPage = () => {
       </section>
 
       {/* Benefits Strip */}
-      <section className="py-8 bg-muted/50 border-b border-border">
+      <section className="py-8 bg-card border-b border-border">
         <div className="container mx-auto px-4">
           <div className="flex flex-wrap justify-center gap-8 md:gap-16">
             {benefits.map((benefit, index) => (
@@ -164,11 +167,11 @@ const PricingPage = () => {
                 transition={{ delay: 0.1 * index }}
                 className="flex items-center gap-3 text-center md:text-left"
               >
-                <div className="w-10 h-10 rounded-full bg-racing-green/10 flex items-center justify-center flex-shrink-0">
-                  <benefit.icon className="h-5 w-5 text-racing-green" />
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <benefit.icon className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <div className="font-semibold text-charcoal text-sm">
+                  <div className="font-semibold text-foreground text-sm">
                     {benefit.title}
                   </div>
                   <div className="text-xs text-muted-foreground hidden md:block">
@@ -191,16 +194,16 @@ const PricingPage = () => {
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 * index }}
-                className={`relative rounded-3xl p-6 flex flex-col ${
+                className={`relative rounded-xl p-6 flex flex-col transition-all duration-200 ${
                   plan.popular
-                    ? "bg-navy text-white shadow-2xl ring-4 ring-racing-green/50 lg:scale-110 z-10"
-                    : "bg-white shadow-lg border border-border"
+                    ? "bg-secondary border-2 border-primary shadow-neon lg:scale-110 z-10"
+                    : "card-dark"
                 }`}
               >
                 {/* Popular Badge */}
                 {plan.popular && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <div className="badge-gold flex items-center gap-1.5">
+                    <div className="badge-neon flex items-center gap-1.5">
                       <Crown className="h-4 w-4" />
                       Most Popular
                     </div>
@@ -209,18 +212,10 @@ const PricingPage = () => {
 
                 {/* Plan Header */}
                 <div className="text-center mb-4">
-                  <h3
-                    className={`text-lg font-bold mb-1 ${
-                      plan.popular ? "text-white" : "text-charcoal"
-                    }`}
-                  >
+                  <h3 className="text-lg font-bold mb-1 text-foreground font-heading">
                     {plan.name}
                   </h3>
-                  <p
-                    className={`text-xs ${
-                      plan.popular ? "text-white/70" : "text-muted-foreground"
-                    }`}
-                  >
+                  <p className="text-xs text-muted-foreground">
                     {plan.description}
                   </p>
                 </div>
@@ -228,25 +223,17 @@ const PricingPage = () => {
                 {/* Price */}
                 <div className="text-center mb-4">
                   <div className="flex items-baseline justify-center gap-1">
-                    <span
-                      className={`text-4xl font-bold ${
-                        plan.popular ? "text-white" : "text-charcoal"
-                      }`}
-                    >
+                    <span className="text-4xl font-bold text-foreground font-mono">
                       ${plan.price}
                     </span>
                   </div>
-                  <div
-                    className={`text-xs mt-1 ${
-                      plan.popular ? "text-white/70" : "text-muted-foreground"
-                    }`}
-                  >
+                  <div className="text-xs mt-1 text-muted-foreground">
                     {plan.credits} credit{plan.credits > 1 ? "s" : ""} ·{" "}
                     ${plan.pricePerCredit.toFixed(2)}/card
                   </div>
                   {plan.savings && (
                     <div className="mt-2">
-                      <span className="text-xs font-semibold text-racing-green">
+                      <span className="text-xs font-semibold text-success">
                         Save ${plan.savings}
                       </span>
                     </div>
@@ -257,18 +244,8 @@ const PricingPage = () => {
                 <ul className="space-y-2 mb-6 flex-1">
                   {plan.features.map((feature, i) => (
                     <li key={i} className="flex items-start gap-2">
-                      <Check
-                        className={`h-4 w-4 flex-shrink-0 mt-0.5 ${
-                          plan.popular ? "text-racing-green" : "text-racing-green"
-                        }`}
-                      />
-                      <span
-                        className={`text-xs ${
-                          plan.popular ? "text-white/90" : "text-charcoal"
-                        }`}
-                      >
-                        {feature}
-                      </span>
+                      <Check className="h-4 w-4 flex-shrink-0 mt-0.5 text-primary" />
+                      <span className="text-xs text-foreground/80">{feature}</span>
                     </li>
                   ))}
                 </ul>
@@ -277,8 +254,8 @@ const PricingPage = () => {
                 <Button
                   className={`w-full font-semibold ${
                     plan.popular
-                      ? "bg-racing-green hover:bg-racing-green-dark text-white shadow-green"
-                      : "bg-navy hover:bg-navy-light text-white"
+                      ? "bg-primary text-primary-foreground hover:brightness-110 shadow-neon"
+                      : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
                   }`}
                 >
                   {plan.cta}
@@ -295,8 +272,8 @@ const PricingPage = () => {
             transition={{ delay: 0.8 }}
             className="text-center mt-16 max-w-2xl mx-auto"
           >
-            <div className="p-6 rounded-2xl bg-muted/50 border border-border">
-              <h3 className="font-semibold text-charcoal mb-2">
+            <div className="p-6 rounded-xl bg-card border border-border">
+              <h3 className="font-semibold text-foreground mb-2 font-heading">
                 💡 How does this compare to traditional handicapping?
               </h3>
               <p className="text-sm text-muted-foreground">
@@ -310,48 +287,35 @@ const PricingPage = () => {
       </section>
 
       {/* FAQ Section */}
-      <section className="py-16 bg-muted/30">
+      <section className="py-16 bg-card">
         <div className="container mx-auto px-4">
-          <h2 className="text-2xl font-bold text-charcoal text-center mb-8">
+          <h2 className="text-2xl font-bold text-foreground text-center mb-8 font-heading">
             Pricing FAQs
           </h2>
           <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-            <div className="bg-white rounded-xl p-6 shadow-sm">
-              <h3 className="font-semibold text-charcoal mb-2">
-                What is a credit?
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                One credit = one RaceCard download. A RaceCard contains all race
-                predictions for a single track on a single day.
-              </p>
-            </div>
-            <div className="bg-white rounded-xl p-6 shadow-sm">
-              <h3 className="font-semibold text-charcoal mb-2">
-                Do credits expire?
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                No! Your credits never expire. Buy them when convenient and use them
-                whenever you're ready to hit the track.
-              </p>
-            </div>
-            <div className="bg-white rounded-xl p-6 shadow-sm">
-              <h3 className="font-semibold text-charcoal mb-2">
-                What payment methods do you accept?
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                We accept all major credit cards, debit cards, and PayPal. All
-                transactions are securely processed.
-              </p>
-            </div>
-            <div className="bg-white rounded-xl p-6 shadow-sm">
-              <h3 className="font-semibold text-charcoal mb-2">
-                Can I get a refund?
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Unused credits can be refunded within 30 days of purchase. Contact our
-                support team for assistance.
-              </p>
-            </div>
+            {[
+              {
+                q: "What is a credit?",
+                a: "One credit = one RaceCard download. A RaceCard contains all race predictions for a single track on a single day.",
+              },
+              {
+                q: "Do credits expire?",
+                a: "No! Your credits never expire. Buy them when convenient and use them whenever you're ready to hit the track.",
+              },
+              {
+                q: "What payment methods do you accept?",
+                a: "We accept all major credit cards, debit cards, and PayPal. All transactions are securely processed.",
+              },
+              {
+                q: "Can I get a refund?",
+                a: "Unused credits can be refunded within 30 days of purchase. Contact our support team for assistance.",
+              },
+            ].map((faq, i) => (
+              <div key={i} className="card-dark">
+                <h3 className="font-semibold text-foreground mb-2">{faq.q}</h3>
+                <p className="text-sm text-muted-foreground">{faq.a}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>

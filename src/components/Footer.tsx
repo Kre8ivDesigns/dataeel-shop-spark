@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Mail, Phone, MapPin, Facebook, Twitter, Youtube } from "lucide-react";
+import { Mail, Facebook, Twitter, Youtube } from "lucide-react";
 
 const footerLinks = {
   product: [
@@ -11,7 +11,7 @@ const footerLinks = {
   company: [
     { label: "About Us", href: "#about" },
     { label: "FAQ", href: "#faq" },
-    { label: "Contact", href: "#contact" },
+    { label: "Contact", href: "/contact" },
     { label: "Careers", href: "#" },
   ],
   legal: [
@@ -23,23 +23,14 @@ const footerLinks = {
 };
 
 const tracks = [
-  "Churchill Downs",
-  "Santa Anita",
-  "Gulfstream Park",
-  "Saratoga",
-  "Del Mar",
-  "Belmont Park",
-  "Keeneland",
-  "Aqueduct",
-  "Tampa Bay Downs",
-  "Fair Grounds",
-  "Oaklawn Park",
-  "Woodbine",
+  "Churchill Downs", "Santa Anita", "Gulfstream Park", "Saratoga",
+  "Del Mar", "Belmont Park", "Keeneland", "Aqueduct",
+  "Tampa Bay Downs", "Fair Grounds", "Oaklawn Park", "Woodbine",
 ];
 
 export const Footer = () => {
   return (
-    <footer className="bg-navy text-white">
+    <footer className="bg-card border-t border-border text-foreground">
       {/* Main Footer */}
       <div className="container mx-auto px-4 py-16">
         <div className="grid lg:grid-cols-5 gap-12">
@@ -47,20 +38,20 @@ export const Footer = () => {
           <div className="lg:col-span-2">
             <Link to="/" className="inline-block mb-6">
               <div className="flex items-baseline">
-                <span className="text-3xl font-bold">DATA</span>
-                <span className="text-3xl font-bold text-racing-green">EEL</span>
-                <span className="text-xs ml-0.5">®</span>
+                <span className="text-3xl font-bold font-heading">DATA</span>
+                <span className="text-3xl font-bold text-neon-green font-heading">EEL</span>
+                <span className="text-xs ml-0.5 text-foreground/60">®</span>
               </div>
             </Link>
-            <p className="tagline text-xl text-gold mb-4">Horse Racing Simplified®</p>
-            <p className="text-white/60 mb-6 max-w-sm leading-relaxed">
+            <p className="text-base text-muted-foreground italic mb-4">Horse Racing Simplified®</p>
+            <p className="text-foreground/50 mb-6 max-w-sm leading-relaxed">
               Thoroughbred predictions powered by algorithms. Get a full day of
               race picks for just $5.
             </p>
             <div className="space-y-3 text-sm">
               <a
                 href="mailto:support@dataeel.com"
-                className="flex items-center gap-3 text-white/60 hover:text-white transition-colors"
+                className="flex items-center gap-3 text-foreground/50 hover:text-foreground transition-colors"
               >
                 <Mail className="h-4 w-4" />
                 support@dataeel.com
@@ -69,90 +60,64 @@ export const Footer = () => {
 
             {/* Social Links */}
             <div className="flex gap-4 mt-6">
-              <a
-                href="#"
-                className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-racing-green transition-colors"
-              >
-                <Facebook className="h-4 w-4" />
-              </a>
-              <a
-                href="#"
-                className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-racing-green transition-colors"
-              >
-                <Twitter className="h-4 w-4" />
-              </a>
-              <a
-                href="#"
-                className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-racing-green transition-colors"
-              >
-                <Youtube className="h-4 w-4" />
-              </a>
+              {[Facebook, Twitter, Youtube].map((Icon, i) => (
+                <a
+                  key={i}
+                  href="#"
+                  className="w-10 h-10 rounded-full bg-muted flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors text-foreground/60"
+                >
+                  <Icon className="h-4 w-4" />
+                </a>
+              ))}
             </div>
           </div>
 
           {/* Links */}
-          <div>
-            <h4 className="font-semibold mb-4 text-white">Product</h4>
-            <ul className="space-y-3">
-              {footerLinks.product.map((link) => (
-                <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="text-white/60 hover:text-white transition-colors text-sm"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-semibold mb-4 text-white">Company</h4>
-            <ul className="space-y-3">
-              {footerLinks.company.map((link) => (
-                <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="text-white/60 hover:text-white transition-colors text-sm"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-semibold mb-4 text-white">Legal</h4>
-            <ul className="space-y-3">
-              {footerLinks.legal.map((link) => (
-                <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="text-white/60 hover:text-white transition-colors text-sm"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {Object.entries(footerLinks).map(([category, links]) => (
+            <div key={category}>
+              <h4 className="font-semibold mb-4 text-foreground capitalize font-heading">
+                {category}
+              </h4>
+              <ul className="space-y-3">
+                {links.map((link) => (
+                  <li key={link.label}>
+                    {link.href.startsWith("/") ? (
+                      <Link
+                        to={link.href}
+                        className="text-foreground/50 hover:text-foreground transition-colors text-sm"
+                      >
+                        {link.label}
+                      </Link>
+                    ) : (
+                      <a
+                        href={link.href}
+                        className="text-foreground/50 hover:text-foreground transition-colors text-sm"
+                      >
+                        {link.label}
+                      </a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
 
         {/* Tracks Coverage */}
-        <div className="mt-12 pt-8 border-t border-white/10">
-          <h4 className="font-semibold mb-4 text-white text-sm">We Cover 30+ Tracks</h4>
+        <div className="mt-12 pt-8 border-t border-border">
+          <h4 className="font-semibold mb-4 text-foreground text-sm font-heading">
+            We Cover 28+ Tracks
+          </h4>
           <div className="flex flex-wrap gap-2">
             {tracks.map((track) => (
               <span
                 key={track}
-                className="px-3 py-1 rounded-full bg-white/5 text-white/50 text-xs"
+                className="px-3 py-1 rounded-full bg-muted text-foreground/40 text-xs"
               >
                 {track}
               </span>
             ))}
-            <span className="px-3 py-1 rounded-full bg-racing-green/20 text-racing-green text-xs">
+            <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
               + more
             </span>
           </div>
@@ -160,16 +125,16 @@ export const Footer = () => {
       </div>
 
       {/* Bottom Bar */}
-      <div className="border-t border-white/10">
+      <div className="border-t border-border">
         <div className="container mx-auto px-4 py-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-white/40">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-foreground/30">
             <p>
               © {new Date().getFullYear()} Data Pierce LLC. All rights reserved. DATAEEL®
               is a registered trademark.
             </p>
             <p>
               Data provided by{" "}
-              <span className="text-white/60">Equibase Company LLC</span>
+              <span className="text-foreground/50">Equibase Company LLC</span>
             </p>
           </div>
         </div>

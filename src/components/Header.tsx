@@ -11,6 +11,7 @@ const navItems = [
   { label: "RaceCards", href: "#racecards" },
   { label: "Pricing", href: "/pricing" },
   { label: "About", href: "#about" },
+  { label: "Contact", href: "/contact" },
 ];
 
 export const Header = () => {
@@ -40,7 +41,7 @@ export const Header = () => {
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled
-          ? "bg-white/95 backdrop-blur-md shadow-md py-3"
+          ? "bg-background/95 backdrop-blur-md border-b border-border py-3"
           : "bg-transparent py-5"
       }`}
     >
@@ -48,58 +49,52 @@ export const Header = () => {
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2">
           <div className="flex items-baseline">
-            <span
-              className={`text-2xl font-bold tracking-tight transition-colors ${
-                isScrolled ? "text-navy" : "text-white"
-              }`}
-            >
+            <span className="text-2xl font-bold tracking-tight text-foreground font-heading">
               DATA
             </span>
-            <span className="text-2xl font-bold text-racing-green">EEL</span>
-            <span
-              className={`text-xs ml-0.5 transition-colors ${
-                isScrolled ? "text-navy" : "text-white"
-              }`}
-            >
-              ®
-            </span>
+            <span className="text-2xl font-bold text-neon-green font-heading">EEL</span>
+            <span className="text-xs ml-0.5 text-foreground/60">®</span>
           </div>
         </Link>
 
         {/* Desktop Navigation */}
         <nav className="hidden lg:flex items-center gap-8">
-          {navItems.map((item) => (
-            <a
-              key={item.label}
-              href={item.href}
-              onClick={(e) => {
-                if (item.href.startsWith("#")) {
-                  e.preventDefault();
-                  handleNavClick(item.href);
-                }
-              }}
-              className={`text-sm font-medium transition-colors duration-200 hover:text-racing-green ${
-                isScrolled ? "text-charcoal/80" : "text-white/90"
-              }`}
-            >
-              {item.label}
-            </a>
-          ))}
+          {navItems.map((item) =>
+            item.href.startsWith("/") && !item.href.startsWith("/#") ? (
+              <Link
+                key={item.label}
+                to={item.href}
+                className="nav-link"
+              >
+                {item.label}
+              </Link>
+            ) : (
+              <a
+                key={item.label}
+                href={item.href}
+                onClick={(e) => {
+                  if (item.href.startsWith("#")) {
+                    e.preventDefault();
+                    handleNavClick(item.href);
+                  }
+                }}
+                className="nav-link"
+              >
+                {item.label}
+              </a>
+            )
+          )}
         </nav>
 
         {/* Utility Nav */}
         <div className="hidden lg:flex items-center gap-4">
           <Button
             variant="ghost"
-            className={`font-medium ${
-              isScrolled
-                ? "text-charcoal hover:text-racing-green"
-                : "text-white hover:bg-white/10"
-            }`}
+            className="font-medium text-foreground/80 hover:text-foreground hover:bg-muted"
           >
             Login
           </Button>
-          <Button className="bg-racing-green hover:bg-racing-green-dark text-white font-semibold px-6 shadow-green">
+          <Button className="bg-primary text-primary-foreground hover:brightness-110 font-semibold px-6 shadow-neon">
             Get Started
           </Button>
         </div>
@@ -107,9 +102,7 @@ export const Header = () => {
         {/* Mobile Menu Button */}
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className={`lg:hidden p-2 rounded-lg transition-colors ${
-            isScrolled ? "text-charcoal" : "text-white"
-          }`}
+          className="lg:hidden p-2 rounded-lg text-foreground"
         >
           {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
@@ -122,29 +115,40 @@ export const Header = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden bg-white border-t border-border shadow-lg"
+            className="lg:hidden bg-card border-t border-border"
           >
             <div className="container mx-auto px-4 py-6 space-y-4">
-              {navItems.map((item) => (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  onClick={(e) => {
-                    if (item.href.startsWith("#")) {
-                      e.preventDefault();
-                    }
-                    handleNavClick(item.href);
-                  }}
-                  className="block text-charcoal font-medium py-2 hover:text-racing-green transition-colors"
-                >
-                  {item.label}
-                </a>
-              ))}
+              {navItems.map((item) =>
+                item.href.startsWith("/") && !item.href.startsWith("/#") ? (
+                  <Link
+                    key={item.label}
+                    to={item.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block text-foreground font-medium py-2 hover:text-neon-green transition-colors"
+                  >
+                    {item.label}
+                  </Link>
+                ) : (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    onClick={(e) => {
+                      if (item.href.startsWith("#")) {
+                        e.preventDefault();
+                      }
+                      handleNavClick(item.href);
+                    }}
+                    className="block text-foreground font-medium py-2 hover:text-neon-green transition-colors"
+                  >
+                    {item.label}
+                  </a>
+                )
+              )}
               <div className="pt-4 border-t border-border space-y-3">
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full border-secondary text-foreground">
                   Login
                 </Button>
-                <Button className="w-full bg-racing-green hover:bg-racing-green-dark text-white font-semibold">
+                <Button className="w-full bg-primary text-primary-foreground font-semibold">
                   Get Started
                 </Button>
               </div>

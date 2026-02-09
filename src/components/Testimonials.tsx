@@ -34,9 +34,9 @@ const testimonials = [
 
 export const Testimonials = () => {
   return (
-    <section className="py-24 bg-background relative overflow-hidden">
+    <section className="py-24 bg-card relative overflow-hidden">
       {/* Decorative */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-racing-green/5 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2" />
+      <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2" />
 
       <div className="container mx-auto px-4 relative">
         {/* Header */}
@@ -46,11 +46,9 @@ export const Testimonials = () => {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <span className="inline-block px-4 py-1.5 rounded-full bg-gold/10 text-gold text-sm font-semibold mb-4">
-            Testimonials
-          </span>
+          <span className="badge-warning mb-4 inline-block">Testimonials</span>
           <h2 className="section-title mb-4">
-            Trusted by <span className="text-racing-green">Thousands</span> of Bettors
+            Trusted by <span className="text-neon">Thousands</span> of Bettors
           </h2>
           <p className="section-subtitle">
             Join the growing community of horse racing enthusiasts who've simplified their handicapping.
@@ -66,30 +64,30 @@ export const Testimonials = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.1 * index }}
-              className="card-elevated relative group"
+              className="card-dark relative group"
             >
               {/* Quote Icon */}
-              <Quote className="absolute top-4 right-4 h-8 w-8 text-racing-green/10 group-hover:text-racing-green/20 transition-colors" />
+              <Quote className="absolute top-4 right-4 h-8 w-8 text-primary/10 group-hover:text-primary/20 transition-colors" />
 
               {/* Stars */}
               <div className="flex gap-1 mb-4">
                 {Array.from({ length: testimonial.rating }).map((_, i) => (
-                  <Star key={i} className="h-4 w-4 fill-gold text-gold" />
+                  <Star key={i} className="h-4 w-4 fill-primary text-primary" />
                 ))}
               </div>
 
               {/* Text */}
-              <p className="text-charcoal leading-relaxed mb-6">
+              <p className="text-foreground/80 leading-relaxed mb-6">
                 "{testimonial.text}"
               </p>
 
               {/* Author */}
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-navy flex items-center justify-center text-white font-semibold">
+                <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-semibold">
                   {testimonial.avatar}
                 </div>
                 <div>
-                  <div className="font-semibold text-charcoal">{testimonial.name}</div>
+                  <div className="font-semibold text-foreground">{testimonial.name}</div>
                   <div className="text-sm text-muted-foreground">{testimonial.location}</div>
                 </div>
               </div>
