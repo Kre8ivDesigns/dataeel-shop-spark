@@ -20,11 +20,9 @@ export const RaceCards = () => {
           viewport={{ once: true }}
           className="text-center mb-12"
         >
-          <span className="inline-block px-4 py-1.5 rounded-full bg-gold/10 text-gold text-sm font-semibold mb-4">
-            Today's RaceCards
-          </span>
+          <span className="badge-neon mb-4 inline-block">Today's RaceCards</span>
           <h2 className="section-title mb-4">
-            Get Your <span className="text-racing-green">EEL RaceCards</span>
+            Get Your <span className="text-neon">EEL RaceCards</span>
           </h2>
           <p className="section-subtitle">
             Select a track and download your predictions instantly. One RaceCard = one
@@ -39,14 +37,14 @@ export const RaceCards = () => {
           viewport={{ once: true }}
           className="flex items-center justify-center gap-4 mb-12"
         >
-          <Button variant="outline" className="flex items-center gap-2">
+          <Button variant="outline" className="flex items-center gap-2 border-primary text-primary">
             <Calendar className="h-4 w-4" />
             Today
           </Button>
-          <Button variant="ghost" className="text-muted-foreground">
+          <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
             Tomorrow
           </Button>
-          <Button variant="ghost" className="text-muted-foreground">
+          <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
             Day After
           </Button>
         </motion.div>
@@ -60,20 +58,20 @@ export const RaceCards = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.1 * index }}
-              className={`card-elevated relative overflow-hidden ${
-                track.status === "coming" ? "opacity-75" : ""
+              className={`card-dark relative overflow-hidden ${
+                track.status === "coming" ? "opacity-60" : ""
               }`}
             >
               {/* Track Badge */}
               <div className="absolute top-4 right-4">
-                <span className="px-2 py-1 rounded bg-navy text-white text-xs font-bold">
+                <span className="px-2 py-1 rounded bg-secondary text-secondary-foreground text-xs font-bold">
                   {track.abbr}
                 </span>
               </div>
 
               {/* Track Info */}
               <div className="mb-6">
-                <h3 className="font-bold text-lg text-charcoal mb-2">{track.name}</h3>
+                <h3 className="font-bold text-lg text-foreground mb-2 font-heading">{track.name}</h3>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <MapPin className="h-3.5 w-3.5" />
@@ -88,22 +86,22 @@ export const RaceCards = () => {
 
               {/* Algorithms */}
               <div className="flex gap-2 mb-6">
-                <span className="px-2 py-1 rounded-full bg-racing-green/10 text-racing-green text-xs font-medium">
+                <span className="px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
                   Concert
                 </span>
-                <span className="px-2 py-1 rounded-full bg-gold/10 text-gold text-xs font-medium">
+                <span className="px-2 py-1 rounded-full bg-warning/10 text-warning text-xs font-medium">
                   Aptitude
                 </span>
               </div>
 
               {/* Action */}
               {track.status === "available" ? (
-                <Button className="w-full bg-racing-green hover:bg-racing-green-dark text-white">
+                <Button className="w-full bg-primary text-primary-foreground hover:brightness-110 font-semibold">
                   <Download className="h-4 w-4 mr-2" />
                   Get RaceCard – $5
                 </Button>
               ) : (
-                <Button variant="outline" disabled className="w-full">
+                <Button variant="outline" disabled className="w-full border-border text-muted-foreground">
                   Coming Soon
                 </Button>
               )}
@@ -119,8 +117,8 @@ export const RaceCards = () => {
           transition={{ delay: 0.5 }}
           className="text-center mt-10"
         >
-          <Button variant="link" className="text-racing-green">
-            View all 30+ tracks →
+          <Button variant="link" className="text-primary hover:text-primary/80">
+            View all 28+ tracks →
           </Button>
         </motion.div>
       </div>
