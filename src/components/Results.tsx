@@ -3,26 +3,40 @@ import { TrendingUp, Trophy, Target, Zap, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const stats = [
-  { number: "4", label: "Winners", sublabel: "Tampa Bay Downs", icon: Trophy },
-  { number: "6", label: "Winners", sublabel: "Santa Anita", icon: Trophy },
-  { number: "TRIFECTA", label: "Hit!", sublabel: "Fair Grounds", icon: Target },
-  { number: "PICK 3", label: "Winner", sublabel: "Gulfstream Park", icon: Zap },
+  { number: "6", label: "Winners", sublabel: "Santa Anita · Jan 25", icon: Trophy },
+  { number: "5", label: "Winners", sublabel: "Woodbine · May 11", icon: Trophy },
+  { number: "TRIFECTA", label: "Hit!", sublabel: "Churchill Downs", icon: Target },
+  { number: "PICK 3", label: "Winner", sublabel: "Santa Anita · Jan 25", icon: Zap },
 ];
 
 const recentWins = [
   {
+    track: "Santa Anita",
+    date: "Jan 25, 2026",
+    algorithm: "Aptitude",
+    results: "Winners in Race #1, #4, #5, #6, #7, #8 · PICK 3 · DAILY DOUBLE",
+    type: "multiple",
+  },
+  {
+    track: "Woodbine",
+    date: "May 11, 2025",
+    algorithm: "Aptitude",
+    results: "Winners in Race #2, #3, #6, #7, #8 · PICK 3 · DAILY DOUBLE",
+    type: "multiple",
+  },
+  {
+    track: "Churchill Downs",
+    date: "2025",
+    algorithm: "Concert",
+    results: "TRIFECTA hit in Race #1",
+    type: "trifecta",
+  },
+  {
     track: "Tampa Bay Downs",
     date: "Jan 30, 2026",
     algorithm: "Concert",
-    results: "Winners in Race #1, #4, #6, #9",
+    results: "4 Winners picked across the card",
     type: "winner",
-  },
-  {
-    track: "Fair Grounds",
-    date: "Jan 30, 2026",
-    algorithm: "Concert",
-    results: "TRIFECTA hit in Race #6",
-    type: "trifecta",
   },
   {
     track: "Gulfstream Park",
@@ -30,13 +44,6 @@ const recentWins = [
     algorithm: "Aptitude",
     results: "Winners in Race #1, #2, #8, #9",
     type: "winner",
-  },
-  {
-    track: "Santa Anita",
-    date: "Jan 25, 2026",
-    algorithm: "Aptitude",
-    results: "6 Winners, PICK 3, DAILY DOUBLE, EXACTA",
-    type: "multiple",
   },
 ];
 
@@ -63,8 +70,9 @@ export const Results = () => {
             <span className="text-neon">In Action</span>
           </h2>
           <p className="section-subtitle">
-            Real results from real races. Our Concert and Aptitude algorithms
-            consistently deliver winning picks across all major tracks.
+            Real results from real races. Our Concert™ and Aptitude™ algorithms
+            consistently deliver winning picks including TRIFECTAS, PICK 3s,
+            DAILY DOUBLES, and EXACTAS across all major tracks.
           </p>
         </motion.div>
 
@@ -133,7 +141,7 @@ export const Results = () => {
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-semibold text-foreground">{win.track}</span>
                     <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
-                      {win.algorithm}
+                      {win.algorithm}™
                     </span>
                   </div>
                   <p className="text-foreground/70 text-sm">{win.results}</p>

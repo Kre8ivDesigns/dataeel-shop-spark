@@ -8,29 +8,29 @@ import {
 
 const faqs = [
   {
-    question: "What is an EEL RaceCard?",
+    question: "What is theDATA EEL™?",
     answer:
-      "An EEL RaceCard is a downloadable PDF that contains algorithmic predictions for every race at a specific track on a given day. It includes picks from both our Concert and Aptitude algorithms, giving you a comprehensive view of the day's races.",
+      "theDATA EEL™ has arrived – Algorithms for thoroughbred horse racing like no other. We provide horse racing predictions via downloadable EEL RaceCards that contain algorithmic picks from both our Concert™ and Aptitude™ algorithms for every race at a specific track on a given day.",
   },
   {
     question: "How much does a RaceCard cost?",
     answer:
-      "Each RaceCard costs just $5 (or less with credit packages). One RaceCard gives you predictions for an entire day's races at any track. Our Best Value package brings the cost down to $3.33 per card.",
+      "Registration is FREE. If you wish to purchase theDATA EEL™ RaceCard you will need to buy 1 Credit. Credits start at $5 each, but our larger packages bring the cost down to as low as $2/card. One credit = one full day of predictions at any track.",
   },
   {
     question: "What tracks do you cover?",
     answer:
-      "We cover 28+ racetracks across the United States and Canada, including all major venues like Churchill Downs, Santa Anita, Gulfstream Park, Saratoga, Del Mar, and many more.",
+      "We cover 28+ racetracks across the United States and Canada, including all major venues like Churchill Downs, Santa Anita, Gulfstream Park, Saratoga, Del Mar, Woodbine, Aqueduct, Tampa Bay Downs, Fair Grounds, Oaklawn Park, Keeneland, and many more.",
   },
   {
-    question: "How do the algorithms work?",
+    question: "What are the Concert™ and Aptitude™ algorithms?",
     answer:
-      "Our proprietary algorithms—Concert and Aptitude—analyze historical race data from Equibase®. Concert focuses on past live performance and race pressure, while Aptitude evaluates inherent ability and future potential. Together, they provide a well-rounded prediction system.",
+      "Concert™ analyzes past live performance – how horses perform under pressure, in front of the crowd, from gate to finish. It focuses on proven winners. Aptitude™ evaluates inherent ability and future potential – running style, pace, stamina, and capability. It identifies future stars. Together, they provide a well-rounded prediction system powered by Equibase® data.",
   },
   {
     question: "Do I need any special software?",
     answer:
-      "No! That's the beauty of DATAEEL. Your RaceCard is delivered as a simple PDF that you can view on any device—your phone, tablet, or computer. Just download it before you head to the track.",
+      "No! That's the beauty of DATAEEL. Horse Racing Simplified® means your RaceCard is delivered as a simple PDF that you can view on any device—your phone, tablet, or computer. Just download it before you head to the track.",
   },
   {
     question: "Do credits expire?",
@@ -40,7 +40,12 @@ const faqs = [
   {
     question: "What if I'm new to horse racing?",
     answer:
-      "DATAEEL is perfect for newcomers! Our tagline is 'Horse Racing Simplified®' for a reason. The RaceCards are easy to understand—just follow the picks without needing to learn complex handicapping.",
+      "DATAEEL is perfect for newcomers! Our tagline is 'Horse Racing Simplified®' for a reason. Are you NEW to horse racing? theDATA EEL™ will change your horse racing life. The RaceCards are easy to understand—just follow the picks without needing to learn complex handicapping.",
+  },
+  {
+    question: "What if a race is cancelled?",
+    answer:
+      "If a race day is cancelled and you've already downloaded the RaceCard, contact our support team and we'll credit your account. We stand behind our product and want to ensure you get value from every credit.",
   },
 ];
 
@@ -60,7 +65,7 @@ export const FAQ = () => {
             Frequently Asked <span className="text-neon">Questions</span>
           </h2>
           <p className="section-subtitle">
-            Everything you need to know about DATAEEL and our prediction service.
+            Everything you need to know about theDATA EEL™ and our prediction service.
           </p>
         </motion.div>
 

@@ -1,7 +1,17 @@
 import { motion } from "framer-motion";
 import { ArrowRight, Play, TrendingUp, MapPin, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-racing.jpg";
+
+const breakingNews = [
+  "Aptitude algorithm picks Winner in race#1, race#4, race#5, race#6, race#7, race#8; Santa Anita Jan.25, 2026",
+  "Aptitude algorithm hits PICK 3 in race#6 and in race#7 and in race#8; Santa Anita Jan.25, 2026",
+  "Aptitude algorithm hits DAILY DOUBLE in race#5 and in race#6 and in race#7 and in race#8; Santa Anita Jan.25, 2026",
+  "Concert algorithm hits TRIFECTA in race#1; Churchill Downs",
+  "Aptitude algorithm picks Winner in race#2, race#3, race#6, race#7, race#8; Woodbine May.11, 2025",
+  "Concert algorithm picks 4 Winners at Tampa Bay Downs",
+];
 
 const trustBadges = [
   { icon: TrendingUp, label: "65-75% Win Rate" },
@@ -27,25 +37,32 @@ export const Hero = () => {
         />
       </div>
 
-      {/* Content */}
-      <div className="relative z-10 container mx-auto px-4 pt-24 pb-16">
-        <div className="max-w-4xl mx-auto text-center">
-          {/* Live Indicator */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="mb-8 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30"
-          >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-            </span>
-            <span className="text-sm font-medium text-foreground">
-              <span className="text-primary font-bold">LIVE:</span> Concert algorithm picks 4 Winners at Tampa Bay Downs
-            </span>
-          </motion.div>
+      {/* Breaking News Ticker */}
+      <div className="absolute top-[72px] left-0 right-0 z-20 bg-card/90 backdrop-blur-sm border-b border-border overflow-hidden">
+        <div className="flex items-center">
+          <div className="flex-shrink-0 px-4 py-2 bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wider">
+            Breaking News
+          </div>
+          <div className="overflow-hidden flex-1">
+            <motion.div
+              className="flex whitespace-nowrap"
+              animate={{ x: ["0%", "-50%"] }}
+              transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
+            >
+              {[...breakingNews, ...breakingNews].map((news, i) => (
+                <span key={i} className="inline-flex items-center text-sm text-foreground/80 mx-8">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary mr-3 flex-shrink-0" />
+                  {news}
+                </span>
+              ))}
+            </motion.div>
+          </div>
+        </div>
+      </div>
 
+      {/* Content */}
+      <div className="relative z-10 container mx-auto px-4 pt-32 pb-16">
+        <div className="max-w-4xl mx-auto text-center">
           {/* Main Headline */}
           <motion.h1
             initial={{ opacity: 0, y: 30 }}
@@ -63,7 +80,8 @@ export const Hero = () => {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="text-lg md:text-xl text-foreground/70 max-w-2xl mx-auto mb-4"
           >
-            Algorithm-powered RaceCards for 28 tracks. Two expert algorithms,
+            How about a simplified and honest approach to Horse Racing?
+            Algorithm-powered RaceCards for 28+ tracks. Two expert algorithms,
             instant downloads, proven results.
           </motion.p>
 
@@ -84,17 +102,22 @@ export const Hero = () => {
             transition={{ duration: 0.6, delay: 0.6 }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12"
           >
-            <Button
-              size="lg"
-              className="btn-neon text-lg px-10 py-6 h-auto"
-            >
-              Get Today's Cards
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
+            <Link to="/racecards">
+              <Button
+                size="lg"
+                className="btn-neon text-lg px-10 py-6 h-auto"
+              >
+                Get Today's Cards
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
             <Button
               size="lg"
               variant="outline"
               className="btn-ghost-light text-lg px-10 py-6 h-auto"
+              onClick={() => {
+                document.querySelector("#how-it-works")?.scrollIntoView({ behavior: "smooth" });
+              }}
             >
               <Play className="mr-2 h-5 w-5" />
               How It Works

@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { ArrowRight, Shield, Zap, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 export const CTA = () => {
   return (
@@ -31,25 +32,30 @@ export const CTA = () => {
             Horse Racing Simplified®
           </p>
           <p className="text-lg text-foreground/60 mb-10 max-w-2xl mx-auto">
+            theDATA<strong className="text-foreground">EEL</strong>™ will change your horse racing life.
             Join thousands of bettors who've ditched the Racing Form and started
             winning with algorithmic predictions. Get your first RaceCard today.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
-            <Button
-              size="lg"
-              className="btn-neon text-lg px-10 py-6 h-auto"
-            >
-              Get Started Free
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="btn-ghost-light text-lg px-10 py-6 h-auto"
-            >
-              View Pricing
-            </Button>
+            <Link to="/racecards">
+              <Button
+                size="lg"
+                className="btn-neon text-lg px-10 py-6 h-auto"
+              >
+                Get Today's Cards
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
+            <Link to="/pricing">
+              <Button
+                size="lg"
+                variant="outline"
+                className="btn-ghost-light text-lg px-10 py-6 h-auto"
+              >
+                View Pricing
+              </Button>
+            </Link>
           </div>
 
           {/* Trust Indicators */}

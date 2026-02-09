@@ -25,8 +25,8 @@ export const RaceCards = () => {
             Get Your <span className="text-neon">EEL RaceCards</span>
           </h2>
           <p className="section-subtitle">
-            Select a track and download your predictions instantly. One RaceCard = one
-            full day of picks.
+            Go on, check out which racetracks are running with EEL RaceCards this week!
+            One credit = one full day of picks.
           </p>
         </motion.div>
 
@@ -98,7 +98,7 @@ export const RaceCards = () => {
               {track.status === "available" ? (
                 <Button className="w-full bg-primary text-primary-foreground hover:brightness-110 font-semibold">
                   <Download className="h-4 w-4 mr-2" />
-                  Get RaceCard – $5
+                  Get RaceCard – 1 Credit
                 </Button>
               ) : (
                 <Button variant="outline" disabled className="w-full border-border text-muted-foreground">

@@ -5,19 +5,19 @@ const team = [
   {
     role: "Computer Scientist",
     experience: "35+ years",
-    description: "Algorithm development and data engineering expertise",
+    description: "Algorithm development and data engineering expertise powering Concert™ and Aptitude™",
     icon: Brain,
   },
   {
     role: "Veteran Handicapper",
     experience: "40+ years",
-    description: "Deep racing knowledge and pattern recognition",
+    description: "Deep racing knowledge and pattern recognition refined over decades at the track",
     icon: Award,
   },
   {
     role: "Racing Operations",
     experience: "22+ years",
-    description: "Track-level insights and industry connections",
+    description: "Track-level insights and industry connections across US and Canadian racetracks",
     icon: Users,
   },
 ];
@@ -45,11 +45,25 @@ export const About = () => {
               Data-Driven Racing.{" "}
               <span className="text-neon">Winning Results.</span>
             </h2>
-            <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-              DATAEEL was born from a simple question: What if we could take decades of
-              handicapping expertise and combine it with modern data science? The result
-              is two proprietary algorithms—Concert and Aptitude—that analyze race data
-              from Equibase® to generate simplified predictions for everyday bettors.
+
+            {/* Quote from original site */}
+            <div className="mb-6 pl-4 border-l-2 border-primary">
+              <p className="text-lg text-foreground/80 italic">
+                "How about a simplified and honest approach to Horse Racing?"
+              </p>
+            </div>
+
+            <p className="text-lg text-muted-foreground mb-4 leading-relaxed">
+              theDATA<strong className="text-foreground">EEL</strong>™ has arrived – Algorithms
+              for thoroughbred horse racing like no other. Are you NEW to horse racing?
+              Or maybe a seasoned player? theDATA<strong className="text-foreground">EEL</strong>™
+              will change your horse racing life.
+            </p>
+            <p className="text-base text-muted-foreground mb-8 leading-relaxed">
+              theDATA<strong className="text-foreground">EEL</strong>™ provides horse racing
+              predictions powered by two proprietary algorithms—Concert™ and Aptitude™—that
+              analyze race data from Equibase® to generate simplified predictions for
+              everyday bettors. No complicated handicapping required.
             </p>
 
             {/* Equibase Badge */}
@@ -128,7 +142,8 @@ export const About = () => {
                     <span className="text-primary font-bold">Concert™</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Analyzes past live performance under race pressure
+                    Analyzes past live performance – how horses perform under pressure,
+                    in front of the crowd, from gate to finish
                   </p>
                 </div>
                 <div className="p-4 rounded-xl bg-background/50 border border-border">
@@ -137,7 +152,8 @@ export const About = () => {
                     <span className="text-warning font-bold">Aptitude™</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Evaluates inherent ability and future potential
+                    Evaluates inherent ability and future potential – running style,
+                    pace, stamina, and capability
                   </p>
                 </div>
               </div>
