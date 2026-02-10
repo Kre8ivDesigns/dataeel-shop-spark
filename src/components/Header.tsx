@@ -98,13 +98,6 @@ export const Header = () => {
         </nav>
 
         <div className="hidden lg:flex items-center gap-3">
-          {isAdmin && (
-            <Link to="/admin">
-              <Button variant="ghost" size="sm" className="text-primary gap-1.5">
-                <Shield className="h-4 w-4" /> Admin
-              </Button>
-            </Link>
-          )}
           {user ? (
             <div className="relative" ref={userMenuRef}>
               <Button
@@ -132,6 +125,16 @@ export const Header = () => {
                       <LayoutDashboard className="h-4 w-4" />
                       Dashboard
                     </Link>
+                    {isAdmin && (
+                      <Link
+                        to="/admin"
+                        onClick={() => setIsUserMenuOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-primary hover:bg-muted transition-colors"
+                      >
+                        <Shield className="h-4 w-4" />
+                        Admin
+                      </Link>
+                    )}
                     <button
                       onClick={handleSignOut}
                       className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors border-t border-border"
@@ -169,11 +172,6 @@ export const Header = () => {
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="lg:hidden bg-card border-t border-border">
             <div className="container mx-auto px-4 py-6 space-y-4">
               {navItems.map((item) => renderNavLink(item, true))}
-              {isAdmin && (
-                <Link to="/admin" onClick={() => setIsMobileMenuOpen(false)} className="block text-primary font-medium py-2">
-                  <Shield className="h-4 w-4 inline mr-1.5" /> Admin Dashboard
-                </Link>
-              )}
               <div className="pt-4 border-t border-border space-y-3">
                 {user ? (
                   <>
@@ -182,6 +180,13 @@ export const Header = () => {
                         <LayoutDashboard className="h-4 w-4" /> Dashboard
                       </Button>
                     </Link>
+                    {isAdmin && (
+                      <Link to="/admin" onClick={() => setIsMobileMenuOpen(false)}>
+                        <Button variant="outline" className="w-full border-secondary text-primary gap-2">
+                          <Shield className="h-4 w-4" /> Admin
+                        </Button>
+                      </Link>
+                    )}
                     <Button variant="outline" className="w-full border-secondary text-foreground gap-2" onClick={handleSignOut}>
                       <LogOut className="h-4 w-4" /> Sign Out
                     </Button>
