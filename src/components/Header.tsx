@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Shield, ChevronDown, LogOut, LayoutDashboard } from "lucide-react";
+import { Menu, X, Shield, ChevronDown, LogOut, LayoutDashboard, FileText } from "lucide-react";
 import logo from "@/assets/dataeel-logo.png";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
@@ -125,6 +125,14 @@ export const Header = () => {
                       <LayoutDashboard className="h-4 w-4" />
                       Dashboard
                     </Link>
+                    <Link
+                      to="/invoices"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
+                    >
+                      <FileText className="h-4 w-4" />
+                      Invoices
+                    </Link>
                     {isAdmin && (
                       <Link
                         to="/admin"
@@ -178,6 +186,11 @@ export const Header = () => {
                     <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
                       <Button variant="outline" className="w-full border-secondary text-foreground gap-2">
                         <LayoutDashboard className="h-4 w-4" /> Dashboard
+                      </Button>
+                    </Link>
+                    <Link to="/invoices" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button variant="outline" className="w-full border-secondary text-foreground gap-2">
+                        <FileText className="h-4 w-4" /> Invoices
                       </Button>
                     </Link>
                     {isAdmin && (
