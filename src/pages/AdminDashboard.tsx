@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Users, CreditCard, FileText, Upload, Trash2, Search } from "lucide-react";
+import { sanitizeError } from "@/lib/errorHandler";
 import { motion } from "framer-motion";
 
 const AdminDashboard = () => {
@@ -61,11 +62,17 @@ const AdminDashboard = () => {
         continue;
       }
 
-      const filePath = `${Date.now()}-${file.name}`;
+      if (file.size > 10 * 1024 * 1024) {
+        toast({ title: `Skipped ${file.name}`, description: "Maximum file size is 10MB", variant: "destructive" });
+        continue;
+      }
+
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const filePath = `${crypto.randomUUID()}-${sanitizedName}`;
       const { error: uploadError } = await supabase.storage.from("racecards").upload(filePath, file);
 
       if (uploadError) {
-        toast({ title: `Upload failed: ${file.name}`, description: uploadError.message, variant: "destructive" });
+        toast({ title: `Upload failed: ${file.name}`, description: sanitizeError(uploadError), variant: "destructive" });
         continue;
       }
 
@@ -85,7 +92,7 @@ const AdminDashboard = () => {
       });
 
       if (dbError) {
-        toast({ title: `DB error: ${file.name}`, description: dbError.message, variant: "destructive" });
+        toast({ title: `Upload failed: ${file.name}`, description: sanitizeError(dbError), variant: "destructive" });
       } else {
         successCount++;
       }
