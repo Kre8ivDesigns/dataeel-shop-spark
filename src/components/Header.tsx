@@ -98,12 +98,12 @@ export const Header = () => {
             </Button>
           ) : (
             <>
-              <Link to="/auth">
+              <Link to="/auth?mode=login">
                 <Button variant="ghost" className="font-medium text-foreground/80 hover:text-foreground hover:bg-muted">
                   Login
                 </Button>
               </Link>
-              <Link to="/auth">
+              <Link to="/auth?mode=signup">
                 <Button className="bg-primary text-primary-foreground hover:brightness-110 font-semibold px-6">
                   Get Started
                 </Button>
@@ -134,10 +134,10 @@ export const Header = () => {
                   </Button>
                 ) : (
                   <>
-                    <Link to="/auth" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Link to="/auth?mode=login" onClick={() => setIsMobileMenuOpen(false)}>
                       <Button variant="outline" className="w-full border-secondary text-foreground">Login</Button>
                     </Link>
-                    <Link to="/auth" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Link to="/auth?mode=signup" onClick={() => setIsMobileMenuOpen(false)}>
                       <Button className="w-full bg-primary text-primary-foreground font-semibold">Get Started</Button>
                     </Link>
                   </>
