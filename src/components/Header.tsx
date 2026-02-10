@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Shield } from "lucide-react";
+import { Menu, X, Shield, ChevronDown, LogOut, LayoutDashboard } from "lucide-react";
 import logo from "@/assets/dataeel-logo.png";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,7 +11,6 @@ const navItems = [
   { label: "How It Works", href: "#how-it-works" },
   { label: "Results", href: "#results" },
   { label: "RaceCards", href: "/racecards" },
-  { label: "Dashboard", href: "/dashboard" },
   { label: "Pricing", href: "/pricing" },
   { label: "About", href: "#about" },
   { label: "Contact", href: "/contact" },
@@ -20,6 +19,8 @@ const navItems = [
 export const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -27,6 +28,16 @@ export const Header = () => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const handleNavClick = (href: string) => {
@@ -38,6 +49,8 @@ export const Header = () => {
   };
 
   const handleSignOut = async () => {
+    setIsUserMenuOpen(false);
+    setIsMobileMenuOpen(false);
     await signOut();
     navigate("/");
   };
@@ -93,9 +106,43 @@ export const Header = () => {
             </Link>
           )}
           {user ? (
-            <Button variant="ghost" onClick={handleSignOut} className="font-medium text-foreground/80 hover:text-foreground hover:bg-muted">
-              Sign Out
-            </Button>
+            <div className="relative" ref={userMenuRef}>
+              <Button
+                variant="ghost"
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="font-medium text-foreground/80 hover:text-foreground hover:bg-muted gap-1.5"
+              >
+                Account
+                <ChevronDown className={`h-4 w-4 transition-transform ${isUserMenuOpen ? "rotate-180" : ""}`} />
+              </Button>
+              <AnimatePresence>
+                {isUserMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg overflow-hidden z-50"
+                  >
+                    <Link
+                      to="/dashboard"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
+                    >
+                      <LayoutDashboard className="h-4 w-4" />
+                      Dashboard
+                    </Link>
+                    <button
+                      onClick={handleSignOut}
+                      className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors border-t border-border"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Sign Out
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           ) : (
             <>
               <Link to="/auth?mode=login">
@@ -129,9 +176,16 @@ export const Header = () => {
               )}
               <div className="pt-4 border-t border-border space-y-3">
                 {user ? (
-                  <Button variant="outline" className="w-full border-secondary text-foreground" onClick={handleSignOut}>
-                    Sign Out
-                  </Button>
+                  <>
+                    <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button variant="outline" className="w-full border-secondary text-foreground gap-2">
+                        <LayoutDashboard className="h-4 w-4" /> Dashboard
+                      </Button>
+                    </Link>
+                    <Button variant="outline" className="w-full border-secondary text-foreground gap-2" onClick={handleSignOut}>
+                      <LogOut className="h-4 w-4" /> Sign Out
+                    </Button>
+                  </>
                 ) : (
                   <>
                     <Link to="/auth?mode=login" onClick={() => setIsMobileMenuOpen(false)}>
