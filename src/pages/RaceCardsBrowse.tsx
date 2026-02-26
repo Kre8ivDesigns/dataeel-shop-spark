@@ -1,51 +1,122 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import {
   Download,
   Eye,
-  Cloud,
-  Sun,
-  CloudRain,
   MapPin,
   Filter,
   CreditCard,
   Search,
+  Loader2,
+  CheckCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-
-const dayTabs = ["Today", "Tomorrow", "Feb 11"];
-
-const raceCards = [
-  { track: "Gulfstream Park", code: "GP", races: 11, postTime: "12:15 PM", weather: "sunny", live: true, region: "East" },
-  { track: "Santa Anita", code: "SA", races: 9, postTime: "3:00 PM", weather: "sunny", live: false, region: "West" },
-  { track: "Aqueduct", code: "AQU", races: 8, postTime: "12:50 PM", weather: "cloudy", live: true, region: "East" },
-  { track: "Tampa Bay Downs", code: "TAM", races: 10, postTime: "12:25 PM", weather: "sunny", live: true, region: "East" },
-  { track: "Fair Grounds", code: "FG", races: 9, postTime: "1:00 PM", weather: "rainy", live: false, region: "East" },
-  { track: "Oaklawn Park", code: "OP", races: 9, postTime: "1:30 PM", weather: "cloudy", live: false, region: "Midwest" },
-  { track: "Woodbine", code: "WO", races: 8, postTime: "1:10 PM", weather: "cloudy", live: false, region: "Canada" },
-  { track: "Del Mar", code: "DMR", races: 8, postTime: "4:00 PM", weather: "sunny", live: false, region: "West" },
-  { track: "Keeneland", code: "KEE", races: 10, postTime: "1:05 PM", weather: "sunny", live: false, region: "Midwest" },
-];
-
-const WeatherIcon = ({ weather }: { weather: string }) => {
-  switch (weather) {
-    case "sunny": return <Sun className="h-4 w-4 text-warning" />;
-    case "rainy": return <CloudRain className="h-4 w-4 text-info" />;
-    default: return <Cloud className="h-4 w-4 text-muted-foreground" />;
-  }
-};
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { format, addDays } from "date-fns";
 
 const RaceCardsBrowse = () => {
-  const [activeDay, setActiveDay] = useState("Today");
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
+  const [credits, setCredits] = useState<number | null>(null);
+  const [racecards, setRacecards] = useState<any[]>([]);
+  const [downloads, setDownloads] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState<string | null>(null);
+  const [selectedDateIndex, setSelectedDateIndex] = useState(0);
 
-  const filtered = raceCards.filter((card) =>
-    card.track.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    card.code.toLowerCase().includes(searchQuery.toLowerCase())
+  const dayTabs = useMemo(() => {
+    const today = new Date();
+    return [
+      { label: "Today", date: format(today, "yyyy-MM-dd") },
+      { label: "Tomorrow", date: format(addDays(today, 1), "yyyy-MM-dd") },
+      { label: format(addDays(today, 2), "MMM d"), date: format(addDays(today, 2), "yyyy-MM-dd") },
+    ];
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [user, selectedDateIndex]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    const selectedDate = dayTabs[selectedDateIndex].date;
+
+    // Fetch racecards for selected date
+    const { data: cards } = await supabase
+      .from("racecards")
+      .select("*")
+      .eq("race_date", selectedDate)
+      .order("track_name");
+
+    setRacecards(cards || []);
+
+    if (user) {
+      // Fetch credit balance
+      const { data: bal } = await supabase
+        .from("credit_balances")
+        .select("credits")
+        .eq("user_id", user.id)
+        .single();
+      setCredits(bal?.credits ?? 0);
+
+      // Fetch user's existing downloads
+      const { data: dl } = await supabase
+        .from("racecard_downloads")
+        .select("racecard_id")
+        .eq("user_id", user.id);
+      setDownloads(new Set((dl || []).map((d: any) => d.racecard_id)));
+    }
+
+    setLoading(false);
+  };
+
+  const handleDownload = async (racecardId: string) => {
+    if (!user) {
+      toast({ title: "Please sign in", description: "You need to be logged in to download racecards.", variant: "destructive" });
+      return;
+    }
+
+    setDownloading(racecardId);
+    try {
+      const { data, error } = await supabase.functions.invoke("download-racecard", {
+        body: { racecardId },
+      });
+
+      if (error || !data?.signedUrl) {
+        const msg = data?.error || "Download failed";
+        toast({ title: "Download failed", description: msg, variant: "destructive" });
+        return;
+      }
+
+      // Update local state
+      if (!data.alreadyOwned) {
+        setCredits((prev) => (prev !== null ? prev - 1 : prev));
+      }
+      setDownloads((prev) => new Set(prev).add(racecardId));
+
+      // Trigger download
+      window.open(data.signedUrl, "_blank");
+      toast({ title: data.alreadyOwned ? "Re-downloading" : "Downloaded!", description: `${data.fileName}` });
+    } catch (err) {
+      toast({ title: "Error", description: "Something went wrong.", variant: "destructive" });
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  const filtered = racecards.filter(
+    (card) =>
+      card.track_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      card.track_code.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const isOwned = (id: string) => downloads.has(id);
 
   return (
     <div className="min-h-screen bg-background">
@@ -63,35 +134,39 @@ const RaceCardsBrowse = () => {
                 Download algorithm-powered predictions for today's races.
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-card border border-border">
-                <CreditCard className="h-4 w-4 text-primary" />
-                <span className="text-sm font-mono-data font-bold text-primary">12</span>
-                <span className="text-xs text-muted-foreground">credits</span>
+            {user && (
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-card border border-border">
+                  <CreditCard className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-mono-data font-bold text-primary">
+                    {credits ?? "—"}
+                  </span>
+                  <span className="text-xs text-muted-foreground">credits</span>
+                </div>
+                <Link to="/buy-credits">
+                  <Button size="sm" variant="outline" className="border-primary text-primary hover:bg-primary/10 text-xs">
+                    Buy More
+                  </Button>
+                </Link>
               </div>
-              <Link to="/buy-credits">
-                <Button size="sm" variant="outline" className="border-primary text-primary hover:bg-primary/10 text-xs">
-                  Buy More
-                </Button>
-              </Link>
-            </div>
+            )}
           </div>
 
           {/* Filters Row */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-8">
             {/* Day Tabs */}
             <div className="flex bg-card rounded-lg border border-border p-1">
-              {dayTabs.map((day) => (
+              {dayTabs.map((day, idx) => (
                 <button
-                  key={day}
-                  onClick={() => setActiveDay(day)}
+                  key={day.date}
+                  onClick={() => setSelectedDateIndex(idx)}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                    activeDay === day
+                    selectedDateIndex === idx
                       ? "bg-primary text-primary-foreground"
                       : "text-foreground/60 hover:text-foreground"
                   }`}
                 >
-                  {day}
+                  {day.label}
                 </button>
               ))}
             </div>
@@ -107,87 +182,89 @@ const RaceCardsBrowse = () => {
                 className="w-full pl-9 pr-4 py-2 rounded-lg bg-card border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
               />
             </div>
-
-            <Button variant="outline" size="sm" className="border-border text-foreground/60 hover:text-foreground gap-2">
-              <Filter className="h-4 w-4" />
-              Filters
-            </Button>
           </div>
+
+          {/* Loading */}
+          {loading && (
+            <div className="text-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+              <p className="text-sm text-muted-foreground">Loading racecards…</p>
+            </div>
+          )}
 
           {/* Cards Grid */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map((card, i) => (
-              <motion.div
-                key={card.code}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="card-dark group relative"
-              >
-                {/* Live Badge */}
-                {card.live && (
-                  <div className="absolute top-4 right-4">
-                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/30">
-                      <span className="relative flex h-1.5 w-1.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary" />
-                      </span>
-                      <span className="text-[10px] font-bold text-primary uppercase">Live</span>
-                    </span>
-                  </div>
-                )}
+          {!loading && filtered.length > 0 && (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filtered.map((card, i) => {
+                const owned = isOwned(card.id);
+                const isDownloading = downloading === card.id;
 
-                {/* Track Header */}
-                <div className="flex items-start gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
-                    <span className="font-mono-data font-bold text-foreground text-sm">{card.code}</span>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground text-sm">{card.track}</h3>
-                    <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                      <span>{card.races} races</span>
-                      <span>·</span>
-                      <WeatherIcon weather={card.weather} />
-                      <span className="capitalize">{card.weather}</span>
+                return (
+                  <motion.div
+                    key={card.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="card-dark group relative"
+                  >
+                    {/* Owned Badge */}
+                    {owned && (
+                      <div className="absolute top-4 right-4">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/10 border border-green-500/30">
+                          <CheckCircle className="h-3 w-3 text-green-500" />
+                          <span className="text-[10px] font-bold text-green-500 uppercase">Owned</span>
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Track Header */}
+                    <div className="flex items-start gap-3 mb-4">
+                      <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
+                        <span className="font-mono-data font-bold text-foreground text-sm">{card.track_code}</span>
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-foreground text-sm">{card.track_name}</h3>
+                        <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                          {card.num_races && <span>{card.num_races} races</span>}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
 
-                {/* Info Row */}
-                <div className="flex items-center justify-between mb-4 text-xs">
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <MapPin className="h-3.5 w-3.5" />
-                    {card.region}
-                  </div>
-                  <span className="text-foreground/60">First post: {card.postTime}</span>
-                </div>
+                    {/* Algorithm Badge */}
+                    <div className="mb-4 px-3 py-2 rounded-lg bg-muted/50 text-xs text-foreground/60">
+                      Includes: <span className="text-primary font-medium">Concert™</span> +{" "}
+                      <span className="text-info font-medium">Aptitude™</span>
+                    </div>
 
-                {/* Algorithm Badge */}
-                <div className="mb-4 px-3 py-2 rounded-lg bg-muted/50 text-xs text-foreground/60">
-                  Includes: <span className="text-primary font-medium">Concert™</span> +{" "}
-                  <span className="text-info font-medium">Aptitude™</span>
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2">
-                  <Button className="flex-1 bg-primary text-primary-foreground hover:brightness-110 font-semibold text-sm h-10 shadow-neon">
-                    <Download className="mr-1.5 h-4 w-4" />
-                    Download · 1 Credit
-                  </Button>
-                  <Button variant="outline" size="icon" className="border-border text-foreground/60 hover:text-foreground h-10 w-10">
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                    {/* Actions */}
+                    <div className="flex gap-2">
+                      <Button
+                        className="flex-1 bg-primary text-primary-foreground hover:brightness-110 font-semibold text-sm h-10 shadow-neon"
+                        onClick={() => handleDownload(card.id)}
+                        disabled={isDownloading}
+                      >
+                        {isDownloading ? (
+                          <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Download className="mr-1.5 h-4 w-4" />
+                        )}
+                        {owned ? "Re-download" : "Download · 1 Credit"}
+                      </Button>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Empty State */}
-          {filtered.length === 0 && (
+          {!loading && filtered.length === 0 && (
             <div className="text-center py-20">
               <Search className="h-12 w-12 text-foreground/20 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">No tracks found</h3>
-              <p className="text-sm text-muted-foreground">Try a different search term or check back later.</p>
+              <h3 className="text-lg font-semibold text-foreground mb-2">No racecards found</h3>
+              <p className="text-sm text-muted-foreground">
+                No racecards available for this date. Check back later.
+              </p>
             </div>
           )}
         </div>
