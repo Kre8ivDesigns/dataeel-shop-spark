@@ -4,18 +4,21 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import {
   Check,
-  Zap,
   Crown,
   ArrowLeft,
   Shield,
   CreditCard,
   Clock,
   ShoppingCart,
-  ChevronRight,
   Lock,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 
 const creditPackages = [
   {
@@ -76,9 +79,49 @@ const creditPackages = [
 
 const BuyCredits = () => {
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
-  const currentCredits = 12;
+  const [purchasing, setPurchasing] = useState(false);
+  const { user } = useAuth();
 
+  const { data: creditBalance } = useQuery({
+    queryKey: ["credit-balance", user?.id],
+    queryFn: async () => {
+      if (!user) return 0;
+      const { data } = await supabase
+        .from("credit_balances")
+        .select("credits")
+        .eq("user_id", user.id)
+        .single();
+      return data?.credits ?? 0;
+    },
+    enabled: !!user,
+  });
+
+  const currentCredits = creditBalance ?? 0;
   const selected = creditPackages.find((p) => p.id === selectedPackage);
+
+  const handlePurchase = async () => {
+    if (!selected || !user) {
+      toast.error("Please log in to purchase credits");
+      return;
+    }
+    setPurchasing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-checkout-session", {
+        body: { packageId: selected.id },
+      });
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (err: any) {
+      console.error("Purchase error:", err);
+      toast.error("Failed to start checkout. Please try again.");
+    } finally {
+      setPurchasing(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -86,7 +129,6 @@ const BuyCredits = () => {
 
       <main className="pt-24 pb-16">
         <div className="container mx-auto px-4">
-          {/* Back Link */}
           <Link
             to="/dashboard"
             className="inline-flex items-center gap-2 text-foreground/50 hover:text-foreground mb-6 transition-colors text-sm"
@@ -95,7 +137,6 @@ const BuyCredits = () => {
             Back to Dashboard
           </Link>
 
-          {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -110,7 +151,6 @@ const BuyCredits = () => {
           </motion.div>
 
           <div className="grid lg:grid-cols-3 gap-8">
-            {/* Package Selection */}
             <div className="lg:col-span-2">
               <h2 className="text-lg font-semibold text-foreground mb-4 font-heading">
                 Select a Package
@@ -131,7 +171,6 @@ const BuyCredits = () => {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        {/* Radio indicator */}
                         <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                           selectedPackage === pkg.id ? "border-primary" : "border-foreground/30"
                         }`}>
@@ -139,7 +178,6 @@ const BuyCredits = () => {
                             <div className="w-2.5 h-2.5 rounded-full bg-primary" />
                           )}
                         </div>
-
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="font-semibold text-foreground">{pkg.name}</span>
@@ -160,7 +198,6 @@ const BuyCredits = () => {
                           </div>
                         </div>
                       </div>
-
                       <div className="text-right flex-shrink-0">
                         <div className="text-2xl font-bold text-foreground font-mono-data">${pkg.price}</div>
                       </div>
@@ -169,7 +206,6 @@ const BuyCredits = () => {
                 ))}
               </div>
 
-              {/* Benefits */}
               <div className="grid sm:grid-cols-3 gap-4 mt-8">
                 {[
                   { icon: Clock, title: "Never Expire", desc: "Use anytime" },
@@ -187,7 +223,6 @@ const BuyCredits = () => {
               </div>
             </div>
 
-            {/* Order Summary Sidebar */}
             <div className="lg:col-span-1">
               <div className="sticky top-28">
                 <div className="card-dark">
@@ -234,10 +269,24 @@ const BuyCredits = () => {
                           </div>
                         </div>
 
-                        <Button className="w-full bg-primary text-primary-foreground hover:brightness-110 font-semibold shadow-neon h-12 text-base">
-                          <ShoppingCart className="mr-2 h-5 w-5" />
-                          Purchase Credits
+                        <Button
+                          onClick={handlePurchase}
+                          disabled={purchasing || !user}
+                          className="w-full bg-primary text-primary-foreground hover:brightness-110 font-semibold shadow-neon h-12 text-base"
+                        >
+                          {purchasing ? (
+                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          ) : (
+                            <ShoppingCart className="mr-2 h-5 w-5" />
+                          )}
+                          {purchasing ? "Redirecting..." : "Purchase Credits"}
                         </Button>
+
+                        {!user && (
+                          <p className="text-xs text-destructive mt-2 text-center">
+                            <Link to="/auth" className="underline">Log in</Link> to purchase credits
+                          </p>
+                        )}
 
                         <div className="flex items-center justify-center gap-2 mt-3 text-xs text-muted-foreground">
                           <Lock className="h-3 w-3" />
@@ -261,7 +310,6 @@ const BuyCredits = () => {
                   </AnimatePresence>
                 </div>
 
-                {/* Features list */}
                 <div className="mt-4 card-dark">
                   <h4 className="text-sm font-semibold text-foreground mb-3">Every credit includes:</h4>
                   <ul className="space-y-2">

@@ -1,1 +1,16 @@
 project_id = "uhalsigyxvshlnlagtwt"
+
+[functions.create-checkout-session]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.download-racecard]
+verify_jwt = false
+
+[functions.customer-portal]
+verify_jwt = false
+
+[functions.list-invoices]
+verify_jwt = false
