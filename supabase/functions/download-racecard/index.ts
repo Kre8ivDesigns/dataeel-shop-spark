@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
     // Generate signed URL (60 seconds)
     const { data: signedUrlData, error: signError } = await supabaseAdmin.storage
       .from("racecards")
-      .createSignedUrl(racecard.file_url, 60);
+      .createSignedUrl(racecard.file_url, 300);
 
     if (signError || !signedUrlData) {
       console.error("Signed URL error:", signError);

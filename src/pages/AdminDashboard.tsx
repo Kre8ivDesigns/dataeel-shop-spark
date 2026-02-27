@@ -27,10 +27,16 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!authLoading && (!user || !isAdmin)) {
+    if (authLoading) return;
+    if (!user) {
       navigate("/auth");
+      return;
     }
-  }, [user, isAdmin, authLoading, navigate]);
+    // Server-side re-verification of admin role
+    supabase.rpc("is_admin", { _user_id: user.id }).then(({ data }) => {
+      if (!data) navigate("/auth");
+    });
+  }, [user, authLoading, navigate]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
