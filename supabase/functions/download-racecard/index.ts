@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    // Service role client (bypasses RLS for credit deduction)
+    // Service role client (for signed URLs and atomic RPC)
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -53,14 +53,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check if already downloaded (free re-download)
-    const { data: existingDownload } = await supabaseUser
-      .from("racecard_downloads")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("racecard_id", racecardId)
-      .maybeSingle();
-
     // Get racecard info
     const { data: racecard, error: rcError } = await supabaseUser
       .from("racecards")
@@ -75,49 +67,40 @@ Deno.serve(async (req) => {
       });
     }
 
-    // If not previously downloaded, check & deduct credits
-    if (!existingDownload) {
-      const { data: balance, error: balError } = await supabaseUser
-        .from("credit_balances")
-        .select("credits")
-        .eq("user_id", user.id)
-        .single();
-
-      if (balError || !balance || balance.credits < 1) {
-        return new Response(
-          JSON.stringify({ error: "Insufficient credits" }),
-          {
-            status: 402,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
+    // Atomic credit check, deduction, and download recording
+    const { data: result, error: rpcError } = await supabaseAdmin.rpc(
+      "deduct_credit_if_sufficient",
+      {
+        p_user_id: user.id,
+        p_racecard_id: racecardId,
+        p_required_credits: 1,
       }
+    );
 
-      // Deduct 1 credit (admin client to bypass RLS)
-      const { error: deductError } = await supabaseAdmin
-        .from("credit_balances")
-        .update({ credits: balance.credits - 1 })
-        .eq("user_id", user.id);
-
-      if (deductError) {
-        console.error("Credit deduction failed:", deductError);
-        return new Response(
-          JSON.stringify({ error: "Failed to deduct credit" }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
-      }
-
-      // Record download
-      await supabaseAdmin.from("racecard_downloads").insert({
-        user_id: user.id,
-        racecard_id: racecardId,
-      });
+    if (rpcError || !result || result.length === 0) {
+      console.error("RPC error:", rpcError);
+      return new Response(
+        JSON.stringify({ error: "Failed to process download" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
-    // Generate signed URL (60 seconds)
+    const { success, already_owned } = result[0];
+
+    if (!success) {
+      return new Response(
+        JSON.stringify({ error: "Insufficient credits" }),
+        {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Generate signed URL (5 minutes)
     const { data: signedUrlData, error: signError } = await supabaseAdmin.storage
       .from("racecards")
       .createSignedUrl(racecard.file_url, 300);
@@ -137,7 +120,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         signedUrl: signedUrlData.signedUrl,
         fileName: racecard.file_name,
-        alreadyOwned: !!existingDownload,
+        alreadyOwned: already_owned,
       }),
       {
         status: 200,

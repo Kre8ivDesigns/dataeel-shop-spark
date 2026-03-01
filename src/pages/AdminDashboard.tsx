@@ -85,14 +85,22 @@ const AdminDashboard = () => {
       // Parse basic info from filename pattern: TRACKCODE_YYYY-MM-DD.pdf
       const nameWithoutExt = file.name.replace(".pdf", "");
       const parts = nameWithoutExt.split("_");
-      const trackCode = parts[0] || "UNK";
-      const raceDate = parts[1] || new Date().toISOString().split("T")[0];
+      
+      // Validate track code: alphanumeric only, max 10 chars
+      const rawTrackCode = (parts[0] || "").replace(/[^A-Z0-9]/gi, '').toUpperCase();
+      const trackCode = rawTrackCode.length > 0 && rawTrackCode.length <= 10 ? rawTrackCode : "UNK";
+      
+      // Validate date format: YYYY-MM-DD
+      const rawDate = parts[1] || "";
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      const isValidDate = dateRegex.test(rawDate) && !isNaN(new Date(rawDate).getTime());
+      const raceDate = isValidDate ? rawDate : new Date().toISOString().split("T")[0];
 
       const { error: dbError } = await supabase.from("racecards").insert({
         file_name: file.name,
         file_url: filePath,
-        track_code: trackCode.toUpperCase(),
-        track_name: trackCode.toUpperCase(),
+        track_code: trackCode,
+        track_name: trackCode,
         race_date: raceDate,
         uploaded_by: user.id,
       });
