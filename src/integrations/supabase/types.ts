@@ -186,6 +186,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      deduct_credit_if_sufficient: {
+        Args: {
+          p_racecard_id: string
+          p_required_credits?: number
+          p_user_id: string
+        }
+        Returns: {
+          already_owned: boolean
+          new_balance: number
+          success: boolean
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
