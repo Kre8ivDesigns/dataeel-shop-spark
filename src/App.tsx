@@ -13,6 +13,8 @@ import RaceCardsBrowse from "./pages/RaceCardsBrowse";
 import Auth from "./pages/Auth";
 import AdminDashboard from "./pages/AdminDashboard";
 import Invoices from "./pages/Invoices";
+import AdminSettings from "./pages/AdminSettings";
+import AdminCreditPackages from "./pages/AdminCreditPackages";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +35,8 @@ const App = () => (
             <Route path="/racecards" element={<RaceCardsBrowse />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/settings" element={<AdminSettings />} />
+            <Route path="/admin/credit-packages" element={<AdminCreditPackages />} />
             <Route path="/invoices" element={<Invoices />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

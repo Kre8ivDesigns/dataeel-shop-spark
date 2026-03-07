@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Users, CreditCard, FileText, Upload, Trash2, Search } from "lucide-react";
 import { sanitizeError } from "@/lib/errorHandler";
 import { motion } from "framer-motion";
@@ -25,6 +26,8 @@ const AdminDashboard = () => {
   const [uploading, setUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null);
+  const [creditsToGive, setCreditsToGive] = useState(0);
 
   useEffect(() => {
     if (authLoading) return;
@@ -168,6 +171,20 @@ const AdminDashboard = () => {
             ))}
           </div>
 
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Give Credits to {selectedCustomer?.full_name}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Input
+                type="number"
+                value={creditsToGive}
+                onChange={(e) => setCreditsToGive(parseInt(e.target.value))}
+              />
+              <Button>Confirm</Button>
+            </div>
+          </DialogContent>
+
           {/* Tabs */}
           <Tabs defaultValue="customers">
             <TabsList className="mb-6">
@@ -199,6 +216,7 @@ const AdminDashboard = () => {
                         <TableHead>Name</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Joined</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -207,6 +225,13 @@ const AdminDashboard = () => {
                           <TableCell className="font-medium text-foreground">{c.full_name || "—"}</TableCell>
                           <TableCell className="text-muted-foreground">{c.email}</TableCell>
                           <TableCell className="text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="outline" size="sm" onClick={() => setSelectedCustomer(c)}>Give Credits</Button>
+                              </DialogTrigger>
+                            </Dialog>
+                          </TableCell>
                         </TableRow>
                       ))}
                       {filteredCustomers.length === 0 && (
