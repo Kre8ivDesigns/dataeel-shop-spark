@@ -15,6 +15,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import Invoices from "./pages/Invoices";
 import AdminSettings from "./pages/AdminSettings";
 import AdminCreditPackages from "./pages/AdminCreditPackages";
+import AccountSettings from "./pages/AccountSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/admin/settings" element={<AdminSettings />} />
             <Route path="/admin/credit-packages" element={<AdminCreditPackages />} />
             <Route path="/invoices" element={<Invoices />} />
+            <Route path="/account-settings" element={<AccountSettings />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

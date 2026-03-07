@@ -133,6 +133,14 @@ export const Header = () => {
                       <FileText className="h-4 w-4" />
                       Invoices
                     </Link>
+                    <Link
+                      to="/account-settings"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
+                    >
+                      <Settings className="h-4 w-4" />
+                      Account Settings
+                    </Link>
                     {isAdmin && (
                       <>
                         <Link
@@ -209,6 +217,11 @@ export const Header = () => {
                     <Link to="/invoices" onClick={() => setIsMobileMenuOpen(false)}>
                       <Button variant="outline" className="w-full border-secondary text-foreground gap-2">
                         <FileText className="h-4 w-4" /> Invoices
+                      </Button>
+                    </Link>
+                    <Link to="/account-settings" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button variant="outline" className="w-full border-secondary text-foreground gap-2">
+                        <Settings className="h-4 w-4" /> Account Settings
                       </Button>
                     </Link>
                     {isAdmin && (

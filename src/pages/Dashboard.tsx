@@ -17,6 +17,9 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { sanitizeError } from "@/lib/errorHandler";
 
 const stats = [
   { label: "Credits Remaining", value: "12", icon: CreditCard, trend: null, accent: true },
@@ -29,7 +32,8 @@ const quickActions = [
   { label: "Download Today's Cards", icon: Zap, href: "/racecards", primary: true },
   { label: "View Live Races", icon: Eye, href: "#", live: true },
   { label: "Buy Credits", icon: ShoppingCart, href: "/buy-credits" },
-  { label: "Manage Account", icon: Settings, href: "#" },
+  { label: "Manage Account", icon: Settings, href: "/account-settings" },
+  { label: "Billing", icon: CreditCard, onClick: openCustomerPortal, href: "#" },
 ];
 
 const recentDownloads = [
@@ -47,6 +51,23 @@ const upcomingRaces = [
 ];
 
 const Dashboard = () => {
+  const { toast } = useToast();
+  const [portalLoading, setPortalLoading] = useState(false);
+
+  const openCustomerPortal = async () => {
+    setPortalLoading(true);
+    const { data, error } = await supabase.functions.invoke("customer-portal");
+    setPortalLoading(false);
+    if (error || data?.error) {
+      toast({
+        title: "Unable to open billing portal",
+        description: data?.error || sanitizeError(error),
+        variant: "destructive",
+      });
+    } else if (data?.url) {
+      window.open(data.url, "_blank");
+    }
+  };
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -102,34 +123,48 @@ const Dashboard = () => {
           >
             <h2 className="text-lg font-semibold text-foreground mb-4 font-heading">Quick Actions</h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {quickActions.map((action) => (
-                <Link
-                  key={action.label}
-                  to={action.href}
-                  className={`relative card-dark flex items-center gap-4 group ${
-                    action.primary ? "border-primary/50" : ""
-                  }`}
-                >
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                    action.primary ? "bg-primary/20" : "bg-muted"
-                  }`}>
-                    <action.icon className={`h-6 w-6 ${action.primary ? "text-primary" : "text-foreground/60"}`} />
+              {quickActions.map((action) => {
+                const content = (
+                  <div
+                    className={`relative card-dark flex items-center gap-4 group ${
+                      action.primary ? "border-primary/50" : ""
+                    }`}
+                  >
+                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                      action.primary ? "bg-primary/20" : "bg-muted"
+                    }`}>
+                      <action.icon className={`h-6 w-6 ${action.primary ? "text-primary" : "text-foreground/60"}`} />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-foreground text-sm">{action.label}</div>
+                      {action.live && (
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                          </span>
+                          <span className="text-xs text-primary font-medium">3 tracks live</span>
+                        </div>
+                      )}
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-foreground/30 ml-auto group-hover:text-foreground/60 transition-colors" />
                   </div>
-                  <div>
-                    <div className="font-semibold text-foreground text-sm">{action.label}</div>
-                    {action.live && (
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
-                        </span>
-                        <span className="text-xs text-primary font-medium">3 tracks live</span>
-                      </div>
-                    )}
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-foreground/30 ml-auto group-hover:text-foreground/60 transition-colors" />
-                </Link>
-              ))}
+                );
+
+                if (action.onClick) {
+                  return (
+                    <button key={action.label} onClick={action.onClick} disabled={portalLoading}>
+                      {content}
+                    </button>
+                  );
+                }
+
+                return (
+                  <Link key={action.label} to={action.href}>
+                    {content}
+                  </Link>
+                );
+              })}
             </div>
           </motion.div>
 
