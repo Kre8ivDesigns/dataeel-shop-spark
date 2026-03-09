@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (session?.user) {
           await checkAdmin(session.user.id);
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("Error fetching session:", error);
       } finally {
         setLoading(false);
@@ -74,7 +74,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider value={{ user, session, isAdmin, loading, signOut }}>
-      {loading ? <div>Loading...</div> : children}
+      {loading ? (
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+      ) : children}
     </AuthContext.Provider>
   );
 };

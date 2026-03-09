@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Shield, ChevronDown, LogOut, LayoutDashboard, FileText } from "lucide-react";
+import { Menu, X, Shield, ChevronDown, LogOut, LayoutDashboard, FileText, Settings } from "lucide-react";
 import logo from "@/assets/dataeel-logo.png";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
