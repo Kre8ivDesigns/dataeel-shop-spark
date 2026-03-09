@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.manage-credit-package]
 verify_jwt = false
+
+[functions.manage-app-settings]
+verify_jwt = false
