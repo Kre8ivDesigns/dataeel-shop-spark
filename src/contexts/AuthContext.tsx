@@ -38,7 +38,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          await checkAdmin(session.user.id);
+          checkAdmin(session.user.id); // intentionally not awaited — don't block loading
         }
       } catch (error: unknown) {
         console.error("Error fetching session:", error);
@@ -50,12 +50,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     fetchSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setIsAdmin(false);
         if (session?.user) {
-          await checkAdmin(session.user.id);
+          checkAdmin(session.user.id); // intentionally not awaited
         }
       }
     );
