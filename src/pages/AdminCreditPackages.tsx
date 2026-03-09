@@ -4,15 +4,41 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Loader2, Package } from "lucide-react";
+import { ArrowLeft, Loader2, Package, Plus, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+
+interface CreditPackage {
+  id: string;
+  name: string;
+  description: string | null;
+  credits: number;
+  price: number;
+  stripe_price_id: string | null;
+}
+
+interface PackageForm {
+  name: string;
+  description: string;
+  credits: string;
+  price: string;
+}
+
+const emptyForm: PackageForm = { name: "", description: "", credits: "", price: "" };
 
 const AdminCreditPackages = () => {
-  const [packages, setPackages] = useState<any[]>([]);
+  const [packages, setPackages] = useState<CreditPackage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingPackage, setEditingPackage] = useState<CreditPackage | null>(null);
+  const [form, setForm] = useState<PackageForm>(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPackages();
@@ -20,9 +46,89 @@ const AdminCreditPackages = () => {
 
   const fetchPackages = async () => {
     setLoading(true);
-    const { data } = await supabase.from("credit_packages").select("*");
+    const { data } = await supabase
+      .from("credit_packages")
+      .select("*")
+      .order("price", { ascending: true });
     setPackages(data || []);
     setLoading(false);
+  };
+
+  const openCreate = () => {
+    setEditingPackage(null);
+    setForm(emptyForm);
+    setDialogOpen(true);
+  };
+
+  const openEdit = (pkg: CreditPackage) => {
+    setEditingPackage(pkg);
+    setForm({
+      name: pkg.name,
+      description: pkg.description ?? "",
+      credits: String(pkg.credits),
+      price: String(pkg.price),
+    });
+    setDialogOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.name.trim() || !form.credits || !form.price) {
+      toast.error("Name, credits, and price are required");
+      return;
+    }
+    const credits = parseInt(form.credits, 10);
+    const price = parseFloat(form.price);
+    if (isNaN(credits) || credits <= 0) {
+      toast.error("Credits must be a positive integer");
+      return;
+    }
+    if (isNaN(price) || price <= 0) {
+      toast.error("Price must be greater than 0");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const action = editingPackage ? "update" : "create";
+      const body: Record<string, unknown> = {
+        action,
+        name: form.name.trim(),
+        description: form.description.trim() || undefined,
+        credits,
+        price,
+      };
+      if (editingPackage) body.packageId = editingPackage.id;
+
+      const { data, error } = await supabase.functions.invoke("manage-credit-package", { body });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast.success(editingPackage ? "Package updated" : "Package created");
+      setDialogOpen(false);
+      fetchPackages();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to save package");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (pkg: CreditPackage) => {
+    if (!confirm(`Delete "${pkg.name}"? This cannot be undone.`)) return;
+    setDeletingId(pkg.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-credit-package", {
+        body: { action: "delete", packageId: pkg.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("Package deleted");
+      fetchPackages();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to delete package");
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   return (
@@ -40,17 +146,10 @@ const AdminCreditPackages = () => {
 
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-bold text-foreground">Credit Packages</h1>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button className="bg-primary text-primary-foreground font-semibold">Create Package</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create New Credit Package</DialogTitle>
-                </DialogHeader>
-                <p className="text-muted-foreground text-sm">Form to create a new package will be here.</p>
-              </DialogContent>
-            </Dialog>
+            <Button onClick={openCreate} className="bg-primary text-primary-foreground font-semibold">
+              <Plus className="h-4 w-4 mr-2" />
+              Create Package
+            </Button>
           </div>
 
           <Card className="bg-card border-border">
@@ -69,24 +168,53 @@ const AdminCreditPackages = () => {
                       <TableHead>Name</TableHead>
                       <TableHead>Credits</TableHead>
                       <TableHead>Price</TableHead>
+                      <TableHead>Stripe Price ID</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {packages.map((pkg) => (
                       <TableRow key={pkg.id}>
-                        <TableCell className="font-medium text-foreground">{pkg.name}</TableCell>
+                        <TableCell>
+                          <div className="font-medium text-foreground">{pkg.name}</div>
+                          {pkg.description && (
+                            <div className="text-xs text-muted-foreground">{pkg.description}</div>
+                          )}
+                        </TableCell>
                         <TableCell className="font-mono-data text-primary">{pkg.credits}</TableCell>
                         <TableCell className="font-mono-data text-foreground">${pkg.price}</TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">
+                          {pkg.stripe_price_id ?? <span className="text-destructive">—</span>}
+                        </TableCell>
                         <TableCell>
-                          <Button variant="outline" size="sm" className="mr-2">Edit</Button>
-                          <Button variant="destructive" size="sm">Delete</Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="mr-2"
+                            onClick={() => openEdit(pkg)}
+                          >
+                            <Pencil className="h-3 w-3 mr-1" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            disabled={deletingId === pkg.id}
+                            onClick={() => handleDelete(pkg)}
+                          >
+                            {deletingId === pkg.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-3 w-3 mr-1" />
+                            )}
+                            Delete
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
                     {packages.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={4} className="py-12 text-center">
+                        <TableCell colSpan={5} className="py-12 text-center">
                           <Package className="h-8 w-8 text-foreground/20 mx-auto mb-3" />
                           <p className="text-muted-foreground text-sm">No credit packages yet.</p>
                         </TableCell>
@@ -100,6 +228,89 @@ const AdminCreditPackages = () => {
         </div>
       </main>
       <Footer />
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingPackage ? "Edit Package" : "Create New Package"}</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="pkg-name">Name *</Label>
+              <Input
+                id="pkg-name"
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="e.g. Starter"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="pkg-desc">Description</Label>
+              <Textarea
+                id="pkg-desc"
+                value={form.description}
+                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                placeholder="Short description shown to customers"
+                rows={2}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="pkg-credits">Credits *</Label>
+                <Input
+                  id="pkg-credits"
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={form.credits}
+                  onChange={(e) => setForm((f) => ({ ...f, credits: e.target.value }))}
+                  placeholder="e.g. 5"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pkg-price">Price (USD) *</Label>
+                <Input
+                  id="pkg-price"
+                  type="number"
+                  min={0.01}
+                  step={0.01}
+                  value={form.price}
+                  onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
+                  placeholder="e.g. 20.00"
+                />
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              {editingPackage
+                ? "Saving will update the Stripe product/price. If the price amount changes, the old Stripe price is archived and a new one is created."
+                : "A Stripe Product and Price will be created automatically on save."}
+            </p>
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setDialogOpen(false)}
+                disabled={saving}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-primary text-primary-foreground"
+                onClick={handleSave}
+                disabled={saving}
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                {saving ? "Saving..." : editingPackage ? "Save Changes" : "Create Package"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

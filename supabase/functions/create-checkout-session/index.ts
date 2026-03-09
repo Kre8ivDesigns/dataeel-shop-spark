@@ -7,15 +7,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Map package IDs to Stripe price IDs and credit amounts
-const PACKAGES: Record<string, { priceId: string; credits: number; name: string }> = {
-  single: { priceId: "price_1T5TJoI2kIUOizBRFylaVi9V", credits: 1, name: "Single" },
-  starter: { priceId: "price_1T5TM0I2kIUOizBRqvb18FTH", credits: 5, name: "Starter" },
-  "best-value": { priceId: "price_1T5TMNI2kIUOizBRYHSZUcQM", credits: 15, name: "Best Value" },
-  pro: { priceId: "price_1T5TaDI2kIUOizBR807We5Dz", credits: 40, name: "Pro" },
-  season: { priceId: "price_1T5TaRI2kIUOizBRXKDPWShk", credits: 100, name: "Season Pass" },
-};
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -24,6 +15,11 @@ serve(async (req) => {
   const supabaseClient = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+  );
+
+  const supabaseAdmin = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
   );
 
   try {
@@ -37,8 +33,16 @@ serve(async (req) => {
 
     // Parse and validate request
     const { packageId } = await req.json();
-    const pkg = PACKAGES[packageId];
-    if (!pkg) throw new Error("Invalid package selected");
+    if (!packageId) throw new Error("packageId is required");
+
+    // Look up package from DB
+    const { data: pkg, error: pkgError } = await supabaseAdmin
+      .from("credit_packages")
+      .select("id, name, credits, stripe_price_id")
+      .eq("id", packageId)
+      .single();
+    if (pkgError || !pkg) throw new Error("Invalid package selected");
+    if (!pkg.stripe_price_id) throw new Error("Package has no associated Stripe price");
 
     // Initialize Stripe
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
@@ -58,13 +62,13 @@ serve(async (req) => {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
-      line_items: [{ price: pkg.priceId, quantity: 1 }],
+      line_items: [{ price: pkg.stripe_price_id, quantity: 1 }],
       mode: "payment",
       success_url: `${origin}/dashboard?payment=success&credits=${pkg.credits}`,
       cancel_url: `${origin}/buy-credits?payment=cancelled`,
       metadata: {
         user_id: user.id,
-        package_id: packageId,
+        package_id: pkg.id,
         credits: String(pkg.credits),
         package_name: pkg.name,
       },

@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.sync-s3-racecards]
 verify_jwt = false
+
+[functions.manage-credit-package]
+verify_jwt = false
