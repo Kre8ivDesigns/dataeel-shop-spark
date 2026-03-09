@@ -1,4 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { S3Client, GetObjectCommand } from "https://esm.sh/@aws-sdk/client-s3@3";
+import { getSignedUrl } from "https://esm.sh/@aws-sdk/s3-request-presigner@3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -100,13 +102,26 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Generate signed URL (5 minutes)
-    const { data: signedUrlData, error: signError } = await supabaseAdmin.storage
-      .from("racecards")
-      .createSignedUrl(racecard.file_url, 300);
+    // Generate S3 pre-signed GET URL (5 minutes)
+    const s3 = new S3Client({
+      region: Deno.env.get("AWS_REGION")!,
+      credentials: {
+        accessKeyId: Deno.env.get("AWS_ACCESS_KEY_ID")!,
+        secretAccessKey: Deno.env.get("AWS_SECRET_ACCESS_KEY")!,
+      },
+    });
 
-    if (signError || !signedUrlData) {
-      console.error("Signed URL error:", signError);
+    const command = new GetObjectCommand({
+      Bucket: Deno.env.get("AWS_S3_BUCKET")!,
+      Key: racecard.file_url,
+      ResponseContentDisposition: `attachment; filename="${racecard.file_name}"`,
+    });
+
+    let signedUrl: string;
+    try {
+      signedUrl = await getSignedUrl(s3, command, { expiresIn: 300 });
+    } catch (signErr) {
+      console.error("S3 sign error:", signErr);
       return new Response(
         JSON.stringify({ error: "Failed to generate download link" }),
         {
@@ -118,7 +133,7 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        signedUrl: signedUrlData.signedUrl,
+        signedUrl,
         fileName: racecard.file_name,
         alreadyOwned: already_owned,
       }),

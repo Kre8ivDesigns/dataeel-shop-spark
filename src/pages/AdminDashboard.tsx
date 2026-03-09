@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Users, CreditCard, FileText, Upload, Trash2, Search } from "lucide-react";
+import { Users, CreditCard, FileText, Upload, Trash2, Search, RefreshCw } from "lucide-react";
 import { sanitizeError } from "@/lib/errorHandler";
 import { motion } from "framer-motion";
 
@@ -24,6 +24,7 @@ const AdminDashboard = () => {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [racecards, setRacecards] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null);
@@ -79,31 +80,46 @@ const AdminDashboard = () => {
       }
 
       const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const filePath = `${crypto.randomUUID()}-${sanitizedName}`;
-      const { error: uploadError } = await supabase.storage.from("racecards").upload(filePath, file);
 
-      if (uploadError) {
-        toast({ title: `Upload failed: ${file.name}`, description: sanitizeError(uploadError), variant: "destructive" });
+      // Step 1: get pre-signed S3 upload URL
+      const { data: urlData, error: urlError } = await supabase.functions.invoke(
+        "generate-upload-url",
+        { body: { fileName: sanitizedName } }
+      );
+
+      if (urlError || !urlData?.uploadUrl) {
+        toast({ title: `Upload failed: ${file.name}`, description: urlData?.error || sanitizeError(urlError), variant: "destructive" });
         continue;
       }
 
-      // Parse basic info from filename pattern: TRACKCODE_YYYY-MM-DD.pdf
+      // Step 2: PUT directly to S3
+      const s3Res = await fetch(urlData.uploadUrl, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": "application/pdf" },
+      });
+
+      if (!s3Res.ok) {
+        toast({ title: `Upload failed: ${file.name}`, description: `S3 error: ${s3Res.status} ${s3Res.statusText}`, variant: "destructive" });
+        continue;
+      }
+
+      // Step 3: parse filename for track/date metadata (TRACKCODE_YYYY-MM-DD.pdf)
       const nameWithoutExt = file.name.replace(".pdf", "");
       const parts = nameWithoutExt.split("_");
-      
-      // Validate track code: alphanumeric only, max 10 chars
+
       const rawTrackCode = (parts[0] || "").replace(/[^A-Z0-9]/gi, '').toUpperCase();
       const trackCode = rawTrackCode.length > 0 && rawTrackCode.length <= 10 ? rawTrackCode : "UNK";
-      
-      // Validate date format: YYYY-MM-DD
+
       const rawDate = parts[1] || "";
       const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
       const isValidDate = dateRegex.test(rawDate) && !isNaN(new Date(rawDate).getTime());
       const raceDate = isValidDate ? rawDate : new Date().toISOString().split("T")[0];
 
+      // Step 4: record in DB with the S3 key
       const { error: dbError } = await supabase.from("racecards").insert({
         file_name: file.name,
-        file_url: filePath,
+        file_url: urlData.s3Key,
         track_code: trackCode,
         track_name: trackCode,
         race_date: raceDate,
@@ -111,7 +127,7 @@ const AdminDashboard = () => {
       });
 
       if (dbError) {
-        toast({ title: `Upload failed: ${file.name}`, description: sanitizeError(dbError), variant: "destructive" });
+        toast({ title: `DB insert failed: ${file.name}`, description: sanitizeError(dbError), variant: "destructive" });
       } else {
         successCount++;
       }
@@ -121,6 +137,18 @@ const AdminDashboard = () => {
     setUploading(false);
     fetchData();
     e.target.value = "";
+  };
+
+  const handleSyncS3 = async () => {
+    setSyncing(true);
+    const { data, error } = await supabase.functions.invoke("sync-s3-racecards");
+    setSyncing(false);
+    if (error || data?.error) {
+      toast({ title: "Sync failed", description: data?.error || sanitizeError(error), variant: "destructive" });
+    } else {
+      toast({ title: `Sync complete — ${data.added} new racecard(s) added` });
+      if (data.added > 0) fetchData();
+    }
   };
 
   const handleGiveCredits = async () => {
@@ -146,11 +174,14 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleDeleteRacecard = async (id: string, fileUrl: string) => {
-    await supabase.storage.from("racecards").remove([fileUrl]);
-    await supabase.from("racecards").delete().eq("id", id);
-    toast({ title: "Racecard deleted" });
-    fetchData();
+  const handleDeleteRacecard = async (id: string) => {
+    const { error } = await supabase.from("racecards").delete().eq("id", id);
+    if (error) {
+      toast({ title: "Delete failed", description: sanitizeError(error), variant: "destructive" });
+    } else {
+      toast({ title: "Racecard deleted" });
+      fetchData();
+    }
   };
 
   const filteredCustomers = customers.filter(
@@ -313,7 +344,15 @@ const AdminDashboard = () => {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-foreground">RaceCards</CardTitle>
-                    <div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={handleSyncS3}
+                        disabled={syncing}
+                      >
+                        <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
+                        {syncing ? "Syncing…" : "Sync S3"}
+                      </Button>
                       <input
                         type="file"
                         accept="application/pdf"
@@ -328,7 +367,7 @@ const AdminDashboard = () => {
                         className="bg-primary text-primary-foreground font-semibold"
                       >
                         <Upload className="h-4 w-4 mr-2" />
-                        {uploading ? "Uploading..." : "Upload PDFs"}
+                        {uploading ? "Uploading…" : "Upload PDFs"}
                       </Button>
                     </div>
                   </div>
@@ -355,7 +394,7 @@ const AdminDashboard = () => {
                           <TableCell className="text-muted-foreground">{rc.race_date}</TableCell>
                           <TableCell className="font-mono-data text-foreground">{rc.num_races ?? "—"}</TableCell>
                           <TableCell>
-                            <Button variant="ghost" size="icon" onClick={() => handleDeleteRacecard(rc.id, rc.file_url)} className="text-destructive hover:text-destructive/80">
+                            <Button variant="ghost" size="icon" onClick={() => handleDeleteRacecard(rc.id)} className="text-destructive hover:text-destructive/80">
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </TableCell>
