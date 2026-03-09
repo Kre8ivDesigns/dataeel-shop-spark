@@ -29,14 +29,6 @@ const stats = [
   { label: "Total Saved", value: "$340", icon: DollarSign, trend: "vs traditional methods", trendUp: true },
 ];
 
-const quickActions = [
-  { label: "Download Today's Cards", icon: Zap, href: "/racecards", primary: true },
-  { label: "View Live Races", icon: Eye, href: "#", live: true },
-  { label: "Buy Credits", icon: ShoppingCart, href: "/buy-credits" },
-  { label: "Manage Account", icon: Settings, href: "/account-settings" },
-  { label: "Billing", icon: CreditCard, onClick: openCustomerPortal, href: "#" },
-];
-
 const recentDownloads = [
   { track: "Gulfstream Park", date: "Feb 9, 2026", races: 11, time: "2 hours ago" },
   { track: "Santa Anita", date: "Feb 9, 2026", races: 9, time: "3 hours ago" },
@@ -69,6 +61,15 @@ const Dashboard = () => {
       window.open(data.url, "_blank");
     }
   };
+
+  const quickActions = [
+    { label: "Download Today's Cards", icon: Zap, href: "/racecards", primary: true },
+    { label: "View Live Races", icon: Eye, href: "#", live: true },
+    { label: "Buy Credits", icon: ShoppingCart, href: "/buy-credits" },
+    { label: "Manage Account", icon: Settings, href: "/account-settings" },
+    { label: "Billing", icon: CreditCard, onClick: openCustomerPortal, href: "#" },
+  ];
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
