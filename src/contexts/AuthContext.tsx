@@ -27,8 +27,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const checkAdmin = async (userId: string) => {
-    const { data } = await supabase.rpc("is_admin", { _user_id: userId });
-    setIsAdmin(!!data);
+    try {
+      const timeout = new Promise<{ data: null }>((resolve) =>
+        setTimeout(() => resolve({ data: null }), 5000)
+      );
+      const result = await Promise.race([
+        supabase.rpc("is_admin", { _user_id: userId }),
+        timeout,
+      ]);
+      setIsAdmin(!!(result as { data: unknown }).data);
+    } catch {
+      setIsAdmin(false);
+    }
   };
 
   useEffect(() => {
@@ -38,7 +48,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          checkAdmin(session.user.id); // intentionally not awaited — don't block loading
+          await checkAdmin(session.user.id);
         }
       } catch (error: unknown) {
         console.error("Error fetching session:", error);

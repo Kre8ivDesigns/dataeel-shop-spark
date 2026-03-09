@@ -28,6 +28,8 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null);
   const [creditsToGive, setCreditsToGive] = useState(0);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [givingCredits, setGivingCredits] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -121,6 +123,29 @@ const AdminDashboard = () => {
     e.target.value = "";
   };
 
+  const handleGiveCredits = async () => {
+    if (!selectedCustomer || creditsToGive <= 0) return;
+    setGivingCredits(true);
+    const { data: bal } = await supabase
+      .from("credit_balances")
+      .select("credits")
+      .eq("user_id", selectedCustomer.id)
+      .single();
+    const current = bal?.credits ?? 0;
+    const { error } = await supabase
+      .from("credit_balances")
+      .upsert({ user_id: selectedCustomer.id, credits: current + creditsToGive }, { onConflict: "user_id" });
+    setGivingCredits(false);
+    if (error) {
+      toast({ title: "Failed to give credits", description: sanitizeError(error), variant: "destructive" });
+    } else {
+      toast({ title: `Gave ${creditsToGive} credits to ${selectedCustomer.full_name || selectedCustomer.email}` });
+      setDialogOpen(false);
+      setCreditsToGive(0);
+      setSelectedCustomer(null);
+    }
+  };
+
   const handleDeleteRacecard = async (id: string, fileUrl: string) => {
     await supabase.storage.from("racecards").remove([fileUrl]);
     await supabase.from("racecards").delete().eq("id", id);
@@ -171,19 +196,26 @@ const AdminDashboard = () => {
             ))}
           </div>
 
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Give Credits to {selectedCustomer?.full_name}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <Input
-                type="number"
-                value={creditsToGive}
-                onChange={(e) => setCreditsToGive(parseInt(e.target.value))}
-              />
-              <Button>Confirm</Button>
-            </div>
-          </DialogContent>
+          {/* Give Credits Dialog (controlled) */}
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Give Credits to {selectedCustomer?.full_name || selectedCustomer?.email}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-2">
+                <Input
+                  type="number"
+                  min={1}
+                  value={creditsToGive}
+                  onChange={(e) => setCreditsToGive(Math.max(1, parseInt(e.target.value) || 0))}
+                  placeholder="Number of credits"
+                />
+                <Button onClick={handleGiveCredits} disabled={givingCredits || creditsToGive <= 0} className="w-full">
+                  {givingCredits ? "Adding…" : "Confirm"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           {/* Tabs */}
           <Tabs defaultValue="customers">
@@ -226,16 +258,12 @@ const AdminDashboard = () => {
                           <TableCell className="text-muted-foreground">{c.email}</TableCell>
                           <TableCell className="text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</TableCell>
                           <TableCell>
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="outline" size="sm" onClick={() => setSelectedCustomer(c)}>Give Credits</Button>
-                              </DialogTrigger>
-                            </Dialog>
+                            <Button variant="outline" size="sm" onClick={() => { setSelectedCustomer(c); setCreditsToGive(1); setDialogOpen(true); }}>Give Credits</Button>
                           </TableCell>
                         </TableRow>
                       ))}
                       {filteredCustomers.length === 0 && (
-                        <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-8">No customers found</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">No customers found</TableCell></TableRow>
                       )}
                     </TableBody>
                   </Table>
