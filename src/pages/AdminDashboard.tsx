@@ -154,15 +154,11 @@ const AdminDashboard = () => {
   const handleGiveCredits = async () => {
     if (!selectedCustomer || creditsToGive <= 0) return;
     setGivingCredits(true);
-    const { data: bal } = await supabase
-      .from("credit_balances")
-      .select("credits")
-      .eq("user_id", selectedCustomer.id)
-      .single();
-    const current = bal?.credits ?? 0;
-    const { error } = await supabase
-      .from("credit_balances")
-      .upsert({ user_id: selectedCustomer.id, credits: current + creditsToGive }, { onConflict: "user_id" });
+    // MED-04: atomic credit grant via RPC — no read-then-write race condition
+    const { error } = await supabase.rpc("admin_grant_credits", {
+      p_user_id: selectedCustomer.id,
+      p_credits: creditsToGive,
+    });
     setGivingCredits(false);
     if (error) {
       toast({ title: "Failed to give credits", description: sanitizeError(error), variant: "destructive" });

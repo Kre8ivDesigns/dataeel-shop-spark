@@ -1,17 +1,8 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+// Stripe calls this endpoint server-to-server — no CORS headers needed.
 import Stripe from "https://esm.sh/stripe@18.5.0";
-import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
-
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
+Deno.serve(async (req) => {
   const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
     apiVersion: "2025-08-27.basil",
   });
@@ -19,12 +10,12 @@ serve(async (req) => {
   const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
   if (!webhookSecret) {
     console.error("[stripe-webhook] STRIPE_WEBHOOK_SECRET not configured");
-    return new Response(JSON.stringify({ error: "Webhook not configured" }), { status: 500, headers: corsHeaders });
+    return new Response(JSON.stringify({ error: "Webhook not configured" }), { status: 500 });
   }
 
   const signature = req.headers.get("stripe-signature");
   if (!signature) {
-    return new Response(JSON.stringify({ error: "No signature" }), { status: 400, headers: corsHeaders });
+    return new Response(JSON.stringify({ error: "No signature" }), { status: 400 });
   }
 
   const body = await req.text();
@@ -33,11 +24,9 @@ serve(async (req) => {
   try {
     event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret);
   } catch (err) {
-    console.error("[stripe-webhook] Signature verification failed:", err);
-    return new Response(JSON.stringify({ error: "Invalid signature" }), { status: 400, headers: corsHeaders });
+    console.error("[stripe-webhook] Signature verification failed:", err instanceof Error ? err.message : "unknown");
+    return new Response(JSON.stringify({ error: "Invalid signature" }), { status: 400 });
   }
-
-  console.log("[stripe-webhook] Event received:", event.type);
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
@@ -47,45 +36,23 @@ serve(async (req) => {
     const amount = (session.amount_total || 0) / 100;
 
     if (!userId || credits <= 0) {
-      console.error("[stripe-webhook] Missing metadata:", { userId, credits });
-      return new Response(JSON.stringify({ error: "Invalid metadata" }), { status: 400, headers: corsHeaders });
+      console.error("[stripe-webhook] Missing or invalid metadata");
+      return new Response(JSON.stringify({ error: "Invalid metadata" }), { status: 400 });
     }
 
-    // Use service role to bypass RLS
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
       { auth: { persistSession: false } }
     );
 
-    // Get current balance
-    const { data: balance, error: balError } = await supabaseAdmin
-      .from("credit_balances")
-      .select("credits")
-      .eq("user_id", userId)
-      .single();
-
-    if (balError) {
-      console.error("[stripe-webhook] Error fetching balance:", balError);
-      return new Response(JSON.stringify({ error: "Balance lookup failed" }), { status: 500, headers: corsHeaders });
-    }
-
-    // Update credits
-    const { error: updateError } = await supabaseAdmin
-      .from("credit_balances")
-      .update({ credits: (balance?.credits || 0) + credits })
-      .eq("user_id", userId);
-
-    if (updateError) {
-      console.error("[stripe-webhook] Error updating credits:", updateError);
-      return new Response(JSON.stringify({ error: "Credit update failed" }), { status: 500, headers: corsHeaders });
-    }
-
-    // Record transaction
+    // IDEMPOTENCY: insert transaction first with unique stripe_session_id.
+    // If the event was already processed, the unique constraint will reject it.
     const { error: txError } = await supabaseAdmin
       .from("transactions")
       .insert({
         user_id: userId,
+        stripe_session_id: session.id,
         amount,
         credits,
         package_name: packageName,
@@ -93,14 +60,40 @@ serve(async (req) => {
       });
 
     if (txError) {
-      console.error("[stripe-webhook] Error recording transaction:", txError);
+      if (txError.code === "23505") {
+        // Duplicate — already processed. Return 200 to stop Stripe retries.
+        console.log("[stripe-webhook] Duplicate event ignored:", session.id);
+        return new Response(JSON.stringify({ received: true, duplicate: true }), { status: 200 });
+      }
+      console.error("[stripe-webhook] Transaction insert failed:", txError.code);
+      return new Response(JSON.stringify({ error: "Transaction recording failed" }), { status: 500 });
     }
 
-    console.log("[stripe-webhook] Credits added:", { userId, credits, packageName });
+    // Atomic credit update — no read-then-write race condition (CRIT-04)
+    const { error: creditError } = await supabaseAdmin.rpc("add_credits_atomic", {
+      p_user_id: userId,
+      p_credits: credits,
+    });
+
+    if (creditError) {
+      console.error("[stripe-webhook] Credit update failed:", creditError.code);
+      // Rollback the transaction record to allow a retry
+      await supabaseAdmin.from("transactions").delete().eq("stripe_session_id", session.id);
+      return new Response(JSON.stringify({ error: "Credit update failed" }), { status: 500 });
+    }
+
+    // Audit log
+    await supabaseAdmin.from("audit_log").insert({
+      actor_id: null,
+      action: "stripe.checkout.completed",
+      resource: "credit_balance",
+      resource_id: userId,
+      detail: { stripe_session_id: session.id, credits, amount, package_name: packageName },
+    });
   }
 
   return new Response(JSON.stringify({ received: true }), {
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" },
     status: 200,
   });
 });

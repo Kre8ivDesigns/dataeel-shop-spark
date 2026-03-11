@@ -1,67 +1,64 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+const ALLOWED_ORIGINS = [
+  "https://dataeel-shop-spark-three.vercel.app",
+  "https://dataeel-shop-spark.lovable.app",
+  "http://localhost:5173",
+  "http://localhost:3000",
+];
+
+function corsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get("origin") ?? "";
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "Vary": "Origin",
+  };
+}
 
 // ── AES-256-GCM helpers ─────────────────────────────────────────────────────
 
 function hexToBytes(hex: string): Uint8Array {
-  if (hex.length % 2 !== 0) throw new Error("Invalid hex string");
   const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16);
-  }
+  for (let i = 0; i < hex.length; i += 2) bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16);
   return bytes;
 }
 
 async function importKey(keyHex: string): Promise<CryptoKey> {
-  const keyBytes = hexToBytes(keyHex.slice(0, 64)); // 32 bytes = 256 bits
-  return crypto.subtle.importKey("raw", keyBytes, { name: "AES-GCM" }, false, [
-    "encrypt",
-    "decrypt",
-  ]);
+  return crypto.subtle.importKey("raw", hexToBytes(keyHex.slice(0, 64)), { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
 }
 
 async function encryptValue(plaintext: string, keyHex: string): Promise<string> {
-  const cryptoKey = await importKey(keyHex);
+  const key = await importKey(keyHex);
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const encoded = new TextEncoder().encode(plaintext);
-  const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, cryptoKey, encoded);
-  const combined = new Uint8Array(12 + ciphertext.byteLength);
+  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(plaintext));
+  const combined = new Uint8Array(12 + ct.byteLength);
   combined.set(iv, 0);
-  combined.set(new Uint8Array(ciphertext), 12);
+  combined.set(new Uint8Array(ct), 12);
   return btoa(String.fromCharCode(...combined));
 }
 
-async function decryptValue(ciphertextBase64: string, keyHex: string): Promise<string> {
-  const cryptoKey = await importKey(keyHex);
-  const combined = Uint8Array.from(atob(ciphertextBase64), (c) => c.charCodeAt(0));
-  const iv = combined.slice(0, 12);
-  const ciphertext = combined.slice(12);
-  const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, cryptoKey, ciphertext);
+async function decryptValue(b64: string, keyHex: string): Promise<string> {
+  const key = await importKey(keyHex);
+  const combined = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: combined.slice(0, 12) }, key, combined.slice(12));
   return new TextDecoder().decode(decrypted);
 }
 
 // ── Handler ──────────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders(req) });
 
+  const headers = { ...corsHeaders(req), "Content-Type": "application/json" };
   const respond = (body: unknown, status = 200) =>
-    new Response(JSON.stringify(body), {
-      status,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    new Response(JSON.stringify(body), { status, headers });
 
   try {
     const encryptionKey = Deno.env.get("APP_SETTINGS_ENCRYPTION_KEY");
     if (!encryptionKey || encryptionKey.length < 64) {
-      console.error("APP_SETTINGS_ENCRYPTION_KEY is missing or too short");
       return respond({ error: "Server misconfigured" }, 500);
     }
 
@@ -87,7 +84,7 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
-    // ── GET ────────────────────────────────────────────────────────────────
+    // ── GET: return presence + 4-char preview only — never full values ─────
     if (action === "get") {
       const { data: rows, error: fetchErr } = await supabaseAdmin
         .from("app_settings")
@@ -95,20 +92,33 @@ Deno.serve(async (req) => {
 
       if (fetchErr) return respond({ error: fetchErr.message }, 500);
 
-      const settings: Record<string, string> = {};
+      const settings: Record<string, { configured: boolean; preview: string | null }> = {};
       for (const row of rows ?? []) {
         try {
-          settings[row.key] = await decryptValue(row.encrypted_value, encryptionKey);
+          const value = await decryptValue(row.encrypted_value, encryptionKey);
+          const configured = value.length > 0;
+          const preview = configured
+            ? (value.length > 4 ? `••••••••${value.slice(-4)}` : "••••")
+            : null;
+          settings[row.key] = { configured, preview };
         } catch {
-          // Skip rows that fail to decrypt (e.g. encrypted with old key)
-          settings[row.key] = "";
+          settings[row.key] = { configured: false, preview: null };
         }
       }
+
+      // Audit: admin viewed settings
+      await supabaseAdmin.from("audit_log").insert({
+        actor_id: user.id,
+        action: "admin.settings.viewed",
+        resource: "app_settings",
+        resource_id: null,
+        detail: { keys_viewed: (rows ?? []).map((r) => r.key) },
+      });
 
       return respond({ settings });
     }
 
-    // ── SET ────────────────────────────────────────────────────────────────
+    // ── SET: encrypt and upsert; empty string = skip (keep existing) ───────
     if (action === "set") {
       const { settings } = body as { settings: Record<string, string> };
       if (!settings || typeof settings !== "object") {
@@ -116,16 +126,14 @@ Deno.serve(async (req) => {
       }
 
       const upserts: { key: string; encrypted_value: string; updated_at: string }[] = [];
+      const updatedKeys: string[] = [];
 
       for (const [key, value] of Object.entries(settings)) {
         if (typeof key !== "string" || typeof value !== "string") continue;
-        // Empty string means "delete this key"
-        if (value === "") {
-          await supabaseAdmin.from("app_settings").delete().eq("key", key);
-          continue;
-        }
+        if (value === "") continue; // Empty = keep existing, do not delete
         const encrypted = await encryptValue(value, encryptionKey);
         upserts.push({ key, encrypted_value: encrypted, updated_at: new Date().toISOString() });
+        updatedKeys.push(key);
       }
 
       if (upserts.length > 0) {
@@ -135,12 +143,23 @@ Deno.serve(async (req) => {
         if (upsertErr) return respond({ error: upsertErr.message }, 500);
       }
 
+      // Audit: admin changed settings (log key names only, never values)
+      if (updatedKeys.length > 0) {
+        await supabaseAdmin.from("audit_log").insert({
+          actor_id: user.id,
+          action: "admin.settings.updated",
+          resource: "app_settings",
+          resource_id: null,
+          detail: { keys_updated: updatedKeys },
+        });
+      }
+
       return respond({ saved: true });
     }
 
     return respond({ error: `Unknown action: ${action}` }, 400);
   } catch (err) {
-    console.error("manage-app-settings error:", err);
+    console.error("manage-app-settings error:", err instanceof Error ? err.message : "unknown");
     return respond({ error: "Internal server error" }, 500);
   }
 });
