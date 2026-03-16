@@ -16,6 +16,7 @@ import Invoices from "./pages/Invoices";
 import AdminSettings from "./pages/AdminSettings";
 import AdminCreditPackages from "./pages/AdminCreditPackages";
 import AccountSettings from "./pages/AccountSettings";
+import PageEditor from "./pages/PageEditor";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="/admin/credit-packages" element={<ProtectedRoute requireAdmin><AdminCreditPackages /></ProtectedRoute>} />
             <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
             <Route path="/account-settings" element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />
+            <Route path="/admin/page-editor" element={<ProtectedRoute requireAdmin><PageEditor /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

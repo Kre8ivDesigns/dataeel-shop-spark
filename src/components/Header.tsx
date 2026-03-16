@@ -167,6 +167,14 @@ export const Header = () => {
                           <Shield className="h-4 w-4" />
                           Credit Packages
                         </Link>
+                        <Link
+                          to="/admin/page-editor"
+                          onClick={() => setIsUserMenuOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2.5 text-sm text-primary hover:bg-muted transition-colors"
+                        >
+                          <Shield className="h-4 w-4" />
+                          Page Editor
+                        </Link>
                       </>
                     )}
                     <button
@@ -239,6 +247,11 @@ export const Header = () => {
                         <Link to="/admin/credit-packages" onClick={() => setIsMobileMenuOpen(false)}>
                           <Button variant="outline" className="w-full border-secondary text-primary gap-2">
                             <Shield className="h-4 w-4" /> Credit Packages
+                          </Button>
+                        </Link>
+                        <Link to="/admin/page-editor" onClick={() => setIsMobileMenuOpen(false)}>
+                          <Button variant="outline" className="w-full border-secondary text-primary gap-2">
+                            <Shield className="h-4 w-4" /> Page Editor
                           </Button>
                         </Link>
                       </>

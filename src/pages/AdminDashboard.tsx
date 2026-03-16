@@ -31,6 +31,10 @@ const AdminDashboard = () => {
   const [creditsToGive, setCreditsToGive] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [givingCredits, setGivingCredits] = useState(false);
+  const [createUserOpen, setCreateUserOpen] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
+  const [creatingUser, setCreatingUser] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -151,13 +155,30 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleCreateUser = async () => {
+    if (!newUserEmail || !newUserPassword) return;
+    setCreatingUser(true);
+    const { error } = await supabase.functions.invoke("admin-create-user", {
+      body: { email: newUserEmail, password: newUserPassword },
+    });
+    setCreatingUser(false);
+    if (error) {
+      toast({ title: "Failed to create user", description: sanitizeError(error), variant: "destructive" });
+    } else {
+      toast({ title: `User ${newUserEmail} created` });
+      setCreateUserOpen(false);
+      setNewUserEmail("");
+      setNewUserPassword("");
+      fetchData();
+    }
+  };
+
   const handleGiveCredits = async () => {
     if (!selectedCustomer || creditsToGive <= 0) return;
     setGivingCredits(true);
-    // MED-04: atomic credit grant via RPC — no read-then-write race condition
-    const { error } = await supabase.rpc("admin_grant_credits", {
-      p_user_id: selectedCustomer.id,
-      p_credits: creditsToGive,
+    const { error } = await supabase.rpc("admin_add_credits", {
+      _user_id: selectedCustomer.id,
+      _amount: creditsToGive,
     });
     setGivingCredits(false);
     if (error) {
@@ -197,7 +218,32 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="pt-24 pb-16">
+      <Dialog open={createUserOpen} onOpenChange={setCreateUserOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New User</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-2">
+              <Input
+                type="email"
+                placeholder="Email"
+                value={newUserEmail}
+                onChange={(e) => setNewUserEmail(e.target.value)}
+              />
+              <Input
+                type="password"
+                placeholder="Password"
+                value={newUserPassword}
+                onChange={(e) => setNewUserPassword(e.target.value)}
+              />
+              <Button onClick={handleCreateUser} disabled={creatingUser || !newUserEmail || !newUserPassword} className="w-full">
+                {creatingUser ? "Creating…" : "Create User"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <main className="pt-24 pb-16">
         <div className="container mx-auto px-4">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
             <h1 className="text-3xl font-bold text-foreground font-heading">Admin Dashboard</h1>
@@ -266,6 +312,7 @@ const AdminDashboard = () => {
                         className="pl-9"
                       />
                     </div>
+                    <Button onClick={() => setCreateUserOpen(true)}>Create User</Button>
                   </div>
                 </CardHeader>
                 <CardContent>
