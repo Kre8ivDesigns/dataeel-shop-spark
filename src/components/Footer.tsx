@@ -16,9 +16,9 @@ const footerLinks = {
     { label: "Careers", href: "#" },
   ],
   legal: [
-    { label: "Terms & Conditions", href: "#" },
-    { label: "Privacy Policy", href: "#" },
-    { label: "Disclaimer", href: "#" },
+    { label: "Terms & Conditions", href: "/terms" },
+    { label: "Privacy Policy", href: "/privacy-policy" },
+    { label: "Disclaimer", href: "/disclaimer" },
     { label: "Responsible Gaming", href: "#" },
   ],
 };

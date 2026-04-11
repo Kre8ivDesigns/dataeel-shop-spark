@@ -17,6 +17,9 @@ import Invoices from "./pages/Invoices";
 import AdminSettings from "./pages/AdminSettings";
 import AdminCreditPackages from "./pages/AdminCreditPackages";
 import AccountSettings from "./pages/AccountSettings";
+import Terms from "./pages/Terms";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import Disclaimer from "./pages/Disclaimer";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { HomeSectionHashRedirect } from "./components/HomeSectionHashRedirect";
@@ -81,6 +84,9 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/disclaimer" element={<Disclaimer />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/buy-credits" element={<ProtectedRoute><BuyCredits /></ProtectedRoute>} />
               <Route path="/racecards" element={<ProtectedRoute><RaceCardsBrowse /></ProtectedRoute>} />
