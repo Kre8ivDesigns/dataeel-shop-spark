@@ -49,8 +49,8 @@ const RaceCardsBrowse = () => {
 
     // Fetch racecards for selected date
     const { data: cards } = await supabase
-      .from("racecards")
-      .select("*")
+      .from("racecards_public")
+      .select("id, track_name, track_code, race_date, num_races, file_name, uploaded_by, created_at, updated_at")
       .eq("race_date", selectedDate)
       .order("track_name");
 

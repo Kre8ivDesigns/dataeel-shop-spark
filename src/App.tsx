@@ -21,6 +21,14 @@ import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const PageEditor = lazy(() => import("./pages/PageEditor"));
+const AdminFinancials = lazy(() => import("./pages/AdminFinancials"));
+const AdminAnalytics = lazy(() => import("./pages/AdminAnalytics"));
+
+const adminChartFallback = (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+  </div>
+);
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
   constructor(props: { children: ReactNode }) {
@@ -77,6 +85,26 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
               <Route path="/admin/settings" element={<ProtectedRoute requireAdmin><AdminSettings /></ProtectedRoute>} />
+              <Route
+                path="/admin/financials"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <Suspense fallback={adminChartFallback}>
+                      <AdminFinancials />
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/analytics"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <Suspense fallback={adminChartFallback}>
+                      <AdminAnalytics />
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/admin/credit-packages" element={<ProtectedRoute requireAdmin><AdminCreditPackages /></ProtectedRoute>} />
               <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
               <Route path="/account-settings" element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />

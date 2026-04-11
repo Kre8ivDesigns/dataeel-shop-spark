@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Loader2, Eye, EyeOff, Save, CheckCircle2, XCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,6 +39,9 @@ interface SettingsForm {
   stripe_publishable_key: string;
   stripe_secret_key: string;
   stripe_webhook_secret: string;
+  google_analytics_measurement_id: string;
+  plausible_domain: string;
+  site_public_url: string;
 }
 
 const EMPTY_FORM: SettingsForm = {
@@ -56,6 +58,9 @@ const EMPTY_FORM: SettingsForm = {
   stripe_publishable_key: "",
   stripe_secret_key: "",
   stripe_webhook_secret: "",
+  google_analytics_measurement_id: "",
+  plausible_domain: "",
+  site_public_url: "",
 };
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -204,16 +209,18 @@ const AdminSettings = () => {
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-foreground">Admin Settings</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Values are encrypted with AES-256-GCM at rest. Leave a field blank to keep the existing value.
+              Secrets are encrypted with AES-256-GCM at rest. Leave a field blank to keep the existing value.
+              Edge Functions still read payment keys from Supabase secrets (<code className="text-xs bg-muted px-1 rounded">STRIPE_SECRET_KEY</code>, etc.); store duplicates here for a single admin record if you want.
             </p>
           </div>
 
           <Tabs defaultValue="openrouter">
-            <TabsList className="mb-4">
+            <TabsList className="mb-4 flex flex-wrap h-auto gap-1">
               <TabsTrigger value="openrouter">OpenRouter</TabsTrigger>
               <TabsTrigger value="smtp">SMTP</TabsTrigger>
               <TabsTrigger value="captcha">CAPTCHA</TabsTrigger>
               <TabsTrigger value="stripe">Stripe</TabsTrigger>
+              <TabsTrigger value="analytics">Analytics &amp; site</TabsTrigger>
             </TabsList>
 
             {/* ── OpenRouter ── */}
@@ -221,7 +228,10 @@ const AdminSettings = () => {
               <Card className="bg-card border-border">
                 <CardHeader>
                   <CardTitle className="text-foreground">OpenRouter</CardTitle>
-                  <CardDescription>AI model access via OpenRouter API.</CardDescription>
+                  <CardDescription>
+                    AI API for future server-side features. Requires <code className="text-xs bg-muted px-1 rounded">APP_SETTINGS_ENCRYPTION_KEY</code> on{" "}
+                    <code className="text-xs bg-muted px-1 rounded">manage-app-settings</code>.
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-1.5">
@@ -250,7 +260,9 @@ const AdminSettings = () => {
               <Card className="bg-card border-border">
                 <CardHeader>
                   <CardTitle className="text-foreground">SMTP</CardTitle>
-                  <CardDescription>Transactional email configuration.</CardDescription>
+                  <CardDescription>
+                    For custom mailers or future Edge Functions. Supabase Auth emails still use the project&apos;s Auth SMTP unless you change that in the Supabase dashboard.
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
@@ -337,12 +349,82 @@ const AdminSettings = () => {
                     <div className="flex items-center justify-between"><Label htmlFor="stripe-wh">Webhook Secret</Label><ConfiguredBadge status={status.stripe_webhook_secret} /></div>
                     <SecretInput id="stripe-wh" value={form.stripe_webhook_secret} placeholder="whsec_…" onChange={set("stripe_webhook_secret")} />
                   </div>
-                  <div className="rounded-md bg-muted/40 border border-border p-3 flex items-start gap-2 text-xs text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-                    Keys are encrypted with AES-256-GCM. The server never returns decrypted values — only a masked preview of the last 4 characters.
+                  <div className="rounded-md bg-muted/40 border border-border p-3 space-y-2 text-xs text-muted-foreground">
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                      <span>
+                        Keys are encrypted at rest. Checkout and webhooks use Supabase Edge Function secrets in production — configure{" "}
+                        <code className="bg-muted px-1 rounded">STRIPE_SECRET_KEY</code> and{" "}
+                        <code className="bg-muted px-1 rounded">STRIPE_WEBHOOK_SECRET</code> there, and point Stripe to your{" "}
+                        <code className="bg-muted px-1 rounded">stripe-webhook</code> URL.
+                      </span>
+                    </div>
                   </div>
                   <div className="pt-2 flex justify-end">
                     <SaveButton onClick={() => saveSection("stripe", ["stripe_publishable_key", "stripe_secret_key", "stripe_webhook_secret"])} saving={saving === "stripe"} />
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="analytics">
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle className="text-foreground">Analytics &amp; public site</CardTitle>
+                  <CardDescription>
+                    IDs for third-party analytics (not secret, but stored encrypted like other keys). To load them in the storefront, mirror into Vite env vars (<code className="text-xs bg-muted px-1 rounded">VITE_GA_MEASUREMENT_ID</code>,{" "}
+                    <code className="text-xs bg-muted px-1 rounded">VITE_PLAUSIBLE_DOMAIN</code>) or wire a small loader later.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="ga-id">Google Analytics measurement ID</Label>
+                      <ConfiguredBadge status={status.google_analytics_measurement_id} />
+                    </div>
+                    <Input
+                      id="ga-id"
+                      value={form.google_analytics_measurement_id}
+                      placeholder="G-XXXXXXXXXX"
+                      onChange={(e) => set("google_analytics_measurement_id")(e.target.value)}
+                      className="font-mono text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="plausible-domain">Plausible domain</Label>
+                      <ConfiguredBadge status={status.plausible_domain} />
+                    </div>
+                    <Input
+                      id="plausible-domain"
+                      value={form.plausible_domain}
+                      placeholder="dataeel.com"
+                      onChange={(e) => set("plausible_domain")(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="site-url">Public site URL</Label>
+                      <ConfiguredBadge status={status.site_public_url} />
+                    </div>
+                    <Input
+                      id="site-url"
+                      value={form.site_public_url}
+                      placeholder="https://www.dataeel.com"
+                      onChange={(e) => set("site_public_url")(e.target.value)}
+                    />
+                  </div>
+                  <div className="pt-2 flex justify-end">
+                    <SaveButton
+                      onClick={() =>
+                        saveSection("analytics", [
+                          "google_analytics_measurement_id",
+                          "plausible_domain",
+                          "site_public_url",
+                        ])
+                      }
+                      saving={saving === "analytics"}
+                    />
                   </div>
                 </CardContent>
               </Card>

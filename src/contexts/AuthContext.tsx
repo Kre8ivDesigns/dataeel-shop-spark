@@ -28,15 +28,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const checkAdmin = async (userId: string) => {
     try {
-      const timeout = new Promise<{ data: null }>((resolve) =>
-        setTimeout(() => resolve({ data: null }), 5000)
-      );
-      const result = await Promise.race([
-        supabase.rpc("is_admin", { _user_id: userId }),
-        timeout,
-      ]);
-      setIsAdmin(!!(result as { data: unknown }).data);
-    } catch {
+      const { data, error } = await supabase.rpc("is_admin", { _user_id: userId });
+      if (error) {
+        console.error("is_admin RPC failed:", error.message);
+        setIsAdmin(false);
+        return;
+      }
+      setIsAdmin(!!data);
+    } catch (e) {
+      console.error("is_admin RPC error:", e);
       setIsAdmin(false);
     }
   };

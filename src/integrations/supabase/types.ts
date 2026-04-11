@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_log: {
+        Row: {
+          id: string
+          actor_id: string | null
+          action: string
+          resource: string
+          resource_id: string | null
+          detail: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          actor_id?: string | null
+          action: string
+          resource: string
+          resource_id?: string | null
+          detail?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          actor_id?: string | null
+          action?: string
+          resource?: string
+          resource_id?: string | null
+          detail?: Json | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       credit_balances: {
         Row: {
           credits: number
@@ -138,6 +168,7 @@ export type Database = {
           id: string
           package_name: string
           status: string
+          stripe_session_id: string | null
           user_id: string
         }
         Insert: {
@@ -147,6 +178,7 @@ export type Database = {
           id?: string
           package_name: string
           status?: string
+          stripe_session_id?: string | null
           user_id: string
         }
         Update: {
@@ -156,6 +188,7 @@ export type Database = {
           id?: string
           package_name?: string
           status?: string
+          stripe_session_id?: string | null
           user_id?: string
         }
         Relationships: []
@@ -183,7 +216,20 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      racecards_public: {
+        Row: {
+          id: string
+          track_name: string
+          track_code: string
+          race_date: string
+          num_races: number | null
+          file_name: string
+          uploaded_by: string
+          created_at: string
+          updated_at: string
+        }
+        Relationships: []
+      }
     }
     Functions: {
       deduct_credit_if_sufficient: {

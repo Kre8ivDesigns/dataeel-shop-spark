@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
@@ -10,8 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Users, CreditCard, FileText, Upload, Trash2, Search, RefreshCw } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Users, CreditCard, FileText, Upload, Trash2, Search, RefreshCw, DollarSign, BarChart3 } from "lucide-react";
 import { sanitizeError } from "@/lib/errorHandler";
 import { motion } from "framer-motion";
 
@@ -177,7 +177,7 @@ const AdminDashboard = () => {
     if (!selectedCustomer || creditsToGive <= 0) return;
     setGivingCredits(true);
     const { error } = await supabase.rpc("admin_add_credits", {
-      _user_id: selectedCustomer.id,
+      _user_id: selectedCustomer.user_id,
       _amount: creditsToGive,
     });
     setGivingCredits(false);
@@ -251,7 +251,7 @@ const AdminDashboard = () => {
           </motion.div>
 
           {/* Stats */}
-          <div className="grid sm:grid-cols-3 gap-4 mb-8">
+          <div className="grid sm:grid-cols-3 gap-4 mb-6">
             {stats.map((s, i) => (
               <motion.div key={s.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
                 <Card className="bg-card border-border">
@@ -267,6 +267,35 @@ const AdminDashboard = () => {
                 </Card>
               </motion.div>
             ))}
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4 mb-8">
+            <Link to="/admin/financials">
+              <Card className="bg-card border-border hover:border-primary/40 transition-colors cursor-pointer h-full">
+                <CardContent className="flex items-center gap-4 p-5">
+                  <div className="w-11 h-11 rounded-lg bg-primary/15 flex items-center justify-center">
+                    <DollarSign className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-foreground">Financial dashboard</div>
+                    <div className="text-xs text-muted-foreground">Revenue, charts, CSV export</div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link to="/admin/analytics">
+              <Card className="bg-card border-border hover:border-primary/40 transition-colors cursor-pointer h-full">
+                <CardContent className="flex items-center gap-4 p-5">
+                  <div className="w-11 h-11 rounded-lg bg-info/15 flex items-center justify-center">
+                    <BarChart3 className="h-5 w-5 text-info" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-foreground">Site analytics</div>
+                    <div className="text-xs text-muted-foreground">Signups, downloads, audit log</div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
 
           {/* Give Credits Dialog (controlled) */}
@@ -294,7 +323,6 @@ const AdminDashboard = () => {
           <Tabs defaultValue="customers">
             <TabsList className="mb-6">
               <TabsTrigger value="customers">Customers</TabsTrigger>
-              <TabsTrigger value="transactions">Transactions</TabsTrigger>
               <TabsTrigger value="racecards">RaceCards</TabsTrigger>
             </TabsList>
 
@@ -338,43 +366,6 @@ const AdminDashboard = () => {
                       ))}
                       {filteredCustomers.length === 0 && (
                         <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">No customers found</TableCell></TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="transactions">
-              <Card className="bg-card border-border">
-                <CardHeader><CardTitle className="text-foreground">Transactions</CardTitle></CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Package</TableHead>
-                        <TableHead>Credits</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Date</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {transactions.map((t) => (
-                        <TableRow key={t.id}>
-                          <TableCell className="font-medium text-foreground">{t.package_name}</TableCell>
-                          <TableCell className="font-mono-data text-primary">{t.credits}</TableCell>
-                          <TableCell className="font-mono-data text-foreground">${Number(t.amount).toFixed(2)}</TableCell>
-                          <TableCell>
-                            <span className={`text-xs px-2 py-1 rounded-full font-medium ${t.status === "completed" ? "bg-primary/20 text-primary" : "bg-warning/20 text-warning"}`}>
-                              {t.status}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">{new Date(t.created_at).toLocaleDateString()}</TableCell>
-                        </TableRow>
-                      ))}
-                      {transactions.length === 0 && (
-                        <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">No transactions yet</TableCell></TableRow>
                       )}
                     </TableBody>
                   </Table>

@@ -8,6 +8,9 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    // Codespaces use *.github.dev; without this Vite may reject the Host header and the bundle
+    // never loads (empty #root → solid background only).
+    allowedHosts: [".github.dev"],
     hmr: {
       overlay: false,
     },

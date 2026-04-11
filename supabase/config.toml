@@ -1,5 +1,10 @@
 project_id = "uhalsigyxvshlnlagtwt"
 
+# CORS + Stripe return URLs: set Edge Function secret ALLOWED_ORIGINS when you have a real domain.
+# Dashboard: Project Settings → Edge Functions → Secrets.
+# Example: ALLOWED_ORIGINS=https://www.example.com,https://example.com,https://app.vercel.app
+# (scheme required, no trailing slash, comma-separated). See supabase/functions/_shared/cors.ts.
+
 # stripe-webhook is called server-to-server by Stripe — no JWT
 [functions.stripe-webhook]
 verify_jwt = false

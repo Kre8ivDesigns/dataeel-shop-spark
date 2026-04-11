@@ -1,24 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { S3Client, GetObjectCommand } from "https://esm.sh/@aws-sdk/client-s3@3";
 import { getSignedUrl } from "https://esm.sh/@aws-sdk/s3-request-presigner@3";
-
-const ALLOWED_ORIGINS = [
-  "https://dataeel-shop-spark-three.vercel.app",
-  "https://dataeel-shop-spark.lovable.app",
-  "http://localhost:5173",
-  "http://localhost:3000",
-];
-
-function getCorsHeaders(req: Request): Record<string, string> {
-  const origin = req.headers.get("origin") ?? "";
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
-  return {
-    "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Headers":
-      "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-    "Vary": "Origin",
-  };
-}
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 Deno.serve(async (req) => {
   const cors = getCorsHeaders(req);
@@ -129,6 +112,7 @@ Deno.serve(async (req) => {
       Bucket: Deno.env.get("AWS_S3_BUCKET")!,
       Key: racecard.file_url,
       ResponseContentDisposition: `attachment; filename="${racecard.file_name}"`,
+      ResponseCacheControl: "private, no-store, max-age=0",
     });
 
     let signedUrl: string;

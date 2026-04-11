@@ -65,9 +65,9 @@ export const Hero = () => {
         <div className="max-w-4xl mx-auto text-center">
           {/* Main Headline */}
           <motion.h1
-            initial={{ opacity: 0, y: 30 }}
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
+            transition={{ duration: 0.5 }}
             className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-foreground leading-tight mb-6 font-heading tracking-tight"
           >
             Win More. Bet Smarter.
@@ -75,9 +75,9 @@ export const Hero = () => {
 
           {/* Sub-headline */}
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
+            transition={{ duration: 0.5 }}
             className="text-lg md:text-xl text-foreground/70 max-w-2xl mx-auto mb-4"
           >
             How about a simplified and honest approach to Horse Racing?
@@ -87,9 +87,9 @@ export const Hero = () => {
 
           {/* Tagline */}
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.5 }}
+            transition={{ duration: 0.5 }}
             className="text-base text-muted-foreground italic mb-10"
           >
             Horse Racing Simplified®
@@ -97,9 +97,9 @@ export const Hero = () => {
 
           {/* CTAs */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.6 }}
+            transition={{ duration: 0.5 }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12"
           >
             <Link to="/racecards">
@@ -126,9 +126,9 @@ export const Hero = () => {
 
           {/* Trust Badges */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.8 }}
+            transition={{ duration: 0.5 }}
             className="flex flex-wrap items-center justify-center gap-4 md:gap-6"
           >
             {trustBadges.map((badge) => (
@@ -145,9 +145,9 @@ export const Hero = () => {
 
         {/* Scroll Indicator */}
         <motion.div
-          initial={{ opacity: 0 }}
+          initial={false}
           animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 1.2 }}
+          transition={{ duration: 0.4 }}
           className="absolute bottom-8 left-1/2 -translate-x-1/2"
         >
           <div className="flex flex-col items-center gap-2 text-foreground/40">
