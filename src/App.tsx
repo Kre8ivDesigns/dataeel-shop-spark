@@ -19,6 +19,7 @@ import AdminCreditPackages from "./pages/AdminCreditPackages";
 import AccountSettings from "./pages/AccountSettings";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { HomeSectionHashRedirect } from "./components/HomeSectionHashRedirect";
 
 const PageEditor = lazy(() => import("./pages/PageEditor"));
 const AdminFinancials = lazy(() => import("./pages/AdminFinancials"));
@@ -75,6 +76,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
+            <HomeSectionHashRedirect />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/pricing" element={<Pricing />} />

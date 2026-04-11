@@ -57,6 +57,8 @@ Each phase must pass its **exit criteria** before starting the next. Prefer addi
 
 **Goal:** Purchase path and credit balance updates work end-to-end in a test/stripe-cli environment.
 
+**Deploy:** Stripe-related Edge Functions (`list-invoices`, `customer-portal`, `create-checkout-session`, `stripe-webhook`) must exist on the **same** Supabase project as `VITE_SUPABASE_URL`. If `/invoices` shows errors and the browser console reports CORS with **404** on `.../functions/v1/list-invoices`, the function is missing on that project — deploy from the repo: `supabase functions deploy list-invoices` (and redeploy others after changing `_shared/cors.ts`).
+
 **Manual**
 
 - [ ] `/buy-credits` loads for a logged-in user with sufficient setup.

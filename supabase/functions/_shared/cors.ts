@@ -38,8 +38,10 @@ export function getCorsHeaders(req: Request): Record<string, string> {
   const allowedOrigin = allowed.includes(origin) ? origin : allowed[0] ?? "*";
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers":
       "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
   };
 }

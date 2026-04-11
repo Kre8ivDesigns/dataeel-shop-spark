@@ -5,6 +5,7 @@ import { Footer } from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { sanitizeError } from "@/lib/errorHandler";
+import { describeFunctionInvokeError } from "@/lib/edgeFunctionErrors";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Download, ExternalLink, FileText, CreditCard, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -45,7 +46,11 @@ const Invoices = () => {
     setLoading(true);
     const { data, error } = await supabase.functions.invoke("list-invoices");
     if (error) {
-      toast({ title: "Error loading invoices", description: sanitizeError(error), variant: "destructive" });
+      toast({
+        title: "Error loading invoices",
+        description: describeFunctionInvokeError("list-invoices", error),
+        variant: "destructive",
+      });
     } else {
       setInvoices(data?.invoices || []);
     }
@@ -59,7 +64,7 @@ const Invoices = () => {
     if (error || data?.error) {
       toast({
         title: "Unable to open billing portal",
-        description: data?.error || sanitizeError(error),
+        description: data?.error || describeFunctionInvokeError("customer-portal", error),
         variant: "destructive",
       });
     } else if (data?.url) {

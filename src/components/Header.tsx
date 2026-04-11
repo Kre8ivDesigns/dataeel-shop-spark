@@ -19,11 +19,11 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
   { label: "Home", href: "/" },
-  { label: "How It Works", href: "#how-it-works" },
-  { label: "Results", href: "#results" },
+  { label: "How It Works", href: "/#how-it-works" },
+  { label: "Results", href: "/#results" },
   { label: "RaceCards", href: "/racecards" },
   { label: "Pricing", href: "/pricing" },
-  { label: "About", href: "#about" },
+  { label: "About", href: "/#about" },
   { label: "Contact", href: "/contact" },
 ];
 
@@ -51,14 +51,6 @@ export const Header = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleNavClick = (href: string) => {
-    setIsMobileMenuOpen(false);
-    if (href.startsWith("#")) {
-      const element = document.querySelector(href);
-      if (element) element.scrollIntoView({ behavior: "smooth" });
-    }
-  };
-
   const handleSignOut = async () => {
     setIsUserMenuOpen(false);
     setIsMobileMenuOpen(false);
@@ -71,25 +63,10 @@ export const Header = () => {
       ? "block text-foreground font-medium py-2 hover:text-primary transition-colors"
       : "nav-link";
 
-    if (item.href.startsWith("/")) {
-      return (
-        <Link key={item.label} to={item.href} onClick={() => setIsMobileMenuOpen(false)} className={cls}>
-          {item.label}
-        </Link>
-      );
-    }
     return (
-      <a
-        key={item.label}
-        href={item.href}
-        onClick={(e) => {
-          if (item.href.startsWith("#")) { e.preventDefault(); }
-          handleNavClick(item.href);
-        }}
-        className={cls}
-      >
+      <Link key={item.label} to={item.href} onClick={() => setIsMobileMenuOpen(false)} className={cls}>
         {item.label}
-      </a>
+      </Link>
     );
   };
 

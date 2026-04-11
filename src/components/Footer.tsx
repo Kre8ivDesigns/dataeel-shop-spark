@@ -4,14 +4,14 @@ import logo from "@/assets/dataeel-logo.png";
 
 const footerLinks = {
   product: [
-    { label: "How It Works", href: "#how-it-works" },
-    { label: "RaceCards", href: "#racecards" },
+    { label: "How It Works", href: "/#how-it-works" },
+    { label: "RaceCards", href: "/#racecards" },
     { label: "Pricing", href: "/pricing" },
-    { label: "Results", href: "#results" },
+    { label: "Results", href: "/#results" },
   ],
   company: [
-    { label: "About Us", href: "#about" },
-    { label: "FAQ", href: "#faq" },
+    { label: "About Us", href: "/#about" },
+    { label: "FAQ", href: "/#faq" },
     { label: "Contact", href: "/contact" },
     { label: "Careers", href: "#" },
   ],
