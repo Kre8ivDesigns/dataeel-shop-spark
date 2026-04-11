@@ -32,6 +32,7 @@ import {
   YAxis,
 } from "recharts";
 import { countByDay, filterSince } from "@/lib/adminCharts";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const RANGE_OPTIONS = [
   { value: "30", label: "Last 30 days" },
@@ -49,6 +50,15 @@ type AuditRow = {
   actor_id: string | null;
 };
 
+function describeAuditLogFetchError(err: { code?: string; message?: string }): string {
+  const code = err.code ?? "";
+  const msg = err.message ?? "";
+  if (code === "PGRST205" || /Could not find the table.*audit_log/i.test(msg)) {
+    return "The audit_log table is not on this Supabase database (PostgREST PGRST205). Link the CLI to this project and run supabase db push, or execute supabase/migrations/20260310000000_security_hardening.sql in the SQL editor.";
+  }
+  return msg || "Could not load the audit log.";
+}
+
 const AdminAnalytics = () => {
   const { isAdmin } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -56,6 +66,7 @@ const AdminAnalytics = () => {
   const [profiles, setProfiles] = useState<{ created_at: string }[]>([]);
   const [downloads, setDownloads] = useState<{ created_at: string }[]>([]);
   const [audit, setAudit] = useState<AuditRow[]>([]);
+  const [auditError, setAuditError] = useState<string | null>(null);
 
   const days = parseInt(range, 10);
 
@@ -72,7 +83,13 @@ const AdminAnalytics = () => {
 
     setProfiles(profRes.data ?? []);
     setDownloads(dlRes.data ?? []);
-    setAudit((auditRes.data as AuditRow[]) ?? []);
+    if (auditRes.error) {
+      setAudit([]);
+      setAuditError(describeAuditLogFetchError(auditRes.error));
+    } else {
+      setAuditError(null);
+      setAudit((auditRes.data as AuditRow[]) ?? []);
+    }
     setLoading(false);
   }, []);
 
@@ -218,7 +235,13 @@ const AdminAnalytics = () => {
                   <CardTitle className="text-foreground">Audit log</CardTitle>
                   <CardDescription>Security and admin actions (newest first)</CardDescription>
                 </CardHeader>
-                <CardContent className="overflow-x-auto">
+                <CardContent className="overflow-x-auto space-y-4">
+                  {auditError ? (
+                    <Alert variant="destructive">
+                      <AlertTitle>Audit log unavailable</AlertTitle>
+                      <AlertDescription>{auditError}</AlertDescription>
+                    </Alert>
+                  ) : null}
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -244,7 +267,7 @@ const AdminAnalytics = () => {
                           </TableCell>
                         </TableRow>
                       ))}
-                      {audit.length === 0 && (
+                      {audit.length === 0 && !auditError && (
                         <TableRow>
                           <TableCell colSpan={4} className="text-center text-muted-foreground py-10">
                             No audit entries yet

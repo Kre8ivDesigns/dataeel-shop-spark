@@ -5,6 +5,7 @@ Use this when standing up or auditing an environment so **database, S3 files, Ed
 ## 1. Database (Supabase Postgres)
 
 - [ ] Apply all migrations from `supabase/migrations/` (local: `supabase db push`; hosted: CI or Dashboard SQL).
+- [ ] If the API logs **404** / **PGRST205** on `GET /rest/v1/audit_log`, the `audit_log` table was never created on that project. Apply at least `20260310000000_security_hardening.sql` (creates `public.audit_log` + admin-read RLS), or run a full `supabase db push` so schema matches the app.
 - [ ] Confirm extensions/policies match expectations: `racecards`, `racecards_public`, `metadata` columns, `site_content`, RLS on sensitive tables.
 - [ ] **Auth**: email provider or SSO configured; site URL / redirect URLs set.
 
