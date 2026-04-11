@@ -21,12 +21,17 @@ import Terms from "./pages/Terms";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Disclaimer from "./pages/Disclaimer";
 import NotFound from "./pages/NotFound";
+import BettingBasics from "./pages/BettingBasics";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { HomeSectionHashRedirect } from "./components/HomeSectionHashRedirect";
+import { DataeelAiAssistant } from "./components/DataeelAiAssistant";
 
 const PageEditor = lazy(() => import("./pages/PageEditor"));
 const AdminFinancials = lazy(() => import("./pages/AdminFinancials"));
 const AdminAnalytics = lazy(() => import("./pages/AdminAnalytics"));
+const AdminSupport = lazy(() => import("./pages/AdminSupport"));
+const AdminReports = lazy(() => import("./pages/AdminReports"));
+const AdminPages = lazy(() => import("./pages/AdminPages"));
 
 const adminChartFallback = (
   <div className="min-h-screen flex items-center justify-center bg-background">
@@ -69,7 +74,15 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
   }
 }
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,
+      gcTime: 30 * 60_000,
+      retry: 1,
+    },
+  },
+});
 
 const App = () => (
   <ErrorBoundary>
@@ -84,6 +97,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/betting-basics" element={<BettingBasics />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/disclaimer" element={<Disclaimer />} />
@@ -114,6 +128,36 @@ const App = () => (
                 }
               />
               <Route path="/admin/credit-packages" element={<ProtectedRoute requireAdmin><AdminCreditPackages /></ProtectedRoute>} />
+              <Route
+                path="/admin/support"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <Suspense fallback={adminChartFallback}>
+                      <AdminSupport />
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/reports"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <Suspense fallback={adminChartFallback}>
+                      <AdminReports />
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/pages"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <Suspense fallback={adminChartFallback}>
+                      <AdminPages />
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
               <Route path="/account-settings" element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />
               <Route path="/admin/page-editor" element={
@@ -126,6 +170,7 @@ const App = () => (
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <DataeelAiAssistant />
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>

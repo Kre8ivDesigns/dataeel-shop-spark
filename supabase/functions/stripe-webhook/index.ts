@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
 
     // IDEMPOTENCY: insert transaction first with unique stripe_session_id.
     // If the event was already processed, the unique constraint will reject it.
-    const { error: txError } = await supabaseAdmin
+    const { data: insertedTx, error: txError } = await supabaseAdmin
       .from("transactions")
       .insert({
         user_id: userId,
@@ -57,7 +57,9 @@ Deno.serve(async (req) => {
         credits,
         package_name: packageName,
         status: "completed",
-      });
+      })
+      .select("id")
+      .single();
 
     if (txError) {
       if (txError.code === "23505") {
@@ -73,6 +75,13 @@ Deno.serve(async (req) => {
     const { error: creditError } = await supabaseAdmin.rpc("add_credits_atomic", {
       p_user_id: userId,
       p_credits: credits,
+      p_entry_type: "purchase",
+      p_ref_id: insertedTx?.id ?? null,
+      p_meta: {
+        stripe_session_id: session.id,
+        package_name: packageName,
+        amount,
+      },
     });
 
     if (creditError) {

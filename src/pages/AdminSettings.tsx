@@ -11,57 +11,13 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Loader2, Eye, EyeOff, Save, CheckCircle2, XCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-// Keys that exist in the DB + their presence status
-interface SettingStatus {
-  configured: boolean;
-  preview: string | null; // e.g. "••••••••Vi9V"
-}
-
-interface SettingsStatus {
-  [key: string]: SettingStatus;
-}
-
-// The form state — empty string means "no change", non-empty means "update to this"
-interface SettingsForm {
-  openrouter_api_key: string;
-  openrouter_model: string;
-  smtp_host: string;
-  smtp_port: string;
-  smtp_user: string;
-  smtp_password: string;
-  smtp_from: string;
-  captcha_provider: string;
-  captcha_site_key: string;
-  captcha_secret_key: string;
-  stripe_publishable_key: string;
-  stripe_secret_key: string;
-  stripe_webhook_secret: string;
-  google_analytics_measurement_id: string;
-  plausible_domain: string;
-  site_public_url: string;
-}
-
-const EMPTY_FORM: SettingsForm = {
-  openrouter_api_key: "",
-  openrouter_model: "",
-  smtp_host: "",
-  smtp_port: "",
-  smtp_user: "",
-  smtp_password: "",
-  smtp_from: "",
-  captcha_provider: "",
-  captcha_site_key: "",
-  captcha_secret_key: "",
-  stripe_publishable_key: "",
-  stripe_secret_key: "",
-  stripe_webhook_secret: "",
-  google_analytics_measurement_id: "",
-  plausible_domain: "",
-  site_public_url: "",
-};
+import { AdminAiSettingsPanel } from "@/components/admin/AdminAiSettingsPanel";
+import {
+  EMPTY_SETTINGS_FORM,
+  type SettingStatus,
+  type SettingsForm,
+  type SettingsStatus,
+} from "@/components/admin/adminSettingsTypes";
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
@@ -127,7 +83,7 @@ const SaveButton = ({ onClick, saving }: { onClick: () => void; saving: boolean 
 
 const AdminSettings = () => {
   const [status, setStatus] = useState<SettingsStatus>({});
-  const [form, setForm] = useState<SettingsForm>(EMPTY_FORM);
+  const [form, setForm] = useState<SettingsForm>(EMPTY_SETTINGS_FORM);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
 
@@ -171,7 +127,14 @@ const AdminSettings = () => {
       toast.success("Settings saved");
       // Clear saved fields from the form and refresh status
       const cleared = { ...form };
-      keys.forEach((k) => { cleared[k] = ""; });
+      keys.forEach((k) => {
+        const key = k as keyof SettingsForm;
+        if (key === "ai_chat_provider") {
+          cleared[key] = form[key] || EMPTY_SETTINGS_FORM.ai_chat_provider;
+          return;
+        }
+        cleared[key] = "";
+      });
       setForm(cleared);
       fetchStatus();
     } catch (err: any) {
@@ -197,7 +160,7 @@ const AdminSettings = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <main className="pt-24 pb-16">
-        <div className="container mx-auto px-4 max-w-3xl">
+        <div className="container mx-auto px-4 max-w-4xl">
           <Link
             to="/admin"
             className="inline-flex items-center gap-2 text-foreground/50 hover:text-foreground mb-6 transition-colors text-sm"
@@ -214,45 +177,41 @@ const AdminSettings = () => {
             </p>
           </div>
 
-          <Tabs defaultValue="openrouter">
+          <Tabs defaultValue="ai">
             <TabsList className="mb-4 flex flex-wrap h-auto gap-1">
-              <TabsTrigger value="openrouter">OpenRouter</TabsTrigger>
+              <TabsTrigger value="ai">AI providers</TabsTrigger>
               <TabsTrigger value="smtp">SMTP</TabsTrigger>
               <TabsTrigger value="captcha">CAPTCHA</TabsTrigger>
               <TabsTrigger value="stripe">Stripe</TabsTrigger>
               <TabsTrigger value="analytics">Analytics &amp; site</TabsTrigger>
             </TabsList>
 
-            {/* ── OpenRouter ── */}
-            <TabsContent value="openrouter">
-              <Card className="bg-card border-border">
-                <CardHeader>
-                  <CardTitle className="text-foreground">OpenRouter</CardTitle>
-                  <CardDescription>
-                    AI API for future server-side features. Requires <code className="text-xs bg-muted px-1 rounded">APP_SETTINGS_ENCRYPTION_KEY</code> on{" "}
-                    <code className="text-xs bg-muted px-1 rounded">manage-app-settings</code>.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="or-key">API Key</Label>
-                      <ConfiguredBadge status={status.openrouter_api_key} />
-                    </div>
-                    <SecretInput id="or-key" value={form.openrouter_api_key} placeholder="sk-or-v1-…" onChange={set("openrouter_api_key")} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="or-model">Default Model</Label>
-                      <ConfiguredBadge status={status.openrouter_model} />
-                    </div>
-                    <Input id="or-model" value={form.openrouter_model} placeholder="e.g. openai/gpt-4o" onChange={(e) => set("openrouter_model")(e.target.value)} />
-                  </div>
-                  <div className="pt-2 flex justify-end">
-                    <SaveButton onClick={() => saveSection("openrouter", ["openrouter_api_key", "openrouter_model"])} saving={saving === "openrouter"} />
-                  </div>
-                </CardContent>
-              </Card>
+            <TabsContent value="ai">
+              <p className="text-sm text-muted-foreground mb-4">
+                Racing assistant uses the <strong className="text-foreground">active provider</strong>. Keys are encrypted via{" "}
+                <code className="text-xs bg-muted px-1 rounded">manage-app-settings</code>. Deploy the{" "}
+                <code className="text-xs bg-muted px-1 rounded">ai-admin</code> and{" "}
+                <code className="text-xs bg-muted px-1 rounded">racing-assistant</code> Edge Functions.
+              </p>
+              <AdminAiSettingsPanel
+                status={status}
+                form={form}
+                set={set}
+                SecretInput={SecretInput}
+                ConfiguredBadge={ConfiguredBadge}
+                saving={saving === "ai"}
+                onSaveAi={() =>
+                  saveSection("ai", [
+                    "ai_chat_provider",
+                    "openrouter_api_key",
+                    "openrouter_model",
+                    "anthropic_api_key",
+                    "anthropic_model",
+                    "openai_api_key",
+                    "openai_model",
+                  ])
+                }
+              />
             </TabsContent>
 
             {/* ── SMTP ── */}

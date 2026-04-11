@@ -1,16 +1,14 @@
-import { useState, useEffect, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import {
   Download,
-  Eye,
-  MapPin,
-  Filter,
   CreditCard,
   Search,
   Loader2,
   CheckCircle,
+  Cloud,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -18,15 +16,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { format, addDays } from "date-fns";
+import { metadataListingLine, parseRacecardMetadata } from "@/lib/raceMetadata";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRacecardsPublicForDate } from "@/lib/queries/racecardsPublic";
+import { racecardDownloadKeys, userDashboardKeys } from "@/lib/queryKeys";
 
 const RaceCardsBrowse = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
-  const [credits, setCredits] = useState<number | null>(null);
-  const [racecards, setRacecards] = useState<any[]>([]);
-  const [downloads, setDownloads] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [selectedDateIndex, setSelectedDateIndex] = useState(0);
 
@@ -39,46 +38,44 @@ const RaceCardsBrowse = () => {
     ];
   }, []);
 
-  useEffect(() => {
-    fetchData();
-  }, [user, selectedDateIndex]);
+  const selectedDate = dayTabs[selectedDateIndex].date;
+  const { data: racecards = [], isLoading: cardsLoading } = useRacecardsPublicForDate(selectedDate);
 
-  const fetchData = async () => {
-    setLoading(true);
-    const selectedDate = dayTabs[selectedDateIndex].date;
-
-    // Fetch racecards for selected date
-    const { data: cards } = await supabase
-      .from("racecards_public")
-      .select("id, track_name, track_code, race_date, num_races, file_name, uploaded_by, created_at, updated_at")
-      .eq("race_date", selectedDate)
-      .order("track_name");
-
-    setRacecards(cards || []);
-
-    if (user) {
-      // Fetch credit balance
-      const { data: bal } = await supabase
+  const { data: credits = null } = useQuery({
+    queryKey: ["credit-balance", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
         .from("credit_balances")
         .select("credits")
-        .eq("user_id", user.id)
+        .eq("user_id", user!.id)
         .single();
-      setCredits(bal?.credits ?? 0);
+      return data?.credits ?? 0;
+    },
+    enabled: !!user,
+  });
 
-      // Fetch user's existing downloads
-      const { data: dl } = await supabase
+  const { data: downloadIds = [] } = useQuery({
+    queryKey: user ? racecardDownloadKeys.byUser(user.id) : ["racecard-downloads", "signed-out"],
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from("racecard_downloads")
         .select("racecard_id")
-        .eq("user_id", user.id);
-      setDownloads(new Set((dl || []).map((d: any) => d.racecard_id)));
-    }
+        .eq("user_id", user!.id);
+      if (error) throw error;
+      return (data ?? []).map((d) => d.racecard_id);
+    },
+    enabled: !!user,
+  });
 
-    setLoading(false);
-  };
+  const downloads = useMemo(() => new Set(downloadIds), [downloadIds]);
 
   const handleDownload = async (racecardId: string) => {
     if (!user) {
-      toast({ title: "Please sign in", description: "You need to be logged in to download racecards.", variant: "destructive" });
+      toast({
+        title: "Please sign in",
+        description: "You need to be logged in to download racecards.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -94,16 +91,15 @@ const RaceCardsBrowse = () => {
         return;
       }
 
-      // Update local state
-      if (!data.alreadyOwned) {
-        setCredits((prev) => (prev !== null ? prev - 1 : prev));
-      }
-      setDownloads((prev) => new Set(prev).add(racecardId));
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["credit-balance", user.id] }),
+        queryClient.invalidateQueries({ queryKey: racecardDownloadKeys.byUser(user.id) }),
+        queryClient.invalidateQueries({ queryKey: userDashboardKeys.detail(user.id) }),
+      ]);
 
-      // Trigger download
       window.open(data.signedUrl, "_blank");
       toast({ title: data.alreadyOwned ? "Re-downloading" : "Downloaded!", description: `${data.fileName}` });
-    } catch (err) {
+    } catch {
       toast({ title: "Error", description: "Something went wrong.", variant: "destructive" });
     } finally {
       setDownloading(null);
@@ -113,10 +109,11 @@ const RaceCardsBrowse = () => {
   const filtered = racecards.filter(
     (card) =>
       card.track_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      card.track_code.toLowerCase().includes(searchQuery.toLowerCase())
+      card.track_code.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const isOwned = (id: string) => downloads.has(id);
+  const loading = cardsLoading;
 
   return (
     <div className="min-h-screen bg-background">
@@ -124,23 +121,21 @@ const RaceCardsBrowse = () => {
 
       <main className="pt-24 pb-16">
         <div className="container mx-auto px-4">
-          {/* Header Row */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div>
               <h1 className="text-3xl md:text-4xl font-bold text-foreground font-heading tracking-tight">
                 Race<span className="text-neon">Cards</span>
               </h1>
               <p className="text-muted-foreground text-sm mt-1">
-                Download algorithm-powered predictions for today's races.
+                Listings are read from the database (with browser caching). PDFs are served from **Amazon S3** via a
+                presigned URL when you download.
               </p>
             </div>
             {user && (
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-card border border-border">
                   <CreditCard className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-mono-data font-bold text-primary">
-                    {credits ?? "—"}
-                  </span>
+                  <span className="text-sm font-mono-data font-bold text-primary">{credits ?? "—"}</span>
                   <span className="text-xs text-muted-foreground">credits</span>
                 </div>
                 <Link to="/buy-credits">
@@ -152,13 +147,12 @@ const RaceCardsBrowse = () => {
             )}
           </div>
 
-          {/* Filters Row */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-8">
-            {/* Day Tabs */}
             <div className="flex bg-card rounded-lg border border-border p-1">
               {dayTabs.map((day, idx) => (
                 <button
                   key={day.date}
+                  type="button"
                   onClick={() => setSelectedDateIndex(idx)}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
                     selectedDateIndex === idx
@@ -171,7 +165,6 @@ const RaceCardsBrowse = () => {
               ))}
             </div>
 
-            {/* Search */}
             <div className="relative flex-1 max-w-xs">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
@@ -184,7 +177,6 @@ const RaceCardsBrowse = () => {
             </div>
           </div>
 
-          {/* Loading */}
           {loading && (
             <div className="text-center py-20">
               <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
@@ -192,12 +184,12 @@ const RaceCardsBrowse = () => {
             </div>
           )}
 
-          {/* Cards Grid */}
           {!loading && filtered.length > 0 && (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filtered.map((card, i) => {
                 const owned = isOwned(card.id);
                 const isDownloading = downloading === card.id;
+                const metaLine = metadataListingLine(parseRacecardMetadata(card.metadata));
 
                 return (
                   <motion.div
@@ -207,7 +199,6 @@ const RaceCardsBrowse = () => {
                     transition={{ delay: i * 0.05 }}
                     className="card-dark group relative"
                   >
-                    {/* Owned Badge */}
                     {owned && (
                       <div className="absolute top-4 right-4">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/10 border border-green-500/30">
@@ -217,7 +208,6 @@ const RaceCardsBrowse = () => {
                       </div>
                     )}
 
-                    {/* Track Header */}
                     <div className="flex items-start gap-3 mb-4">
                       <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
                         <span className="font-mono-data font-bold text-foreground text-sm">{card.track_code}</span>
@@ -225,22 +215,26 @@ const RaceCardsBrowse = () => {
                       <div>
                         <h3 className="font-semibold text-foreground text-sm">{card.track_name}</h3>
                         <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                          {card.num_races && <span>{card.num_races} races</span>}
+                          {card.num_races != null && card.num_races > 0 && <span>{card.num_races} races</span>}
                         </div>
+                        {metaLine && (
+                          <div className="flex items-start gap-1 mt-1.5 text-[11px] text-muted-foreground">
+                            <Cloud className="h-3 w-3 shrink-0 mt-0.5" />
+                            <span>{metaLine}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
-                    {/* Algorithm Badge */}
                     <div className="mb-4 px-3 py-2 rounded-lg bg-muted/50 text-xs text-foreground/60">
                       Includes: <span className="text-primary font-medium">Concert™</span> +{" "}
                       <span className="text-info font-medium">Aptitude™</span>
                     </div>
 
-                    {/* Actions */}
                     <div className="flex gap-2">
                       <Button
                         className="flex-1 bg-primary text-primary-foreground hover:brightness-110 font-semibold text-sm h-10 shadow-neon"
-                        onClick={() => handleDownload(card.id)}
+                        onClick={() => void handleDownload(card.id)}
                         disabled={isDownloading}
                       >
                         {isDownloading ? (
@@ -257,7 +251,6 @@ const RaceCardsBrowse = () => {
             </div>
           )}
 
-          {/* Empty State */}
           {!loading && filtered.length === 0 && (
             <div className="text-center py-20">
               <Search className="h-12 w-12 text-foreground/20 mx-auto mb-4" />

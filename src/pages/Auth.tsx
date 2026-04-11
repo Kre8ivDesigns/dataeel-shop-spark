@@ -30,7 +30,9 @@ const Auth = () => {
       toast({ title: "Login failed", description: sanitizeError(error), variant: "destructive" });
     } else {
       toast({ title: "Welcome back!" });
-      navigate("/dashboard");
+      const next = searchParams.get("redirect");
+      const safe = next && next.startsWith("/") && !next.startsWith("//");
+      navigate(safe ? next : "/dashboard");
     }
   };
 

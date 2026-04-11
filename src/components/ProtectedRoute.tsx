@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface ProtectedRouteProps {
@@ -9,6 +9,7 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps) => {
   const { user, isAdmin, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-background">
@@ -16,7 +17,10 @@ const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps)
     </div>
   );
 
-  if (!user) return <Navigate to="/auth" replace />;
+  if (!user) {
+    const redirect = encodeURIComponent(`${location.pathname}${location.search || ""}`);
+    return <Navigate to={`/auth?redirect=${redirect}`} replace />;
+  }
 
   if (requireAdmin && !isAdmin) return <Navigate to="/" replace />;
 

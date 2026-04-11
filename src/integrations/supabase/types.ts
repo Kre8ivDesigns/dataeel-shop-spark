@@ -127,6 +127,8 @@ export type Database = {
           file_name: string
           file_url: string
           id: string
+          metadata: Json
+          metadata_updated_at: string | null
           num_races: number | null
           race_date: string
           track_code: string
@@ -139,6 +141,8 @@ export type Database = {
           file_name: string
           file_url: string
           id?: string
+          metadata?: Json
+          metadata_updated_at?: string | null
           num_races?: number | null
           race_date: string
           track_code: string
@@ -151,6 +155,8 @@ export type Database = {
           file_name?: string
           file_url?: string
           id?: string
+          metadata?: Json
+          metadata_updated_at?: string | null
           num_races?: number | null
           race_date?: string
           track_code?: string
@@ -193,6 +199,135 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_submissions: {
+        Row: {
+          id: string
+          created_at: string
+          updated_at: string
+          name: string
+          email: string
+          category: string
+          subject: string | null
+          message: string
+          user_id: string | null
+          status: string
+          admin_notes: string | null
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          updated_at?: string
+          name: string
+          email: string
+          category: string
+          subject?: string | null
+          message: string
+          user_id?: string | null
+          status?: string
+          admin_notes?: string | null
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          updated_at?: string
+          name?: string
+          email?: string
+          category?: string
+          subject?: string | null
+          message?: string
+          user_id?: string | null
+          status?: string
+          admin_notes?: string | null
+        }
+        Relationships: []
+      }
+      credit_ledger: {
+        Row: {
+          id: string
+          user_id: string
+          delta: number
+          balance_after: number
+          entry_type: string
+          ref_id: string | null
+          meta: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          delta: number
+          balance_after: number
+          entry_type: string
+          ref_id?: string | null
+          meta?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          delta?: number
+          balance_after?: number
+          entry_type?: string
+          ref_id?: string | null
+          meta?: Json
+          created_at?: string
+        }
+        Relationships: []
+      }
+      pages: {
+        Row: {
+          id: string
+          slug: string
+          html: string | null
+          css: string | null
+          created_at: string
+          updated_at: string
+          title: string | null
+          published: boolean
+          meta_description: string | null
+        }
+        Insert: {
+          id?: string
+          slug: string
+          html?: string | null
+          css?: string | null
+          created_at?: string
+          updated_at?: string
+          title?: string | null
+          published?: boolean
+          meta_description?: string | null
+        }
+        Update: {
+          id?: string
+          slug?: string
+          html?: string | null
+          css?: string | null
+          created_at?: string
+          updated_at?: string
+          title?: string | null
+          published?: boolean
+          meta_description?: string | null
+        }
+        Relationships: []
+      }
+      site_content: {
+        Row: {
+          key: string
+          body: string
+          updated_at: string
+        }
+        Insert: {
+          key: string
+          body: string
+          updated_at?: string
+        }
+        Update: {
+          key?: string
+          body?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -227,6 +362,8 @@ export type Database = {
           uploaded_by: string
           created_at: string
           updated_at: string
+          metadata: Json
+          metadata_updated_at: string | null
         }
         Relationships: []
       }

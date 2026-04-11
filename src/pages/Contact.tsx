@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { sanitizeError } from "@/lib/errorHandler";
 import { motion } from "framer-motion";
 import { Mail, MessageCircle, HelpCircle, Clock, Send, AlertTriangle, ArrowLeft, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -69,23 +72,48 @@ const contactFaqs = [
   },
 ];
 
+const categoryLabels: Record<string, string> = {
+  technical: "Technical Issue",
+  billing: "Billing Question",
+  feature: "Feature Request",
+  general: "General Inquiry",
+};
+
 const ContactPage = () => {
+  const { user } = useAuth();
   const [formState, setFormState] = useState<"idle" | "submitting" | "success">("idle");
+  const [formError, setFormError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!subject) {
+      setFormError("Please choose a topic.");
+      return;
+    }
+    setFormError(null);
     setFormState("submitting");
-    setTimeout(() => {
-      setFormState("success");
-      setName("");
-      setEmail("");
-      setSubject("");
-      setMessage("");
-    }, 1500);
+    const { error } = await supabase.from("contact_submissions").insert({
+      name: name.trim(),
+      email: email.trim(),
+      category: subject,
+      subject: categoryLabels[subject] ?? subject,
+      message: message.trim(),
+      user_id: user?.id ?? null,
+    });
+    setFormState("idle");
+    if (error) {
+      setFormError(sanitizeError(error));
+      return;
+    }
+    setFormState("success");
+    setName("");
+    setEmail("");
+    setSubject("");
+    setMessage("");
   };
 
   return (
@@ -235,6 +263,11 @@ const ContactPage = () => {
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">Your email is safe with us.</p>
+                  {formError && (
+                    <p className="text-sm text-destructive" role="alert">
+                      {formError}
+                    </p>
+                  )}
                   <Button
                     type="submit"
                     disabled={formState === "submitting"}

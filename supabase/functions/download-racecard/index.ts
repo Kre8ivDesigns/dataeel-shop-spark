@@ -1,3 +1,6 @@
+/**
+ * Presigned GET for RaceCard PDFs. Files are read from **AWS S3** using `racecards.file_url` as the object key.
+ */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { S3Client, GetObjectCommand } from "https://esm.sh/@aws-sdk/client-s3@3";
 import { getSignedUrl } from "https://esm.sh/@aws-sdk/s3-request-presigner@3";

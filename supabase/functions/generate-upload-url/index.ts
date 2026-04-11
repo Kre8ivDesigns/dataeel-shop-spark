@@ -1,3 +1,7 @@
+/**
+ * Presigned PUT for RaceCard PDFs. Primary object store is **AWS S3** (`AWS_S3_BUCKET`);
+ * `racecards.file_url` must hold this S3 object key after upload.
+ */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { S3Client, PutObjectCommand } from "https://esm.sh/@aws-sdk/client-s3@3";
 import { getSignedUrl } from "https://esm.sh/@aws-sdk/s3-request-presigner@3";

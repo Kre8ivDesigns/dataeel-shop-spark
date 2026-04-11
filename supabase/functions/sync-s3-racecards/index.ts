@@ -1,3 +1,7 @@
+/**
+ * Registers new PDFs from the **primary S3 bucket** (`AWS_S3_BUCKET`) into `racecards`.
+ * Source of truth for blobs is S3; Postgres rows are the catalog + `file_url` = S3 key.
+ */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { S3Client, ListObjectsV2Command } from "https://esm.sh/@aws-sdk/client-s3@3";
 import { getCorsHeaders } from "../_shared/cors.ts";
