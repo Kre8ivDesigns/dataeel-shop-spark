@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { resolveStripeConfig } from "../_shared/stripe_config.ts";
 
 Deno.serve(async (req) => {
   const cors = getCorsHeaders(req);
@@ -35,7 +36,11 @@ Deno.serve(async (req) => {
     const { data: isAdmin } = await supabaseAdmin.rpc("is_admin", { _user_id: user.id });
     if (!isAdmin) return respond({ error: "Forbidden" }, 403);
 
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
+    const stripeConfig = await resolveStripeConfig(supabaseAdmin);
+    if (!stripeConfig.secretKey) {
+      return respond({ error: "Stripe is not configured. Save Stripe keys in Admin > Settings > Stripe, or set STRIPE_SECRET_KEY as an Edge Function secret." }, 500);
+    }
+    const stripe = new Stripe(stripeConfig.secretKey, {
       apiVersion: "2025-08-27.basil",
     });
 

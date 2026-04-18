@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Loader2, Package, Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { describeFunctionInvokeError } from "@/lib/edgeFunctionErrors";
 
 interface CreditPackage {
   id: string;
@@ -100,14 +101,24 @@ const AdminCreditPackages = () => {
       if (editingPackage) body.packageId = editingPackage.id;
 
       const { data, error } = await supabase.functions.invoke("manage-credit-package", { body });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (error) {
+        toast.error(
+          typeof data?.error === "string"
+            ? data.error
+            : describeFunctionInvokeError("manage-credit-package", error),
+        );
+        return;
+      }
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
 
       toast.success(editingPackage ? "Package updated" : "Package created");
       setDialogOpen(false);
       fetchPackages();
-    } catch (err: any) {
-      toast.error(err?.message ?? "Failed to save package");
+    } catch (err) {
+      toast.error(describeFunctionInvokeError("manage-credit-package", err));
     } finally {
       setSaving(false);
     }
@@ -120,12 +131,22 @@ const AdminCreditPackages = () => {
       const { data, error } = await supabase.functions.invoke("manage-credit-package", {
         body: { action: "delete", packageId: pkg.id },
       });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (error) {
+        toast.error(
+          typeof data?.error === "string"
+            ? data.error
+            : describeFunctionInvokeError("manage-credit-package", error),
+        );
+        return;
+      }
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
       toast.success("Package deleted");
       fetchPackages();
-    } catch (err: any) {
-      toast.error(err?.message ?? "Failed to delete package");
+    } catch (err) {
+      toast.error(describeFunctionInvokeError("manage-credit-package", err));
     } finally {
       setDeletingId(null);
     }
@@ -135,7 +156,7 @@ const AdminCreditPackages = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <main className="pt-24 pb-16">
-        <div className="container mx-auto px-4 max-w-4xl">
+        <div className="container mx-auto px-4 max-w-[1400px]">
           <Link
             to="/admin"
             className="inline-flex items-center gap-2 text-foreground/50 hover:text-foreground mb-6 transition-colors text-sm"

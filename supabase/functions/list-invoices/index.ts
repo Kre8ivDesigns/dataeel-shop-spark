@@ -1,6 +1,7 @@
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { resolveStripeConfig } from "../_shared/stripe_config.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -10,9 +11,6 @@ Deno.serve(async (req) => {
   const headers = { ...getCorsHeaders(req), "Content-Type": "application/json" };
 
   try {
-    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
-
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers });
@@ -33,7 +31,9 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers });
     }
 
-    const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+    const stripeConfig = await resolveStripeConfig(supabaseAdmin);
+    if (!stripeConfig.secretKey) throw new Error("Stripe secret key is not configured");
+    const stripe = new Stripe(stripeConfig.secretKey, { apiVersion: "2025-08-27.basil" });
 
     // HIGH-03: look up customer ID from profiles first
     const { data: profile } = await supabaseAdmin

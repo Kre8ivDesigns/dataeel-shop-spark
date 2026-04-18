@@ -14,7 +14,13 @@ export function describeFunctionInvokeError(functionName: string, error: unknown
 
   if (e.name === "FunctionsHttpError" && e.context instanceof Response) {
     if (e.context.status === 404) {
-      return `Invoices are unavailable: the "${functionName}" Edge Function is not deployed to this Supabase project. From the repo root run: supabase functions deploy ${functionName} (or deploy it in the Supabase Dashboard).`;
+      return `The "${functionName}" Edge Function is not deployed to this Supabase project. Run: supabase functions deploy ${functionName} (or deploy it in the Supabase Dashboard).`;
+    }
+    if (e.context.status === 401) {
+      return `Not signed in (or session expired) — sign in again and retry "${functionName}".`;
+    }
+    if (e.context.status === 403) {
+      return `You don't have permission to call "${functionName}".`;
     }
   }
 

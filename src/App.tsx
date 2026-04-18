@@ -32,6 +32,7 @@ const AdminAnalytics = lazy(() => import("./pages/AdminAnalytics"));
 const AdminSupport = lazy(() => import("./pages/AdminSupport"));
 const AdminReports = lazy(() => import("./pages/AdminReports"));
 const AdminPages = lazy(() => import("./pages/AdminPages"));
+const PublicPage = lazy(() => import("./pages/PublicPage"));
 
 const adminChartFallback = (
   <div className="min-h-screen flex items-center justify-center bg-background">
@@ -167,6 +168,15 @@ const App = () => (
                   </Suspense>
                 </ProtectedRoute>
               } />
+              {/* Public pages edited via /admin/page-editor render here. */}
+              <Route
+                path="/p/:slug"
+                element={
+                  <Suspense fallback={adminChartFallback}>
+                    <PublicPage />
+                  </Suspense>
+                }
+              />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
