@@ -12,6 +12,7 @@ import { ArrowLeft, Loader2, Eye, EyeOff, Save, CheckCircle2, XCircle } from "lu
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AdminAiSettingsPanel } from "@/components/admin/AdminAiSettingsPanel";
+import { AdminSmtpSettingsPanel } from "@/components/admin/AdminSmtpSettingsPanel";
 import {
   EMPTY_SETTINGS_FORM,
   type SettingStatus,
@@ -129,7 +130,7 @@ const AdminSettings = () => {
       const cleared = { ...form };
       keys.forEach((k) => {
         const key = k as keyof SettingsForm;
-        if (key === "ai_chat_provider") {
+        if (key === "ai_chat_provider" || key === "smtp_provider") {
           cleared[key] = form[key] || EMPTY_SETTINGS_FORM.ai_chat_provider;
           return;
         }
@@ -216,41 +217,26 @@ const AdminSettings = () => {
 
             {/* ── SMTP ── */}
             <TabsContent value="smtp">
-              <Card className="bg-card border-border">
-                <CardHeader>
-                  <CardTitle className="text-foreground">SMTP</CardTitle>
-                  <CardDescription>
-                    For custom mailers or future Edge Functions. Supabase Auth emails still use the project&apos;s Auth SMTP unless you change that in the Supabase dashboard.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between"><Label htmlFor="smtp-host">Host</Label><ConfiguredBadge status={status.smtp_host} /></div>
-                      <Input id="smtp-host" value={form.smtp_host} placeholder="smtp.example.com" onChange={(e) => set("smtp_host")(e.target.value)} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between"><Label htmlFor="smtp-port">Port</Label><ConfiguredBadge status={status.smtp_port} /></div>
-                      <Input id="smtp-port" type="number" value={form.smtp_port} placeholder="587" onChange={(e) => set("smtp_port")(e.target.value)} />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between"><Label htmlFor="smtp-user">Username</Label><ConfiguredBadge status={status.smtp_user} /></div>
-                    <Input id="smtp-user" value={form.smtp_user} placeholder="user@example.com" onChange={(e) => set("smtp_user")(e.target.value)} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between"><Label htmlFor="smtp-pass">Password</Label><ConfiguredBadge status={status.smtp_password} /></div>
-                    <SecretInput id="smtp-pass" value={form.smtp_password} onChange={set("smtp_password")} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between"><Label htmlFor="smtp-from">From Address</Label><ConfiguredBadge status={status.smtp_from} /></div>
-                    <Input id="smtp-from" value={form.smtp_from} placeholder="noreply@yourdomain.com" onChange={(e) => set("smtp_from")(e.target.value)} />
-                  </div>
-                  <div className="pt-2 flex justify-end">
-                    <SaveButton onClick={() => saveSection("smtp", ["smtp_host", "smtp_port", "smtp_user", "smtp_password", "smtp_from"])} saving={saving === "smtp"} />
-                  </div>
-                </CardContent>
-              </Card>
+              <AdminSmtpSettingsPanel
+                status={status}
+                form={form}
+                set={set}
+                SecretInput={SecretInput}
+                ConfiguredBadge={ConfiguredBadge}
+                saving={saving === "smtp"}
+                onSave={() =>
+                  saveSection("smtp", [
+                    "smtp_provider",
+                    "smtp_host",
+                    "smtp_port",
+                    "smtp_user",
+                    "smtp_password",
+                    "smtp_from",
+                    "smtp_from_name",
+                    "smtp_reply_to",
+                  ])
+                }
+              />
             </TabsContent>
 
             {/* ── CAPTCHA ── */}
