@@ -26,6 +26,8 @@ The database **never** embeds PDF bytes. It stores **`file_url`** as the **S3 ob
 
 **Ingest pattern (recommended):** your pipeline writes **file → S3**, then **row → `racecards`** (sync or admin), then **`metadata` JSON** on that row (or a follow-up `UPDATE`). The website reads only Postgres + signed file URLs when the user downloads.
 
+**Batch PDFs in `race cards/` (Equibase-style names):** each file is **`XXX` + `YYMMDD`** (three letters for the track, then six digits for the date), optionally **`-N`** for another card the same day (e.g. `Kee260411-1.pdf`). Stray **`^`** characters in some exports are ignored. Run `npm run prepare:racecards` to copy into `racecards-staging/` as `TRACKCODE_YYYY-MM-DD.pdf` (see `scripts/racecard-track-prefixes.json` for letter codes). Upload from **Admin → Racecards**, then **Sync from S3**. Same-day duplicates become `KEE_2026-04-11__2.pdf`, etc.
+
 ## 3. Cache (fast repeat reads)
 
 | Layer | Mechanism | Typical use |

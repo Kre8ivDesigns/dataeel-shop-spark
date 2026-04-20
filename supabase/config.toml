@@ -9,6 +9,16 @@ project_id = "uhalsigyxvshlnlagtwt"
 [functions.stripe-webhook]
 verify_jwt = false
 
+# Public RSS proxy (fixed upstream URL); homepage uses anon key + no session
+[functions.abr-rss]
+verify_jwt = false
+
+[functions.tdn-rss]
+verify_jwt = false
+
+[functions.equibase-late-changes-rss]
+verify_jwt = false
+
 # All other functions validate JWT themselves AND via gateway
 [functions.create-checkout-session]
 verify_jwt = true

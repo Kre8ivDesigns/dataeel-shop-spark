@@ -37,6 +37,9 @@ Use this when standing up or auditing an environment so **database, S3 files, Ed
 | `manage-app-settings` | Encrypted site + AI settings |
 | `racing-assistant` | LLM chat; reads `site_content` + app_settings |
 | `ai-admin` | Admin model list / connection tests |
+| `abr-rss` | Proxies [ABR “The Sport” RSS](https://www.americasbestracing.net/the-sport/rss) for the homepage (CORS-safe); `verify_jwt = false`, fixed URL only |
+| `tdn-rss` | Proxies [Thoroughbred Daily News](https://www.thoroughbreddailynews.com/feed/) main WordPress RSS; `verify_jwt = false`, fixed URL only |
+| `equibase-late-changes-rss` | Proxies [Equibase static late-changes RSS](https://www.equibase.com/static/latechanges/rss/KD-USA.rss); `verify_jwt = false`. Optional secret **`EQUIBASE_LATE_CHANGES_BRN`** (default **`KD-USA`**, Keeneland) — e.g. `GP-USA`, `SA-USA`. Pattern: `{TRACK}-{COUNTRY}` |
 | `create-checkout-session`, `stripe-webhook`, `customer-portal`, `list-invoices` | Stripe |
 | `manage-credit-package` | Admin packages |
 | `admin-create-user`, `admin-manage-user` | Admin user ops |

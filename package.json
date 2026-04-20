@@ -9,6 +9,7 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
+    "prepare:racecards": "node scripts/prepare-racecards-for-s3.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },
