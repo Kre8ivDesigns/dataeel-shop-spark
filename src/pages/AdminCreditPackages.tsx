@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Loader2, Package, Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { describeFunctionInvokeError } from "@/lib/edgeFunctionErrors";
 
 interface CreditPackage {
   id: string;
@@ -71,6 +72,15 @@ const AdminCreditPackages = () => {
     setDialogOpen(true);
   };
 
+  const invokePackageAction = async (body: Record<string, unknown>) => {
+    const { data, error } = await supabase.functions.invoke("manage-credit-package", { body });
+    if (error || data?.error) {
+      toast.error(typeof data?.error === "string" ? data.error : describeFunctionInvokeError("manage-credit-package", error));
+      return null;
+    }
+    return data;
+  };
+
   const handleSave = async () => {
     if (!form.name.trim() || !form.credits || !form.price) {
       toast.error("Name, credits, and price are required");
@@ -99,15 +109,12 @@ const AdminCreditPackages = () => {
       };
       if (editingPackage) body.packageId = editingPackage.id;
 
-      const { data, error } = await supabase.functions.invoke("manage-credit-package", { body });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      const result = await invokePackageAction(body);
+      if (result === null) return;
 
       toast.success(editingPackage ? "Package updated" : "Package created");
       setDialogOpen(false);
       fetchPackages();
-    } catch (err: any) {
-      toast.error(err?.message ?? "Failed to save package");
     } finally {
       setSaving(false);
     }
@@ -117,15 +124,10 @@ const AdminCreditPackages = () => {
     if (!confirm(`Delete "${pkg.name}"? This cannot be undone.`)) return;
     setDeletingId(pkg.id);
     try {
-      const { data, error } = await supabase.functions.invoke("manage-credit-package", {
-        body: { action: "delete", packageId: pkg.id },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      const result = await invokePackageAction({ action: "delete", packageId: pkg.id });
+      if (result === null) return;
       toast.success("Package deleted");
       fetchPackages();
-    } catch (err: any) {
-      toast.error(err?.message ?? "Failed to delete package");
     } finally {
       setDeletingId(null);
     }

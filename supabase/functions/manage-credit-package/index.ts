@@ -35,7 +35,10 @@ Deno.serve(async (req) => {
     const { data: isAdmin } = await supabaseAdmin.rpc("is_admin", { _user_id: user.id });
     if (!isAdmin) return respond({ error: "Forbidden" }, 403);
 
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    if (!stripeKey) return respond({ error: "STRIPE_SECRET_KEY is not configured" }, 500);
+
+    const stripe = new Stripe(stripeKey, {
       apiVersion: "2025-08-27.basil",
     });
 
@@ -182,6 +185,7 @@ Deno.serve(async (req) => {
     return respond({ error: `Unknown action: ${action}` }, 400);
   } catch (err) {
     console.error("manage-credit-package error:", err);
-    return respond({ error: "Internal server error" }, 500);
+    const msg = err instanceof Error ? err.message : "Internal server error";
+    return respond({ error: msg }, 500);
   }
 });
