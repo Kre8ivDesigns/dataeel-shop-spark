@@ -1,5 +1,6 @@
 import "grapesjs/dist/css/grapes.min.css";
 import GrapesJS from "grapesjs";
+import gjsPresetWebpage from "grapesjs-preset-webpage";
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,10 +38,7 @@ const PageEditor = () => {
         height: "calc(100vh - 200px)",
         width: "auto",
         storageManager: false,
-        plugins: ["gjs-preset-webpage"],
-        pluginsOpts: {
-          "gjs-preset-webpage": {},
-        },
+        plugins: [gjsPresetWebpage],
       });
       setEditor(editorInstance);
     }
