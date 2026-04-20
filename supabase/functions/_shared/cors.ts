@@ -35,7 +35,7 @@ export function getAllowedOrigins(): string[] {
 export function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") ?? "";
   const allowed = getAllowedOrigins();
-  const allowedOrigin = allowed.includes(origin) ? origin : allowed[0] ?? "*";
+  const allowedOrigin = allowed.includes(origin) ? origin : "*";
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
