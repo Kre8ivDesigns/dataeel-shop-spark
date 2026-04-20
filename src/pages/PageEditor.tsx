@@ -1,5 +1,6 @@
 import "grapesjs/dist/css/grapes.min.css";
 import GrapesJS from "grapesjs";
+import gjsPresetWebpage from "grapesjs-preset-webpage";
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,7 +18,7 @@ const PageEditor = () => {
   const slugFromUrl = searchParams.get("slug");
 
   const [editor, setEditor] = useState<ReturnType<typeof GrapesJS.init> | null>(null);
-  const [slug, setSlug] = useState(slugFromUrl || "homepage");
+  const [slug, setSlug] = useState(slugFromUrl || "");
   const [title, setTitle] = useState("");
   const [published, setPublished] = useState(true);
   const [metaDescription, setMetaDescription] = useState("");
@@ -37,9 +38,31 @@ const PageEditor = () => {
         height: "calc(100vh - 200px)",
         width: "auto",
         storageManager: false,
-        plugins: ["gjs-preset-webpage"],
-        pluginsOpts: {
-          "gjs-preset-webpage": {},
+        plugins: [(e) => gjsPresetWebpage(e, {})],
+        assetManager: {
+          uploadFile: async (uploadEvent: Event) => {
+            const input = uploadEvent as unknown as { dataTransfer?: DataTransfer; target?: HTMLInputElement };
+            const files: File[] = Array.from(
+              input.dataTransfer?.files ?? (input.target as HTMLInputElement | undefined)?.files ?? []
+            );
+            if (!files.length) return;
+            const uploads = await Promise.all(
+              files.map(async (file) => {
+                // Sanitize filename: keep only safe characters
+                const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").replace(/\.{2,}/g, "_");
+                const path = `uploads/${Date.now()}-${safeName}`;
+                const { data, error } = await supabase.storage
+                  .from("page-media")
+                  .upload(path, file, { upsert: false });
+                if (error || !data) return null;
+                const { data: urlData } = supabase.storage
+                  .from("page-media")
+                  .getPublicUrl(data.path);
+                return urlData.publicUrl;
+              })
+            );
+            editorInstance.AssetManager.add(uploads.filter(Boolean).map((src) => ({ src })));
+          },
         },
       });
       setEditor(editorInstance);
