@@ -32,10 +32,26 @@ export function getAllowedOrigins(): string[] {
   return [...FALLBACK_ORIGINS];
 }
 
+/**
+ * Returns true when `origin` matches an entry that contains a `*` wildcard.
+ * The wildcard only matches valid hostname/subdomain characters (`[a-zA-Z0-9-]+`),
+ * so `https://*.vercel.app` matches `https://my-preview-123.vercel.app` but NOT
+ * `https://evil.other.com` or patterns with path separators / special characters.
+ */
+function originMatchesPattern(origin: string, pattern: string): boolean {
+  if (!pattern.includes("*")) return false;
+  const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[a-zA-Z0-9-]+");
+  return new RegExp(`^${escaped}$`).test(origin);
+}
+
+function isOriginAllowed(origin: string, allowed: string[]): boolean {
+  return allowed.some((entry) => entry === origin || originMatchesPattern(origin, entry));
+}
+
 export function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") ?? "";
   const allowed = getAllowedOrigins();
-  const allowedOrigin = allowed.includes(origin) ? origin : "*";
+  const allowedOrigin = isOriginAllowed(origin, allowed) ? origin : "*";
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -50,5 +66,5 @@ export function getCorsHeaders(req: Request): Record<string, string> {
 export function getValidatedOrigin(req: Request): string {
   const origin = req.headers.get("origin") ?? "";
   const allowed = getAllowedOrigins();
-  return allowed.includes(origin) ? origin : allowed[0] ?? "";
+  return isOriginAllowed(origin, allowed) ? origin : allowed[0] ?? "";
 }
