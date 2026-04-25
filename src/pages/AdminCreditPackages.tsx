@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Loader2, Package, Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { describeFunctionInvokeError } from "@/lib/edgeFunctionErrors";
 
 interface CreditPackage {
   id: string;
@@ -100,7 +101,7 @@ const AdminCreditPackages = () => {
       if (editingPackage) body.packageId = editingPackage.id;
 
       const { data, error } = await supabase.functions.invoke("manage-credit-package", { body });
-      if (error) throw error;
+      if (error) throw new Error(describeFunctionInvokeError("manage-credit-package", error));
       if (data?.error) throw new Error(data.error);
 
       toast.success(editingPackage ? "Package updated" : "Package created");
@@ -120,7 +121,7 @@ const AdminCreditPackages = () => {
       const { data, error } = await supabase.functions.invoke("manage-credit-package", {
         body: { action: "delete", packageId: pkg.id },
       });
-      if (error) throw error;
+      if (error) throw new Error(describeFunctionInvokeError("manage-credit-package", error));
       if (data?.error) throw new Error(data.error);
       toast.success("Package deleted");
       fetchPackages();
