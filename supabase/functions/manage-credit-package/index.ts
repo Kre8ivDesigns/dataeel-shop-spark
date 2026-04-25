@@ -220,8 +220,8 @@ Deno.serve(async (req) => {
 
     return respond({ error: `Unknown action: ${action}` }, 400);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("manage-credit-package error:", msg);
-    return respond({ error: "Internal server error" }, 500);
+    console.error("manage-credit-package error:", err);
+    const msg = err instanceof Error ? err.message : "Internal server error";
+    return respond({ error: msg }, 500);
   }
 });
