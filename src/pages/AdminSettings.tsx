@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import type { ReactNode } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Loader2, Eye, EyeOff, Save, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowLeft, Loader2, Eye, EyeOff, Save, CheckCircle2, XCircle, Copy, Check, Link2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AdminAiSettingsPanel } from "@/components/admin/AdminAiSettingsPanel";
@@ -18,6 +19,10 @@ import {
   type SettingsForm,
   type SettingsStatus,
 } from "@/components/admin/adminSettingsTypes";
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const STRIPE_WEBHOOK_PATH = "/functions/v1/stripe-webhook";
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
@@ -79,6 +84,43 @@ const SaveButton = ({ onClick, saving, disabled }: { onClick: () => void; saving
     {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
     {saving ? "Saving…" : "Save"}
   </Button>
+);
+
+const CopyButton = ({ text }: { text: string }) => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    if (!navigator?.clipboard?.writeText) {
+      toast.error("Clipboard API not available in this browser");
+      return;
+    }
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {
+      toast.error("Failed to copy to clipboard");
+    });
+  };
+  return (
+    <Button type="button" variant="ghost" size="sm" onClick={handleCopy} className="h-7 px-2 shrink-0">
+      {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
+      <span className="ml-1 text-xs">{copied ? "Copied!" : "Copy"}</span>
+    </Button>
+  );
+};
+
+const WebhookUrlRow = ({ label, url, badge }: { label: string; url: string; badge: ReactNode }) => (
+  <div className="space-y-1.5">
+    <div className="flex items-center gap-2">
+      {badge}
+      <span className="text-xs text-muted-foreground">{label}</span>
+    </div>
+    <div className="flex items-center gap-2">
+      <code className="flex-1 min-w-0 rounded bg-muted px-2 py-1.5 text-xs font-mono truncate block">
+        {url}
+      </code>
+      <CopyButton text={url} />
+    </div>
+  </div>
 );
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -334,6 +376,67 @@ const AdminSettings = () => {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
+
+                  {/* ── Webhook Callback URL ── */}
+                  {(() => {
+                    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+                    const webhookUrl = supabaseUrl
+                      ? `${supabaseUrl.replace(/\/$/, "")}${STRIPE_WEBHOOK_PATH}`
+                      : null;
+
+                    if (!webhookUrl) {
+                      return (
+                        <div className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+                          <span>Set <code className="bg-muted px-1 rounded">VITE_SUPABASE_URL</code> to see the webhook callback URL.</span>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="rounded-md border border-border bg-muted/30 p-4 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Link2 className="h-4 w-4 text-primary flex-shrink-0" />
+                          <h3 className="text-sm font-medium text-foreground">Webhook Callback URL</h3>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Register this URL in your{" "}
+                          <a
+                            href="https://dashboard.stripe.com/webhooks"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline hover:text-foreground"
+                          >
+                            Stripe Dashboard
+                          </a>{" "}
+                          under Developers → Webhooks. Create a separate webhook entry for Test mode and Live mode — both point to the same URL.
+                        </p>
+                        <div className="space-y-3">
+                          <WebhookUrlRow
+                            url={webhookUrl}
+                            label="Endpoint URL"
+                            badge={
+                              <span className="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-300">
+                                Test
+                              </span>
+                            }
+                          />
+                          <WebhookUrlRow
+                            url={webhookUrl}
+                            label="Endpoint URL"
+                            badge={
+                              <span className="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/30 px-2 py-0.5 text-xs font-medium text-green-800 dark:text-green-300">
+                                Live
+                              </span>
+                            }
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          After creating each webhook in Stripe, copy its generated signing secret (<code className="bg-muted px-1 rounded">whsec_…</code>) into the Webhook Secret field below.
+                        </p>
+                      </div>
+                    );
+                  })()}
+
                   {/* ── Mode toggle ── */}
                   <div className="space-y-2">
                     <Label>Active Mode</Label>
