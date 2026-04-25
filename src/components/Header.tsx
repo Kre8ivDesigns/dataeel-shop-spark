@@ -23,14 +23,10 @@ import { useAuth } from "@/contexts/AuthContext";
 const navItems = [
   { label: "Home", href: "/" },
   { label: "How It Works", href: "/#how-it-works" },
-  { label: "Results", href: "/#results" },
   { label: "RaceCards", href: "/racecards" },
-  { label: "News", href: "/#racing-headlines" },
-  { label: "TDN", href: "/#tdn-headlines" },
-  { label: "Scratches", href: "/#equibase-late-changes" },
+  { label: "Results", href: "/#results" },
   { label: "Pricing", href: "/pricing" },
-  { label: "Betting basics", href: "/betting-basics" },
-  { label: "About", href: "/#about" },
+  { label: "Betting Basics", href: "/betting-basics" },
   { label: "Contact", href: "/contact" },
 ];
 
