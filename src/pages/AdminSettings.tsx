@@ -46,11 +46,13 @@ const SecretInput = ({
   value,
   placeholder,
   onChange,
+  className,
 }: {
   id: string;
   value: string;
   placeholder?: string;
   onChange: (v: string) => void;
+  className?: string;
 }) => {
   const [show, setShow] = useState(false);
   return (
@@ -61,7 +63,7 @@ const SecretInput = ({
         value={value}
         placeholder={placeholder ?? "Enter new value to update…"}
         onChange={(e) => onChange(e.target.value)}
-        className="pr-10 font-mono text-sm"
+        className={`pr-10 font-mono text-sm${className ? ` ${className}` : ""}`}
         autoComplete="new-password"
         spellCheck={false}
       />
@@ -77,8 +79,8 @@ const SecretInput = ({
   );
 };
 
-const SaveButton = ({ onClick, saving }: { onClick: () => void; saving: boolean }) => (
-  <Button onClick={onClick} disabled={saving} className="bg-primary text-primary-foreground font-semibold">
+const SaveButton = ({ onClick, saving, disabled }: { onClick: () => void; saving: boolean; disabled?: boolean }) => (
+  <Button onClick={onClick} disabled={saving || disabled} className="bg-primary text-primary-foreground font-semibold">
     {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
     {saving ? "Saving…" : "Save"}
   </Button>
@@ -151,8 +153,31 @@ const AdminSettings = () => {
   useEffect(() => { fetchStatus(); }, [fetchStatus]);
 
   const saveSection = async (section: string, keys: (keyof SettingsForm)[]) => {
+    // Validate Stripe key prefixes before sending
+    if (section === "stripe") {
+      if (form.stripe_test_publishable_key && !form.stripe_test_publishable_key.startsWith("pk_test_")) {
+        toast.error("Test publishable key must start with pk_test_");
+        return;
+      }
+      if (form.stripe_test_secret_key && !form.stripe_test_secret_key.startsWith("sk_test_")) {
+        toast.error("Test secret key must start with sk_test_");
+        return;
+      }
+      if (form.stripe_publishable_key && !form.stripe_publishable_key.startsWith("pk_live_")) {
+        toast.error("Live publishable key must start with pk_live_");
+        return;
+      }
+      if (form.stripe_secret_key && !form.stripe_secret_key.startsWith("sk_live_")) {
+        toast.error("Live secret key must start with sk_live_");
+        return;
+      }
+    }
+
+    // Non-secret selector fields that are always included in the payload
+    const alwaysInclude: (keyof SettingsForm)[] = ["ai_chat_provider", "stripe_mode"];
+
     const payload: Partial<SettingsForm> = {};
-    keys.forEach((k) => { if (form[k] !== "") payload[k] = form[k]; });
+    keys.forEach((k) => { if (alwaysInclude.includes(k) || form[k] !== "") payload[k] = form[k]; });
 
     if (Object.keys(payload).length === 0) {
       toast.info("No changes to save — enter a new value to update a field");
@@ -171,8 +196,8 @@ const AdminSettings = () => {
       const cleared = { ...form };
       keys.forEach((k) => {
         const key = k as keyof SettingsForm;
-        if (key === "ai_chat_provider") {
-          cleared[key] = form[key] || EMPTY_SETTINGS_FORM.ai_chat_provider;
+        if (alwaysInclude.includes(key)) {
+          cleared[key] = form[key] || EMPTY_SETTINGS_FORM[key];
           return;
         }
         cleared[key] = "";
@@ -334,10 +359,23 @@ const AdminSettings = () => {
             <TabsContent value="stripe">
               <Card className="bg-card border-border">
                 <CardHeader>
-                  <CardTitle className="text-foreground">Stripe</CardTitle>
-                  <CardDescription>Payment processing keys.</CardDescription>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <CardTitle className="text-foreground">Stripe</CardTitle>
+                      <CardDescription>Payment processing keys.</CardDescription>
+                    </div>
+                    {form.stripe_mode === "test" ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-yellow-500/15 px-3 py-1 text-xs font-semibold text-yellow-600 dark:text-yellow-400 border border-yellow-500/30 whitespace-nowrap">
+                        ● TEST MODE
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500/15 px-3 py-1 text-xs font-semibold text-green-600 dark:text-green-400 border border-green-500/30 whitespace-nowrap">
+                        ● LIVE MODE
+                      </span>
+                    )}
+                  </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-6">
 
                   {/* ── Webhook Callback URL ── */}
                   {(() => {
@@ -399,18 +437,116 @@ const AdminSettings = () => {
                     );
                   })()}
 
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between"><Label htmlFor="stripe-pub">Publishable Key</Label><ConfiguredBadge status={status.stripe_publishable_key} /></div>
-                    <Input id="stripe-pub" value={form.stripe_publishable_key} placeholder="pk_live_…" onChange={(e) => set("stripe_publishable_key")(e.target.value)} />
+                  {/* ── Mode toggle ── */}
+                  <div className="space-y-2">
+                    <Label>Active Mode</Label>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant={form.stripe_mode === "test" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => set("stripe_mode")("test")}
+                      >
+                        Test
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={form.stripe_mode === "live" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => set("stripe_mode")("live")}
+                      >
+                        Live
+                      </Button>
+                    </div>
+                    {form.stripe_mode === "test" && (
+                      <p className="text-xs text-yellow-600 dark:text-yellow-400">
+                        Test mode is active — Stripe will use test keys and no real charges will be made.
+                      </p>
+                    )}
                   </div>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between"><Label htmlFor="stripe-sec">Secret Key</Label><ConfiguredBadge status={status.stripe_secret_key} /></div>
-                    <SecretInput id="stripe-sec" value={form.stripe_secret_key} placeholder="sk_live_…" onChange={set("stripe_secret_key")} />
+
+                  {/* ── Test Keys ── */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 border-b border-border pb-2">
+                      <h3 className="text-sm font-semibold text-foreground">Test Keys</h3>
+                      <span className="text-xs text-muted-foreground">pk_test_ / sk_test_</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="stripe-test-pub">Publishable Key</Label>
+                        <ConfiguredBadge status={status.stripe_test_publishable_key} />
+                      </div>
+                      <Input
+                        id="stripe-test-pub"
+                        value={form.stripe_test_publishable_key}
+                        placeholder="pk_test_…"
+                        onChange={(e) => set("stripe_test_publishable_key")(e.target.value)}
+                        className={form.stripe_test_publishable_key && !form.stripe_test_publishable_key.startsWith("pk_test_") ? "border-destructive focus-visible:ring-destructive" : ""}
+                      />
+                      {form.stripe_test_publishable_key && !form.stripe_test_publishable_key.startsWith("pk_test_") && (
+                        <p className="text-xs text-destructive">Test publishable key must start with <code className="bg-muted px-1 rounded">pk_test_</code></p>
+                      )}
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="stripe-test-sec">Secret Key</Label>
+                        <ConfiguredBadge status={status.stripe_test_secret_key} />
+                      </div>
+                      <SecretInput id="stripe-test-sec" value={form.stripe_test_secret_key} placeholder="sk_test_…" onChange={set("stripe_test_secret_key")} className={form.stripe_test_secret_key && !form.stripe_test_secret_key.startsWith("sk_test_") ? "border-destructive focus-visible:ring-destructive" : ""} />
+                      {form.stripe_test_secret_key && !form.stripe_test_secret_key.startsWith("sk_test_") && (
+                        <p className="text-xs text-destructive">Test secret key must start with <code className="bg-muted px-1 rounded">sk_test_</code></p>
+                      )}
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="stripe-test-wh">Webhook Secret</Label>
+                        <ConfiguredBadge status={status.stripe_test_webhook_secret} />
+                      </div>
+                      <SecretInput id="stripe-test-wh" value={form.stripe_test_webhook_secret} placeholder="whsec_…" onChange={set("stripe_test_webhook_secret")} />
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between"><Label htmlFor="stripe-wh">Webhook Secret</Label><ConfiguredBadge status={status.stripe_webhook_secret} /></div>
-                    <SecretInput id="stripe-wh" value={form.stripe_webhook_secret} placeholder="whsec_…" onChange={set("stripe_webhook_secret")} />
+
+                  {/* ── Live Keys ── */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 border-b border-border pb-2">
+                      <h3 className="text-sm font-semibold text-foreground">Live Keys</h3>
+                      <span className="text-xs text-muted-foreground">pk_live_ / sk_live_</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="stripe-pub">Publishable Key</Label>
+                        <ConfiguredBadge status={status.stripe_publishable_key} />
+                      </div>
+                      <Input
+                        id="stripe-pub"
+                        value={form.stripe_publishable_key}
+                        placeholder="pk_live_…"
+                        onChange={(e) => set("stripe_publishable_key")(e.target.value)}
+                        className={form.stripe_publishable_key && !form.stripe_publishable_key.startsWith("pk_live_") ? "border-destructive focus-visible:ring-destructive" : ""}
+                      />
+                      {form.stripe_publishable_key && !form.stripe_publishable_key.startsWith("pk_live_") && (
+                        <p className="text-xs text-destructive">Live publishable key must start with <code className="bg-muted px-1 rounded">pk_live_</code></p>
+                      )}
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="stripe-sec">Secret Key</Label>
+                        <ConfiguredBadge status={status.stripe_secret_key} />
+                      </div>
+                      <SecretInput id="stripe-sec" value={form.stripe_secret_key} placeholder="sk_live_…" onChange={set("stripe_secret_key")} className={form.stripe_secret_key && !form.stripe_secret_key.startsWith("sk_live_") ? "border-destructive focus-visible:ring-destructive" : ""} />
+                      {form.stripe_secret_key && !form.stripe_secret_key.startsWith("sk_live_") && (
+                        <p className="text-xs text-destructive">Live secret key must start with <code className="bg-muted px-1 rounded">sk_live_</code></p>
+                      )}
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="stripe-wh">Webhook Secret</Label>
+                        <ConfiguredBadge status={status.stripe_webhook_secret} />
+                      </div>
+                      <SecretInput id="stripe-wh" value={form.stripe_webhook_secret} placeholder="whsec_…" onChange={set("stripe_webhook_secret")} />
+                    </div>
                   </div>
+
                   <div className="rounded-md bg-muted/40 border border-border p-3 space-y-2 text-xs text-muted-foreground">
                     <div className="flex items-start gap-2">
                       <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
@@ -423,7 +559,26 @@ const AdminSettings = () => {
                     </div>
                   </div>
                   <div className="pt-2 flex justify-end">
-                    <SaveButton onClick={() => saveSection("stripe", ["stripe_publishable_key", "stripe_secret_key", "stripe_webhook_secret"])} saving={saving === "stripe"} />
+                    <SaveButton
+                      onClick={() =>
+                        saveSection("stripe", [
+                          "stripe_mode",
+                          "stripe_test_publishable_key",
+                          "stripe_test_secret_key",
+                          "stripe_test_webhook_secret",
+                          "stripe_publishable_key",
+                          "stripe_secret_key",
+                          "stripe_webhook_secret",
+                        ])
+                      }
+                      saving={saving === "stripe"}
+                      disabled={
+                        (!!form.stripe_test_publishable_key && !form.stripe_test_publishable_key.startsWith("pk_test_")) ||
+                        (!!form.stripe_test_secret_key && !form.stripe_test_secret_key.startsWith("sk_test_")) ||
+                        (!!form.stripe_publishable_key && !form.stripe_publishable_key.startsWith("pk_live_")) ||
+                        (!!form.stripe_secret_key && !form.stripe_secret_key.startsWith("sk_live_"))
+                      }
+                    />
                   </div>
                 </CardContent>
               </Card>

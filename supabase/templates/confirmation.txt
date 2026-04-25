@@ -1,0 +1,24 @@
+DATAEEL® — Horse Racing Simplified®
+======================================
+
+Confirm your email address
+---------------------------
+
+Welcome aboard — you're one step away from unlocking DATAEEL® race-day intelligence.
+
+To verify your email address and activate your account, visit the link below:
+
+{{ .ConfirmationURL }}
+
+If the link above doesn't work, copy it and paste it directly into your browser's address bar.
+
+----------------------------------------------------------------------
+Didn't create an account?
+If you didn't sign up for DATAEEL®, you can safely ignore this email.
+No account will be created without confirmation.
+----------------------------------------------------------------------
+
+Questions? Contact us at support@dataeel.com
+
+This email was sent to {{ .Email }}.
+© DATAEEL®. All rights reserved.
