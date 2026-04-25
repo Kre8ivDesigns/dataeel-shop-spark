@@ -13,11 +13,14 @@ export interface SettingsForm {
   anthropic_model: string;
   openai_api_key: string;
   openai_model: string;
+  smtp_provider: string;
   smtp_host: string;
   smtp_port: string;
   smtp_user: string;
   smtp_password: string;
   smtp_from: string;
+  smtp_from_name: string;
+  smtp_reply_to: string;
   captcha_provider: string;
   captcha_site_key: string;
   captcha_secret_key: string;
@@ -41,11 +44,14 @@ export const EMPTY_SETTINGS_FORM: SettingsForm = {
   anthropic_model: "",
   openai_api_key: "",
   openai_model: "",
+  smtp_provider: "generic",
   smtp_host: "",
   smtp_port: "",
   smtp_user: "",
   smtp_password: "",
   smtp_from: "",
+  smtp_from_name: "",
+  smtp_reply_to: "",
   captcha_provider: "",
   captcha_site_key: "",
   captcha_secret_key: "",
