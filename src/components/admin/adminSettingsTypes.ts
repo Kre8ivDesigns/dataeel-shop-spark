@@ -21,9 +21,13 @@ export interface SettingsForm {
   captcha_provider: string;
   captcha_site_key: string;
   captcha_secret_key: string;
+  stripe_mode: string;
   stripe_publishable_key: string;
   stripe_secret_key: string;
   stripe_webhook_secret: string;
+  stripe_test_publishable_key: string;
+  stripe_test_secret_key: string;
+  stripe_test_webhook_secret: string;
   google_analytics_measurement_id: string;
   plausible_domain: string;
   site_public_url: string;
@@ -45,9 +49,13 @@ export const EMPTY_SETTINGS_FORM: SettingsForm = {
   captcha_provider: "",
   captcha_site_key: "",
   captcha_secret_key: "",
+  stripe_mode: "live",
   stripe_publishable_key: "",
   stripe_secret_key: "",
   stripe_webhook_secret: "",
+  stripe_test_publishable_key: "",
+  stripe_test_secret_key: "",
+  stripe_test_webhook_secret: "",
   google_analytics_measurement_id: "",
   plausible_domain: "",
   site_public_url: "",

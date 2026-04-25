@@ -36,11 +36,6 @@ Deno.serve(async (req) => {
     if (!isAdmin) return respond({ error: "Forbidden" }, 403);
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) return respond({ error: "STRIPE_SECRET_KEY is not configured" }, 500);
-
-    const stripe = new Stripe(stripeKey, {
-      apiVersion: "2025-08-27.basil",
-    });
 
     const body = await req.json();
     const { action } = body;
@@ -54,6 +49,9 @@ Deno.serve(async (req) => {
 
       const unitAmount = Math.round(Number(price) * 100);
       if (unitAmount <= 0) return respond({ error: "Price must be greater than 0" }, 400);
+
+      if (!stripeKey) return respond({ error: "STRIPE_SECRET_KEY is not configured. Cannot create credit package with Stripe integration." }, 500);
+      const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
       // Create Stripe product
       const product = await stripe.products.create({
@@ -97,6 +95,9 @@ Deno.serve(async (req) => {
         .single();
 
       if (fetchErr || !existing) return respond({ error: "Package not found" }, 404);
+
+      if (!stripeKey) return respond({ error: "STRIPE_SECRET_KEY is not configured. Cannot update credit package with Stripe integration." }, 500);
+      const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
       const unitAmount = Math.round(Number(price) * 100);
       let newPriceId: string = existing.stripe_price_id;
@@ -163,13 +164,19 @@ Deno.serve(async (req) => {
         .single();
 
       if (existing?.stripe_price_id) {
-        try {
-          const stripePrice = await stripe.prices.retrieve(existing.stripe_price_id);
-          await stripe.prices.update(existing.stripe_price_id, { active: false });
-          await stripe.products.update(stripePrice.product as string, { active: false });
-        } catch (stripeErr) {
-          // Log but don't block DB deletion if Stripe object is already gone
-          console.error("Stripe archive error:", stripeErr);
+        // Best-effort: archive the Stripe price/product. Errors are logged but
+        // never block the database deletion so the package is always removed.
+        if (stripeKey) {
+          try {
+            const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+            const stripePrice = await stripe.prices.retrieve(existing.stripe_price_id);
+            await stripe.prices.update(existing.stripe_price_id, { active: false });
+            await stripe.products.update(stripePrice.product as string, { active: false });
+          } catch (stripeErr) {
+            console.error("Stripe archive error:", stripeErr);
+          }
+        } else {
+          console.warn("STRIPE_SECRET_KEY not set — skipping Stripe archive for deleted package");
         }
       }
 
