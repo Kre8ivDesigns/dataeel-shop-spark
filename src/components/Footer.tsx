@@ -8,6 +8,9 @@ const footerLinks = {
     { label: "RaceCards", href: "/#racecards" },
     { label: "Pricing", href: "/pricing" },
     { label: "Results", href: "/#results" },
+    { label: "News", href: "/#racing-headlines" },
+    { label: "TDN", href: "/#tdn-headlines" },
+    { label: "Scratches", href: "/#equibase-late-changes" },
   ],
   company: [
     { label: "About Us", href: "/#about" },
