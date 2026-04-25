@@ -369,6 +369,13 @@ export type Database = {
       }
     }
     Functions: {
+      admin_add_credits: {
+        Args: {
+          _user_id: string
+          _amount: number
+        }
+        Returns: number
+      }
       deduct_credit_if_sufficient: {
         Args: {
           p_racecard_id: string
