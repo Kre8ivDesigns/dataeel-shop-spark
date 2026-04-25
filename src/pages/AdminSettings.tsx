@@ -87,6 +87,10 @@ const SaveButton = ({ onClick, saving }: { onClick: () => void; saving: boolean 
 const CopyButton = ({ text }: { text: string }) => {
   const [copied, setCopied] = useState(false);
   const handleCopy = () => {
+    if (!navigator?.clipboard?.writeText) {
+      toast.error("Clipboard API not available in this browser");
+      return;
+    }
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
