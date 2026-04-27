@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
       result.usage.cost_usd,
     );
 
-    await supabaseAdmin.from("audit_log").insert({
+    supabaseAdmin.from("audit_log").insert({
       actor_id: user.id,
       action: "racing_assistant.query",
       resource: result.provider,
@@ -173,6 +173,8 @@ Deno.serve(async (req) => {
         estimated_cost_usd,
         native_cost_usd: result.usage.cost_usd ?? null,
       },
+    }).then(({ error: logErr }) => {
+      if (logErr) console.error("[racing-assistant] audit log:", logErr.message);
     });
 
     return respond({

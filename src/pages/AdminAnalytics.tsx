@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Loader2, UserPlus, Download, Activity } from "lucide-react";
+import { ArrowLeft, Loader2, UserPlus, Download, Activity, AlertTriangle } from "lucide-react";
 import {
   CartesianGrid,
   Legend,
@@ -50,6 +50,17 @@ type AuditRow = {
   actor_id: string | null;
 };
 
+const ERROR_ACTION_PATTERNS = ["error", "fail", "exception", "denied", "unauthorized"];
+
+function isErrorRow(row: AuditRow): boolean {
+  const action = row.action.toLowerCase();
+  const detail = JSON.stringify(row.detail ?? "").toLowerCase();
+  return (
+    ERROR_ACTION_PATTERNS.some((p) => action.includes(p)) ||
+    ERROR_ACTION_PATTERNS.some((p) => detail.includes(p))
+  );
+}
+
 function describeAuditLogFetchError(err: { code?: string; message?: string }): string {
   const code = err.code ?? "";
   const msg = err.message ?? "";
@@ -67,6 +78,7 @@ const AdminAnalytics = () => {
   const [downloads, setDownloads] = useState<{ created_at: string }[]>([]);
   const [audit, setAudit] = useState<AuditRow[]>([]);
   const [auditError, setAuditError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<AuditRow[]>([]);
 
   const days = parseInt(range, 10);
 
@@ -85,10 +97,13 @@ const AdminAnalytics = () => {
     setDownloads(dlRes.data ?? []);
     if (auditRes.error) {
       setAudit([]);
+      setErrors([]);
       setAuditError(describeAuditLogFetchError(auditRes.error));
     } else {
       setAuditError(null);
-      setAudit((auditRes.data as AuditRow[]) ?? []);
+      const rows = (auditRes.data as AuditRow[]) ?? [];
+      setAudit(rows);
+      setErrors(rows.filter(isErrorRow));
     }
     setLoading(false);
   }, []);
@@ -159,7 +174,7 @@ const AdminAnalytics = () => {
             </div>
           ) : (
             <>
-              <div className="grid sm:grid-cols-3 gap-4 mb-8">
+              <div className="grid sm:grid-cols-4 gap-4 mb-8">
                 <Card className="bg-card border-border">
                   <CardHeader className="pb-2">
                     <CardDescription className="flex items-center gap-2">
@@ -190,6 +205,17 @@ const AdminAnalytics = () => {
                     <CardTitle className="text-2xl font-mono-data text-foreground">{audit.length}</CardTitle>
                   </CardHeader>
                   <CardContent className="text-xs text-muted-foreground">Latest 80 rows</CardContent>
+                </Card>
+                <Card className={`border-border ${errors.length > 0 ? "bg-destructive/10 border-destructive/30" : "bg-card"}`}>
+                  <CardHeader className="pb-2">
+                    <CardDescription className="flex items-center gap-2">
+                      <AlertTriangle className={`h-4 w-4 ${errors.length > 0 ? "text-destructive" : ""}`} /> Errors (recent)
+                    </CardDescription>
+                    <CardTitle className={`text-2xl font-mono-data ${errors.length > 0 ? "text-destructive" : "text-foreground"}`}>
+                      {errors.length}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-xs text-muted-foreground">From latest 80 audit rows</CardContent>
                 </Card>
               </div>
 
@@ -229,6 +255,46 @@ const AdminAnalytics = () => {
                   )}
                 </CardContent>
               </Card>
+
+              {errors.length > 0 && (
+                <Card className="bg-destructive/10 border-destructive/30 mb-8">
+                  <CardHeader>
+                    <CardTitle className="text-destructive flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5" /> Error log
+                    </CardTitle>
+                    <CardDescription>Recent error events detected in audit log</CardDescription>
+                  </CardHeader>
+                  <CardContent className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Time</TableHead>
+                          <TableHead>Action</TableHead>
+                          <TableHead>Resource</TableHead>
+                          <TableHead>Detail</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {errors.map((e) => (
+                          <TableRow key={e.id}>
+                            <TableCell className="text-muted-foreground whitespace-nowrap text-xs">
+                              {new Date(e.created_at).toLocaleString()}
+                            </TableCell>
+                            <TableCell className="font-mono text-xs text-destructive">{e.action}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {e.resource}
+                              {e.resource_id ? ` · ${e.resource_id}` : ""}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground max-w-md truncate font-mono">
+                              {e.detail ? JSON.stringify(e.detail) : "—"}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              )}
 
               <Card className="bg-card border-border">
                 <CardHeader>

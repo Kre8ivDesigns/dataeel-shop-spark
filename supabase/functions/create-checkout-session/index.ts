@@ -1,6 +1,23 @@
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, getValidatedOrigin } from "../_shared/cors.ts";
+import { decryptSettingValue } from "../_shared/decrypt_setting.ts";
+
+async function loadStripeKey(supabaseAdmin: ReturnType<typeof createClient>, encryptionKey: string): Promise<string | null> {
+  const { data: rows } = await supabaseAdmin
+    .from("app_settings")
+    .select("key, encrypted_value")
+    .in("key", ["stripe_mode", "stripe_secret_key", "stripe_test_secret_key"]);
+
+  const settings: Record<string, string> = {};
+  for (const row of rows ?? []) {
+    try { settings[row.key] = await decryptSettingValue(row.encrypted_value, encryptionKey); } catch { /* skip */ }
+  }
+
+  const mode = settings.stripe_mode ?? "live";
+  const key = mode === "test" ? settings.stripe_test_secret_key : settings.stripe_secret_key;
+  return key?.trim() || Deno.env.get("STRIPE_SECRET_KEY") || null;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -48,7 +65,16 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Package has no associated Stripe price" }), { status: 400, headers });
     }
 
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+    const encryptionKey = Deno.env.get("APP_SETTINGS_ENCRYPTION_KEY") ?? "";
+    const stripeKey = encryptionKey.length >= 64
+      ? await loadStripeKey(supabaseAdmin, encryptionKey)
+      : Deno.env.get("STRIPE_SECRET_KEY") ?? null;
+
+    if (!stripeKey) {
+      return new Response(JSON.stringify({ error: "Stripe is not configured. An admin must add the Stripe key under Admin → Settings." }), { status: 503, headers });
+    }
+
+    const stripe = new Stripe(stripeKey, {
       apiVersion: "2025-08-27.basil",
     });
 
@@ -96,7 +122,8 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({ url: session.url }), { status: 200, headers });
   } catch (error) {
-    console.error("[create-checkout-session] Error:", error instanceof Error ? error.message : "unknown");
-    return new Response(JSON.stringify({ error: "Internal server error" }), { status: 500, headers });
+    const msg = error instanceof Error ? error.message : "unknown";
+    console.error("[create-checkout-session] Error:", msg);
+    return new Response(JSON.stringify({ error: msg.slice(0, 280) }), { status: 500, headers });
   }
 });
