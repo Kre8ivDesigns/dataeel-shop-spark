@@ -1,6 +1,23 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { decryptSettingValue } from "../_shared/decrypt_setting.ts";
+
+async function loadStripeKey(supabaseAdmin: ReturnType<typeof createClient>, encryptionKey: string): Promise<string | null> {
+  const { data: rows } = await supabaseAdmin
+    .from("app_settings")
+    .select("key, encrypted_value")
+    .in("key", ["stripe_mode", "stripe_secret_key", "stripe_test_secret_key"]);
+
+  const settings: Record<string, string> = {};
+  for (const row of rows ?? []) {
+    try { settings[row.key] = await decryptSettingValue(row.encrypted_value, encryptionKey); } catch { /* skip */ }
+  }
+
+  const mode = settings.stripe_mode ?? "live";
+  const key = mode === "test" ? settings.stripe_test_secret_key : settings.stripe_secret_key;
+  return key?.trim() || Deno.env.get("STRIPE_SECRET_KEY") || null;
+}
 
 Deno.serve(async (req) => {
   const cors = getCorsHeaders(req);
@@ -35,7 +52,10 @@ Deno.serve(async (req) => {
     const { data: isAdmin } = await supabaseAdmin.rpc("is_admin", { _user_id: user.id });
     if (!isAdmin) return respond({ error: "Forbidden" }, 403);
 
-    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    const encryptionKey = Deno.env.get("APP_SETTINGS_ENCRYPTION_KEY") ?? "";
+    const stripeKey = encryptionKey.length >= 64
+      ? await loadStripeKey(supabaseAdmin, encryptionKey)
+      : Deno.env.get("STRIPE_SECRET_KEY") ?? null;
 
     const body = await req.json();
     const { action } = body;
