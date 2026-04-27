@@ -8,8 +8,9 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 
 /**
  * Parse a track code and race date from an S3 key.
- * Expected key format: racecards/<uuid>-TRACKCODE_YYYY-MM-DD.pdf
- * Falls back gracefully when the pattern isn't followed.
+ * Supported basename patterns (after optional `uuid-` prefix):
+ * - `TRACKCODE_YYYY-MM-DD.pdf` (admin upload)
+ * - `TRACKCODE_YYYY-MM-DD__2.pdf` (same track/day second card; from prepare-racecards-for-s3.mjs)
  */
 function parseS3Key(s3Key: string): { trackCode: string; raceDate: string; fileName: string } {
   const fileName = s3Key.split("/").pop() ?? s3Key;
@@ -18,8 +19,14 @@ function parseS3Key(s3Key: string): { trackCode: string; raceDate: string; fileN
   const baseName = uuidPrefixRe.exec(fileName)?.[1] ?? fileName;
 
   const nameWithoutExt = baseName.replace(/\.pdf$/i, "");
-  const parts = nameWithoutExt.split("_");
+  const strict = /^([A-Z0-9]+)_(20\d{2}-\d{2}-\d{2})(?:__\d+)?$/i.exec(nameWithoutExt);
+  if (strict) {
+    const trackCode = strict[1].toUpperCase();
+    const raceDate = strict[2];
+    return { trackCode, raceDate, fileName: baseName };
+  }
 
+  const parts = nameWithoutExt.split("_");
   const rawTrackCode = (parts[0] ?? "").replace(/[^A-Z0-9]/gi, "").toUpperCase();
   const trackCode =
     rawTrackCode.length > 0 && rawTrackCode.length <= 10 ? rawTrackCode : "UNK";

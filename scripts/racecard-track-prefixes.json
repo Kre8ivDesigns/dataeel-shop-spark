@@ -1,0 +1,15 @@
+{
+  "aqu": { "track_code": "AQU", "track_name": "Aqueduct" },
+  "cmr": { "track_code": "CMR", "track_name": "Charles Town" },
+  "ct": { "track_code": "CD", "track_name": "Churchill Downs" },
+  "gp": { "track_code": "GP", "track_name": "Gulfstream Park" },
+  "kee": { "track_code": "KEE", "track_name": "Keeneland" },
+  "lrl": { "track_code": "LRL", "track_name": "Laurel Park" },
+  "mnr": { "track_code": "MNR", "track_name": "Mountaineer" },
+  "mvr": { "track_code": "MVR", "track_name": "Mahoning Valley" },
+  "op": { "track_code": "OP", "track_name": "Oaklawn Park" },
+  "pen": { "track_code": "PEN", "track_name": "Penn National" },
+  "prx": { "track_code": "PRX", "track_name": "Parx" },
+  "sa": { "track_code": "SA", "track_name": "Santa Anita Park" },
+  "tam": { "track_code": "TAM", "track_name": "Tampa Bay Downs" }
+}

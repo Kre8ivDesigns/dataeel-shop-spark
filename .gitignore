@@ -27,3 +27,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local Equibase PDF drops + prepared upload names (large binaries)
+racecards-staging/
+race cards/
+
+# Local AI/dev tooling state — not project source
+.ijfw/
+.claude-context.md

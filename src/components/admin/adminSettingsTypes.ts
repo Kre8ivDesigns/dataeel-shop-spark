@@ -44,7 +44,7 @@ export const EMPTY_SETTINGS_FORM: SettingsForm = {
   anthropic_model: "",
   openai_api_key: "",
   openai_model: "",
-  smtp_provider: "google_workspace",
+  smtp_provider: "generic",
   smtp_host: "",
   smtp_port: "",
   smtp_user: "",

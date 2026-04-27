@@ -186,3 +186,6 @@ npx @claude-flow/cli@latest doctor --fix
 
 - Documentation: https://github.com/ruvnet/claude-flow
 - Issues: https://github.com/ruvnet/claude-flow/issues
+
+<!-- IJFW-MEMORY-START (managed -- do not edit manually) -->
+<!-- IJFW-MEMORY-END -->

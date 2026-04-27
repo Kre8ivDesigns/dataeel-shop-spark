@@ -101,24 +101,53 @@ Deno.serve(async (req) => {
       if (fetchErr || !existing) return respond({ error: "Package not found" }, 404);
 
       const unitAmount = Math.round(Number(price) * 100);
-      let newPriceId: string = existing.stripe_price_id;
+      if (unitAmount <= 0) return respond({ error: "Price must be greater than 0" }, 400);
+      let newPriceId: string | null = existing.stripe_price_id ?? null;
 
       if (existing.stripe_price_id) {
-        // Retrieve existing Stripe price to find the product
-        const existingStripePrice = await stripe.prices.retrieve(existing.stripe_price_id);
-        const productId = existingStripePrice.product as string;
+        // Retrieve existing Stripe price to find the product.
+        // If the price no longer exists in Stripe (e.g. was manually deleted or belongs
+        // to a different Stripe account), fall through to the creation branch.
+        let existingStripePrice: Stripe.Price | null = null;
+        try {
+          existingStripePrice = await stripe.prices.retrieve(existing.stripe_price_id);
+        } catch (stripeErr: unknown) {
+          const statusCode =
+            stripeErr !== null &&
+            typeof stripeErr === "object" &&
+            "statusCode" in stripeErr
+              ? (stripeErr as { statusCode: unknown }).statusCode
+              : undefined;
+          if (statusCode !== 404) throw stripeErr;
+          console.warn(
+            `manage-credit-package: Stripe price ${existing.stripe_price_id} not found – creating replacement`
+          );
+        }
 
-        // Update product name/description
-        await stripe.products.update(productId, {
-          name,
-          description: description || undefined,
-        });
+        if (existingStripePrice) {
+          const productId = existingStripePrice.product as string;
 
-        // Prices are immutable — archive old and create new if amount changed
-        if (existingStripePrice.unit_amount !== unitAmount) {
-          await stripe.prices.update(existing.stripe_price_id, { active: false });
+          // Update product name/description
+          await stripe.products.update(productId, {
+            name,
+            description: description || undefined,
+          });
+
+          // Prices are immutable — archive old and create new if amount changed
+          if (existingStripePrice.unit_amount !== unitAmount) {
+            await stripe.prices.update(existing.stripe_price_id, { active: false });
+            const newStripePrice = await stripe.prices.create({
+              product: productId,
+              unit_amount: unitAmount,
+              currency: "usd",
+            });
+            newPriceId = newStripePrice.id;
+          }
+        } else {
+          // Price was not found — create a fresh Stripe product and price
+          const product = await stripe.products.create({ name, description: description || undefined });
           const newStripePrice = await stripe.prices.create({
-            product: productId,
+            product: product.id,
             unit_amount: unitAmount,
             currency: "usd",
           });
@@ -165,12 +194,13 @@ Deno.serve(async (req) => {
         .single();
 
       if (existing?.stripe_price_id) {
+        // Best-effort: archive the Stripe price/product. Errors are logged but
+        // never block the database deletion so the package is always removed.
         try {
           const stripePrice = await stripe.prices.retrieve(existing.stripe_price_id);
           await stripe.prices.update(existing.stripe_price_id, { active: false });
           await stripe.products.update(stripePrice.product as string, { active: false });
         } catch (stripeErr) {
-          // Log but don't block DB deletion if Stripe object is already gone
           console.error("Stripe archive error:", stripeErr);
         }
       }
@@ -187,6 +217,7 @@ Deno.serve(async (req) => {
     return respond({ error: `Unknown action: ${action}` }, 400);
   } catch (err) {
     console.error("manage-credit-package error:", err);
-    return respond({ error: "Internal server error" }, 500);
+    const msg = err instanceof Error ? err.message : "Internal server error";
+    return respond({ error: msg }, 500);
   }
 });

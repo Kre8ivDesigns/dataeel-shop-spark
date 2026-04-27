@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, ExternalLink, Loader2 } from "lucide-react";
+import { ArrowLeft, ExternalLink, Loader2, PlusCircle } from "lucide-react";
 import { sanitizeError } from "@/lib/errorHandler";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
@@ -67,9 +67,17 @@ const AdminPages = () => {
             Back to Admin
           </Link>
 
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground font-heading">Pages</h1>
-            <p className="text-muted-foreground text-sm mt-1">Drafts stay private until published.</p>
+          <div className="mb-8 flex items-center justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground font-heading">Pages</h1>
+              <p className="text-muted-foreground text-sm mt-1">Drafts stay private until published.</p>
+            </div>
+            <Button asChild>
+              <Link to="/admin/page-editor">
+                <PlusCircle className="h-4 w-4 mr-2" />
+                New Page
+              </Link>
+            </Button>
           </div>
 
           <Card className="bg-card border-border">
@@ -106,12 +114,21 @@ const AdminPages = () => {
                           <Switch checked={r.published} onCheckedChange={(v) => togglePublished(r, v)} />
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="outline" size="sm" asChild>
-                            <Link to={`/admin/page-editor?slug=${encodeURIComponent(r.slug)}`}>
-                              <ExternalLink className="h-3.5 w-3.5 mr-1" />
-                              Edit
-                            </Link>
-                          </Button>
+                          <div className="flex items-center justify-end gap-2">
+                            {r.published && (
+                              <Button variant="ghost" size="sm" asChild>
+                                <Link to={`/pages/${encodeURIComponent(r.slug)}`} target="_blank" rel="noopener noreferrer">
+                                  View
+                                </Link>
+                              </Button>
+                            )}
+                            <Button variant="outline" size="sm" asChild>
+                              <Link to={`/admin/page-editor?slug=${encodeURIComponent(r.slug)}`}>
+                                <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                                Edit
+                              </Link>
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

@@ -1,6 +1,17 @@
 project_id = "uhalsigyxvshlnlagtwt"
 
-# CORS + Stripe return URLs: set Edge Function secret ALLOWED_ORIGINS when you have a real domain.
+# ── Auth email templates ────────────────────────────────────────────────────
+# Custom branded emails for local Supabase dev (supabase start).
+# For PRODUCTION apply the same HTML in the Supabase Dashboard:
+#   Authentication → Email Templates → Confirm signup
+#   See supabase/templates/README.md for step-by-step instructions.
+
+[auth.email.template.confirmation]
+subject = "Confirm your DATAEEL® account"
+content_path = "./supabase/templates/confirmation.html"
+
+# ── CORS + Stripe return URLs ────────────────────────────────────────────────
+# Set Edge Function secret ALLOWED_ORIGINS when you have a real domain.
 # Dashboard: Project Settings → Edge Functions → Secrets.
 # Example: ALLOWED_ORIGINS=https://www.example.com,https://example.com,https://app.vercel.app
 # (scheme required, no trailing slash, comma-separated). See supabase/functions/_shared/cors.ts.
@@ -22,6 +33,16 @@ content_path = "./templates/magic-link.html"
 
 # stripe-webhook is called server-to-server by Stripe — no JWT
 [functions.stripe-webhook]
+verify_jwt = false
+
+# Public RSS proxy (fixed upstream URL); homepage uses anon key + no session
+[functions.abr-rss]
+verify_jwt = false
+
+[functions.tdn-rss]
+verify_jwt = false
+
+[functions.equibase-late-changes-rss]
 verify_jwt = false
 
 # All other functions validate JWT themselves AND via gateway

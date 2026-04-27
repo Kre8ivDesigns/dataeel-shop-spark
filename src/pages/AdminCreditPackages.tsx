@@ -72,6 +72,15 @@ const AdminCreditPackages = () => {
     setDialogOpen(true);
   };
 
+  const invokePackageAction = async (body: Record<string, unknown>) => {
+    const { data, error } = await supabase.functions.invoke("manage-credit-package", { body });
+    if (error || data?.error) {
+      toast.error(typeof data?.error === "string" ? data.error : describeFunctionInvokeError("manage-credit-package", error));
+      return null;
+    }
+    return data;
+  };
+
   const handleSave = async () => {
     if (!form.name.trim() || !form.credits || !form.price) {
       toast.error("Name, credits, and price are required");
@@ -100,25 +109,12 @@ const AdminCreditPackages = () => {
       };
       if (editingPackage) body.packageId = editingPackage.id;
 
-      const { data, error } = await supabase.functions.invoke("manage-credit-package", { body });
-      if (error) {
-        toast.error(
-          typeof data?.error === "string"
-            ? data.error
-            : describeFunctionInvokeError("manage-credit-package", error),
-        );
-        return;
-      }
-      if (data?.error) {
-        toast.error(data.error);
-        return;
-      }
+      const result = await invokePackageAction(body);
+      if (result === null) return;
 
       toast.success(editingPackage ? "Package updated" : "Package created");
       setDialogOpen(false);
       fetchPackages();
-    } catch (err) {
-      toast.error(describeFunctionInvokeError("manage-credit-package", err));
     } finally {
       setSaving(false);
     }
@@ -128,25 +124,10 @@ const AdminCreditPackages = () => {
     if (!confirm(`Delete "${pkg.name}"? This cannot be undone.`)) return;
     setDeletingId(pkg.id);
     try {
-      const { data, error } = await supabase.functions.invoke("manage-credit-package", {
-        body: { action: "delete", packageId: pkg.id },
-      });
-      if (error) {
-        toast.error(
-          typeof data?.error === "string"
-            ? data.error
-            : describeFunctionInvokeError("manage-credit-package", error),
-        );
-        return;
-      }
-      if (data?.error) {
-        toast.error(data.error);
-        return;
-      }
+      const result = await invokePackageAction({ action: "delete", packageId: pkg.id });
+      if (result === null) return;
       toast.success("Package deleted");
       fetchPackages();
-    } catch (err) {
-      toast.error(describeFunctionInvokeError("manage-credit-package", err));
     } finally {
       setDeletingId(null);
     }

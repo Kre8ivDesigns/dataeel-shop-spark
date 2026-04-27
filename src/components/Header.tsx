@@ -23,11 +23,10 @@ import { useAuth } from "@/contexts/AuthContext";
 const navItems = [
   { label: "Home", href: "/" },
   { label: "How It Works", href: "/#how-it-works" },
-  { label: "Results", href: "/#results" },
   { label: "RaceCards", href: "/racecards" },
+  { label: "Results", href: "/#results" },
   { label: "Pricing", href: "/pricing" },
-  { label: "Betting basics", href: "/betting-basics" },
-  { label: "About", href: "/#about" },
+  { label: "Betting Basics", href: "/betting-basics" },
   { label: "Contact", href: "/contact" },
 ];
 
