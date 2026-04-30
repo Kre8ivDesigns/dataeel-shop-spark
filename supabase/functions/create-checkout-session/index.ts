@@ -101,7 +101,8 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({ url: session.url }), { status: 200, headers });
   } catch (error) {
-    console.error("[create-checkout-session] Error:", error instanceof Error ? error.message : "unknown");
-    return new Response(JSON.stringify({ error: "Internal server error" }), { status: 500, headers });
+    const msg = error instanceof Error ? error.message : "unknown";
+    console.error("[create-checkout-session] Error:", msg);
+    return new Response(JSON.stringify({ error: msg.slice(0, 280) }), { status: 500, headers });
   }
 });

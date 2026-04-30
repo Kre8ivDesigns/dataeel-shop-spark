@@ -39,10 +39,11 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!isError || !error) return;
-    console.error(error);
+    console.error("[dashboard]", error);
+    const detail = error instanceof Error ? error.message : String(error);
     toast({
       title: "Could not load dashboard",
-      description: "Some sections may be incomplete. Try refreshing.",
+      description: detail || "Some sections may be incomplete. Try refreshing.",
       variant: "destructive",
     });
   }, [isError, error, toast]);

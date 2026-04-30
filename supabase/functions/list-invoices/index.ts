@@ -26,6 +26,17 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
+    const stripeKey = await resolveStripeSecretKey(supabaseAdmin);
+    if (!stripeKey) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "Stripe is not configured. Add keys under Admin → Settings (with APP_SETTINGS_ENCRYPTION_KEY), or set STRIPE_SECRET_KEY.",
+        }),
+        { status: 503, headers },
+      );
+    }
+
     const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
     if (userError || !user?.email) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers });

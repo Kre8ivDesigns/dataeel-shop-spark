@@ -170,7 +170,7 @@ const AdminCreditPackages = () => {
                       <TableHead>Name</TableHead>
                       <TableHead>Credits</TableHead>
                       <TableHead>Price</TableHead>
-                      <TableHead>Stripe Price ID</TableHead>
+                      <TableHead className="whitespace-nowrap">Stripe (auto)</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -185,8 +185,12 @@ const AdminCreditPackages = () => {
                         </TableCell>
                         <TableCell className="font-mono-data text-primary">{pkg.credits}</TableCell>
                         <TableCell className="font-mono-data text-foreground">${pkg.price}</TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">
-                          {pkg.stripe_price_id ?? <span className="text-destructive">—</span>}
+                        <TableCell className="text-xs text-muted-foreground">
+                          {pkg.stripe_price_id ? (
+                            <span title={pkg.stripe_price_id}>Linked</span>
+                          ) : (
+                            <span className="text-destructive">Not linked — save package with Stripe configured</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Button
@@ -288,8 +292,8 @@ const AdminCreditPackages = () => {
 
             <p className="text-xs text-muted-foreground">
               {editingPackage
-                ? "Saving will update the Stripe product/price. If the price amount changes, the old Stripe price is archived and a new one is created."
-                : "A Stripe Product and Price will be created automatically on save."}
+                ? "Saving updates Stripe automatically — you never paste a Stripe Price ID. If the USD amount changes, the previous Stripe price is archived and a new one is created."
+                : "You only fill in name, credits, and price here. Stripe Product + Price are created in your Stripe account when you save — no Dashboard lookup."}
             </p>
 
             <div className="flex gap-3 pt-2">
