@@ -1,6 +1,7 @@
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, getValidatedOrigin } from "../_shared/cors.ts";
+import { resolveStripeSecretKey } from "../_shared/stripe_secret.ts";
 
 function validatedReturnUrl(req: Request, path: string): string {
   return `${getValidatedOrigin(req)}${path}`;
@@ -14,9 +15,6 @@ Deno.serve(async (req) => {
   const headers = { ...getCorsHeaders(req), "Content-Type": "application/json" };
 
   try {
-    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
-
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers });
@@ -31,6 +29,17 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
+
+    const stripeKey = await resolveStripeSecretKey(supabaseAdmin);
+    if (!stripeKey) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "Stripe is not configured. Add keys under Admin → Settings (with APP_SETTINGS_ENCRYPTION_KEY), or set STRIPE_SECRET_KEY.",
+        }),
+        { status: 503, headers },
+      );
+    }
 
     const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
     if (userError || !user?.email) {

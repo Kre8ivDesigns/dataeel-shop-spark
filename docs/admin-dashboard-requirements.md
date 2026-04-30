@@ -103,7 +103,7 @@ Last reviewed against the codebase: **2026-04-11**.
 | Requirement | Status | Notes |
 |-------------|--------|--------|
 | Configure credit packages | **Built** | `AdminCreditPackages` → `credit_packages` table. |
-| Stripe linkage (price IDs) | **Partial** | Field `stripe_price_id` on packages; full checkout wiring is outside this checklist. |
+| Stripe linkage | **Built** | Creating or editing a package in **Admin → Credit Packages** calls `manage-credit-package`, which creates a Stripe Product + Price and stores `stripe_price_id`. No manual Stripe Dashboard copy/paste is required for packages created in the app. |
 | Promo codes / discounts | **Missing** | — |
 | Subscription vs one-time | **Missing** | Model appears credit-based one-time; no subscription admin. |
 | Credit expiration rules | **Missing** | Product copy says credits don’t expire; no admin to change policy. |

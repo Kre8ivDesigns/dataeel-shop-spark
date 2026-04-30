@@ -1,23 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
-import { decryptSettingValue } from "../_shared/decrypt_setting.ts";
-
-async function loadStripeKey(supabaseAdmin: ReturnType<typeof createClient>, encryptionKey: string): Promise<string | null> {
-  const { data: rows } = await supabaseAdmin
-    .from("app_settings")
-    .select("key, encrypted_value")
-    .in("key", ["stripe_mode", "stripe_secret_key", "stripe_test_secret_key"]);
-
-  const settings: Record<string, string> = {};
-  for (const row of rows ?? []) {
-    try { settings[row.key] = await decryptSettingValue(row.encrypted_value, encryptionKey); } catch { /* skip */ }
-  }
-
-  const mode = settings.stripe_mode ?? "live";
-  const key = mode === "test" ? settings.stripe_test_secret_key : settings.stripe_secret_key;
-  return key?.trim() || Deno.env.get("STRIPE_SECRET_KEY") || null;
-}
+import { resolveStripeSecretKey } from "../_shared/stripe_secret.ts";
 
 Deno.serve(async (req) => {
   const cors = getCorsHeaders(req);
@@ -52,10 +36,7 @@ Deno.serve(async (req) => {
     const { data: isAdmin } = await supabaseAdmin.rpc("is_admin", { _user_id: user.id });
     if (!isAdmin) return respond({ error: "Forbidden" }, 403);
 
-    const encryptionKey = Deno.env.get("APP_SETTINGS_ENCRYPTION_KEY") ?? "";
-    const stripeKey = encryptionKey.length >= 64
-      ? await loadStripeKey(supabaseAdmin, encryptionKey)
-      : Deno.env.get("STRIPE_SECRET_KEY") ?? null;
+    const stripeKey = await resolveStripeSecretKey(supabaseAdmin);
 
     const body = await req.json();
     const { action } = body;
@@ -70,7 +51,15 @@ Deno.serve(async (req) => {
       const unitAmount = Math.round(Number(price) * 100);
       if (unitAmount <= 0) return respond({ error: "Price must be greater than 0" }, 400);
 
-      if (!stripeKey) return respond({ error: "STRIPE_SECRET_KEY is not configured. Cannot create credit package with Stripe integration." }, 500);
+      if (!stripeKey) {
+        return respond(
+          {
+            error:
+              "Stripe is not configured. Add your Stripe secret key under Admin → Settings (requires APP_SETTINGS_ENCRYPTION_KEY on Edge Functions), or set STRIPE_SECRET_KEY as a function secret.",
+          },
+          503,
+        );
+      }
       const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
       // Create Stripe product
@@ -116,7 +105,15 @@ Deno.serve(async (req) => {
 
       if (fetchErr || !existing) return respond({ error: "Package not found" }, 404);
 
-      if (!stripeKey) return respond({ error: "STRIPE_SECRET_KEY is not configured. Cannot update credit package with Stripe integration." }, 500);
+      if (!stripeKey) {
+        return respond(
+          {
+            error:
+              "Stripe is not configured. Add your Stripe secret key under Admin → Settings (requires APP_SETTINGS_ENCRYPTION_KEY on Edge Functions), or set STRIPE_SECRET_KEY as a function secret.",
+          },
+          503,
+        );
+      }
       const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
       const unitAmount = Math.round(Number(price) * 100);
@@ -225,7 +222,7 @@ Deno.serve(async (req) => {
             console.error("Stripe archive error:", stripeErr);
           }
         } else {
-          console.warn("STRIPE_SECRET_KEY not set — skipping Stripe archive for deleted package");
+          console.warn("Stripe secret not resolved — skipping Stripe archive for deleted package");
         }
       }
 

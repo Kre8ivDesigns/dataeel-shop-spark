@@ -107,15 +107,24 @@ const BuyCredits = () => {
       const { data, error } = await supabase.functions.invoke("create-checkout-session", {
         body: { packageId: selected.id },
       });
-      if (error) throw error;
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error("No checkout URL returned");
+      const payload = data as { url?: string; error?: string } | null;
+      if (payload?.error) {
+        toast.error(payload.error);
+        return;
       }
+      if (error) {
+        console.error("Purchase error:", error);
+        toast.error(error.message ?? "Failed to start checkout.");
+        return;
+      }
+      if (payload?.url) {
+        window.location.href = payload.url;
+        return;
+      }
+      toast.error("No checkout URL returned from the server.");
     } catch (err: any) {
       console.error("Purchase error:", err);
-      toast.error("Failed to start checkout. Please try again.");
+      toast.error(err?.message ?? "Failed to start checkout. Please try again.");
     } finally {
       setPurchasing(false);
     }

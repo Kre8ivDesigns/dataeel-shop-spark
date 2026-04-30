@@ -1,9 +1,22 @@
 // Stripe calls this endpoint server-to-server — no CORS headers needed.
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { resolveStripeSecretKey } from "../_shared/stripe_secret.ts";
 
 Deno.serve(async (req) => {
-  const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+  const supabaseAdmin = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    { auth: { persistSession: false } },
+  );
+
+  const stripeSecret = await resolveStripeSecretKey(supabaseAdmin);
+  if (!stripeSecret) {
+    console.error("[stripe-webhook] Stripe secret not configured (Admin → Settings or STRIPE_SECRET_KEY)");
+    return new Response(JSON.stringify({ error: "Stripe not configured" }), { status: 503 });
+  }
+
+  const stripe = new Stripe(stripeSecret, {
     apiVersion: "2025-08-27.basil",
   });
 
@@ -39,12 +52,6 @@ Deno.serve(async (req) => {
       console.error("[stripe-webhook] Missing or invalid metadata");
       return new Response(JSON.stringify({ error: "Invalid metadata" }), { status: 400 });
     }
-
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } }
-    );
 
     // IDEMPOTENCY: insert transaction first with unique stripe_session_id.
     // If the event was already processed, the unique constraint will reject it.
