@@ -1,48 +1,35 @@
 import { motion } from "framer-motion";
-import { TrendingUp, Trophy, Target, Zap, ArrowRight } from "lucide-react";
+import { TrendingUp, Layers, MapPin, FileDown, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 const stats = [
-  { number: "6", label: "Winners", sublabel: "Santa Anita · Jan 25", icon: Trophy },
-  { number: "5", label: "Winners", sublabel: "Woodbine · May 11", icon: Trophy },
-  { number: "TRIFECTA", label: "Hit!", sublabel: "Churchill Downs", icon: Target },
-  { number: "PICK 3", label: "Winner", sublabel: "Santa Anita · Jan 25", icon: Zap },
+  { number: "2", label: "Algorithms", sublabel: "Concert™ & Aptitude™", icon: Layers },
+  { number: "28+", label: "Tracks", sublabel: "U.S. & Canada (marketing scope)", icon: MapPin },
+  { number: "1", label: "Credit / day", sublabel: "Typical full-card unlock", icon: Sparkles },
+  { number: "PDF", label: "Instant", sublabel: "Download after unlock", icon: FileDown },
 ];
 
-const recentWins = [
+const cardHighlights = [
   {
-    track: "Santa Anita",
-    date: "Jan 25, 2026",
-    algorithm: "Aptitude",
-    results: "Winners in Race #1, #4, #5, #6, #7, #8 · PICK 3 · DAILY DOUBLE",
+    track: "Every card",
+    date: "—",
+    algorithm: "Concert",
+    results: "Live-performance emphasis — trips, energy, finishing patterns under race-day pressure.",
     type: "multiple",
   },
   {
-    track: "Woodbine",
-    date: "May 11, 2025",
+    track: "Every card",
+    date: "—",
     algorithm: "Aptitude",
-    results: "Winners in Race #2, #3, #6, #7, #8 · PICK 3 · DAILY DOUBLE",
+    results: "Ability & suitability — class, distance/surface fit, pace matchup, stamina context.",
     type: "multiple",
   },
   {
-    track: "Churchill Downs",
-    date: "2025",
-    algorithm: "Concert",
-    results: "TRIFECTA hit in Race #1",
-    type: "trifecta",
-  },
-  {
-    track: "Tampa Bay Downs",
-    date: "Jan 30, 2026",
-    algorithm: "Concert",
-    results: "4 Winners picked across the card",
-    type: "winner",
-  },
-  {
-    track: "Gulfstream Park",
-    date: "Jan 29, 2026",
-    algorithm: "Aptitude",
-    results: "Winners in Race #1, #2, #8, #9",
+    track: "Browse",
+    date: "Your date",
+    algorithm: "EEL",
+    results: "Pick a track and calendar day in RaceCards; availability follows the live racing schedule.",
     type: "winner",
   },
 ];
@@ -64,15 +51,15 @@ export const Results = () => {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <span className="badge-neon mb-4 inline-block">Proven Results</span>
+          <span className="badge-neon mb-4 inline-block">What you get</span>
           <h2 className="section-title mb-4">
-            See Our Algorithms{" "}
-            <span className="text-neon">In Action</span>
+            Two Algorithms{" "}
+            <span className="text-neon">On Every Card</span>
           </h2>
           <p className="section-subtitle">
-            Real results from real races. Our Concert™ and Aptitude™ algorithms
-            consistently deliver winning picks including TRIFECTAS, PICK 3s,
-            DAILY DOUBLES, and EXACTAS across all major tracks.
+            Each EEL RaceCard PDF combines Concert™ and Aptitude™ views on structured race data for
+            handicapping education. Past marketing anecdotes are illustrations only — not guarantees for
+            future races.
           </p>
         </motion.div>
 
@@ -115,11 +102,11 @@ export const Results = () => {
         >
           <h3 className="text-xl font-semibold text-foreground mb-6 flex items-center gap-2 font-heading">
             <TrendingUp className="h-5 w-5 text-primary" />
-            Recent Algorithm Wins
+            Card highlights
           </h3>
 
           <div className="space-y-4">
-            {recentWins.map((win, index) => (
+            {cardHighlights.map((win, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, x: -20 }}
@@ -157,9 +144,12 @@ export const Results = () => {
             <Button
               variant="outline"
               className="border-border text-foreground hover:bg-muted hover:border-primary/30"
+              asChild
             >
-              View All Results
-              <ArrowRight className="ml-2 h-4 w-4" />
+              <Link to="/racecards">
+                Browse RaceCards
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
             </Button>
           </div>
         </motion.div>

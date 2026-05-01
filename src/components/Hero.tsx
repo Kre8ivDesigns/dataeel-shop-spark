@@ -4,13 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-racing.jpg";
 
+/** Ticker copy is non-outcome marketing only — specific win/exotic claims require auditable published picks. */
 const breakingNews = [
-  "Aptitude algorithm picks Winner in race#1, race#4, race#5, race#6, race#7, race#8; Santa Anita Jan.25, 2026",
-  "Aptitude algorithm hits PICK 3 in race#6 and in race#7 and in race#8; Santa Anita Jan.25, 2026",
-  "Aptitude algorithm hits DAILY DOUBLE in race#5 and in race#6 and in race#7 and in race#8; Santa Anita Jan.25, 2026",
-  "Concert algorithm hits TRIFECTA in race#1; Churchill Downs",
-  "Aptitude algorithm picks Winner in race#2, race#3, race#6, race#7, race#8; Woodbine May.11, 2025",
-  "Concert algorithm picks 4 Winners at Tampa Bay Downs",
+  "EEL RaceCards ship Concert™ and Aptitude™ overlays on every PDF — structured handicapping education, not picks advice.",
+  "Browse tracks by date; one credit typically unlocks a full published race day where cards are available.",
+  "Coverage marketed for 28+ North American venues — see the RaceCards catalog for what is live on your date.",
+  "Outputs are informational; racing has variance — always follow local laws and operator rules.",
 ];
 
 const trustBadges = [
