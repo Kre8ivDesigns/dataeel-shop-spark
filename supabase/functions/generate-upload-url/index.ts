@@ -6,6 +6,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { S3Client, PutObjectCommand } from "https://esm.sh/@aws-sdk/client-s3@3";
 import { getSignedUrl } from "https://esm.sh/@aws-sdk/s3-request-presigner@3";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { getAwsS3Env, missingAwsS3EnvKeys } from "../_shared/awsS3Env.ts";
+
+function errMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  return String(err);
+}
 
 Deno.serve(async (req) => {
   const cors = getCorsHeaders(req);
@@ -48,21 +54,29 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Missing fileName" }), { status: 400, headers });
     }
 
-    const bucket = Deno.env.get("AWS_S3_BUCKET")!;
-    const region = Deno.env.get("AWS_REGION")!;
+    const aws = getAwsS3Env();
+    if (!aws) {
+      return new Response(
+        JSON.stringify({
+          error: "AWS S3 is not configured",
+          detail: `Set Edge Function secrets: ${missingAwsS3EnvKeys().join(", ")}`,
+        }),
+        { status: 503, headers },
+      );
+    }
 
     const s3 = new S3Client({
-      region,
+      region: aws.region,
       credentials: {
-        accessKeyId: Deno.env.get("AWS_ACCESS_KEY_ID")!,
-        secretAccessKey: Deno.env.get("AWS_SECRET_ACCESS_KEY")!,
+        accessKeyId: aws.accessKeyId,
+        secretAccessKey: aws.secretAccessKey,
       },
     });
 
     const s3Key = `racecards/${crypto.randomUUID()}-${fileName}`;
 
     const command = new PutObjectCommand({
-      Bucket: bucket,
+      Bucket: aws.bucket,
       Key: s3Key,
       ContentType: "application/pdf",
     });
@@ -71,7 +85,11 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({ uploadUrl, s3Key }), { status: 200, headers });
   } catch (err) {
-    console.error("generate-upload-url error:", err instanceof Error ? err.message : "unknown");
-    return new Response(JSON.stringify({ error: "Internal server error" }), { status: 500, headers });
+    const msg = errMessage(err);
+    console.error("generate-upload-url error:", msg);
+    return new Response(
+      JSON.stringify({ error: "Failed to create upload URL", detail: msg.slice(0, 2000) }),
+      { status: 500, headers },
+    );
   }
 });

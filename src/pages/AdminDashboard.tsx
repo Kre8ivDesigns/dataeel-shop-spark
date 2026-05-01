@@ -25,7 +25,11 @@ import {
   LayoutList,
 } from "lucide-react";
 import { sanitizeError } from "@/lib/errorHandler";
-import { describeFunctionInvokeError } from "@/lib/edgeFunctionErrors";
+import {
+  describeFunctionInvokeError,
+  formatInvokeFailureMessage,
+  getInvokeErrorMessage,
+} from "@/lib/edgeFunctionErrors";
 import { motion } from "framer-motion";
 import type { AdminCustomer, AdminRacecard, AdminTransaction } from "@/lib/adminDashboardTypes";
 import { mergeProfilesWithCredits } from "@/lib/adminDashboardTypes";
@@ -120,7 +124,7 @@ const AdminDashboard = () => {
       if (urlError || !urlData?.uploadUrl) {
         toast({
           title: `Upload failed: ${file.name}`,
-          description: urlData?.error || describeFunctionInvokeError("generate-upload-url", urlError),
+          description: formatInvokeFailureMessage("generate-upload-url", urlError, urlData),
           variant: "destructive",
         });
         continue;
@@ -175,15 +179,34 @@ const AdminDashboard = () => {
     setSyncing(true);
     const { data, error } = await supabase.functions.invoke("sync-s3-racecards");
     setSyncing(false);
-    if (error || data?.error) {
+
+    const payload = data as { error?: unknown; added?: number; message?: string } | null;
+    const hasErrorPayload =
+      payload != null &&
+      typeof payload === "object" &&
+      "error" in payload &&
+      payload.error != null &&
+      payload.error !== "";
+
+    if (error || hasErrorPayload) {
+      const description = await getInvokeErrorMessage("sync-s3-racecards", error, data);
+      toast({ title: "Sync failed", description, variant: "destructive" });
+      return;
+    }
+
+    const added = typeof payload?.added === "number" ? payload.added : 0;
+    const message = typeof payload?.message === "string" ? payload.message : undefined;
+    if (added > 0) {
       toast({
-        title: "Sync failed",
-        description: data?.error || describeFunctionInvokeError("sync-s3-racecards", error),
-        variant: "destructive",
+        title: `Sync complete — ${added} new racecard(s) added`,
+        description: message,
       });
+      void fetchData();
     } else {
-      toast({ title: `Sync complete — ${data.added} new racecard(s) added` });
-      if (data.added > 0) fetchData();
+      toast({
+        title: "Sync complete",
+        description: message ?? "No new racecard PDFs found in S3.",
+      });
     }
   };
 

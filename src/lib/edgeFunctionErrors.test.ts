@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { describeFunctionInvokeError, getInvokeErrorMessage } from "./edgeFunctionErrors";
+import {
+  describeFunctionInvokeError,
+  formatInvokeFailureMessage,
+  getInvokeErrorMessage,
+} from "./edgeFunctionErrors";
 
 describe("describeFunctionInvokeError", () => {
   it("explains 404 from FunctionsHttpError", () => {
@@ -38,6 +42,17 @@ describe("describeFunctionInvokeError", () => {
   });
 });
 
+describe("formatInvokeFailureMessage", () => {
+  it("joins error and detail", () => {
+    expect(
+      formatInvokeFailureMessage("generate-upload-url", new Error("x"), {
+        error: "AWS S3 is not configured",
+        detail: "Set Edge Function secrets: AWS_S3_BUCKET",
+      }),
+    ).toBe("AWS S3 is not configured — Set Edge Function secrets: AWS_S3_BUCKET");
+  });
+});
+
 describe("getInvokeErrorMessage", () => {
   it("returns data.error when present", async () => {
     const msg = await getInvokeErrorMessage(
@@ -46,6 +61,27 @@ describe("getInvokeErrorMessage", () => {
       { error: "Package has no associated Stripe price" },
     );
     expect(msg).toBe("Package has no associated Stripe price");
+  });
+
+  it("appends data.detail to data.error when both present", async () => {
+    const msg = await getInvokeErrorMessage("sync-s3-racecards", null, {
+      error: "S3 list failed",
+      detail: "AccessDenied: ...",
+    });
+    expect(msg).toBe("S3 list failed — AccessDenied: ...");
+  });
+
+  it("appends data.detail when present alongside error", async () => {
+    const msg = await getInvokeErrorMessage(
+      "sync-s3-racecards",
+      { name: "FunctionsHttpError", message: "non-2xx", context: new Response(null, { status: 500 }) },
+      {
+        error: "Failed to register new racecards",
+        detail: "duplicate key value violates unique constraint",
+      },
+    );
+    expect(msg).toContain("Failed to register new racecards");
+    expect(msg).toContain("duplicate key");
   });
 
   it("parses JSON error from FunctionsHttpError context Response", async () => {

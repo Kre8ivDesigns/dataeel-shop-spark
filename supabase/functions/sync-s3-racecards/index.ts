@@ -5,6 +5,19 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { S3Client, ListObjectsV2Command } from "https://esm.sh/@aws-sdk/client-s3@3";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { getAwsS3Env, missingAwsS3EnvKeys } from "../_shared/awsS3Env.ts";
+
+const MAX_ERROR_DETAIL_CHARS = 2000;
+
+function truncateDetail(message: string): string {
+  if (message.length <= MAX_ERROR_DETAIL_CHARS) return message;
+  return `${message.slice(0, MAX_ERROR_DETAIL_CHARS)}…`;
+}
+
+function errorDetailFromUnknown(err: unknown): string {
+  if (err instanceof Error) return truncateDetail(err.message);
+  return truncateDetail(String(err));
+}
 
 /**
  * Parse a track code and race date from an S3 key.
@@ -62,7 +75,9 @@ Deno.serve(async (req) => {
 
     // Allow cron invocations via shared secret (no user session available)
     const cronSecret = Deno.env.get("CRON_SECRET");
-    const isCron = cronSecret && authHeader === `Bearer ${cronSecret}`;
+    const isCron = !!(cronSecret && authHeader === `Bearer ${cronSecret}`);
+
+    let actingUserId: string | null = null;
 
     if (!isCron) {
       const supabaseUser = createClient(
@@ -86,16 +101,26 @@ Deno.serve(async (req) => {
           headers: { ...cors, "Content-Type": "application/json" },
         });
       }
+
+      actingUserId = user.id;
     }
 
-    const bucket = Deno.env.get("AWS_S3_BUCKET")!;
-    const region = Deno.env.get("AWS_REGION")!;
+    const aws = getAwsS3Env();
+    if (!aws) {
+      return new Response(
+        JSON.stringify({
+          error: "AWS S3 is not configured",
+          detail: `Set Edge Function secrets: ${missingAwsS3EnvKeys().join(", ")}`,
+        }),
+        { status: 503, headers: { ...cors, "Content-Type": "application/json" } },
+      );
+    }
 
     const s3 = new S3Client({
-      region,
+      region: aws.region,
       credentials: {
-        accessKeyId: Deno.env.get("AWS_ACCESS_KEY_ID")!,
-        secretAccessKey: Deno.env.get("AWS_SECRET_ACCESS_KEY")!,
+        accessKeyId: aws.accessKeyId,
+        secretAccessKey: aws.secretAccessKey,
       },
     });
 
@@ -111,11 +136,23 @@ Deno.serve(async (req) => {
 
     do {
       const listCmd = new ListObjectsV2Command({
-        Bucket: bucket,
+        Bucket: aws.bucket,
         Prefix: "racecards/",
         ContinuationToken: continuationToken,
       });
-      const listRes = await s3.send(listCmd);
+      let listRes;
+      try {
+        listRes = await s3.send(listCmd);
+      } catch (s3Err) {
+        console.error("S3 list error:", s3Err);
+        return new Response(
+          JSON.stringify({
+            error: "S3 list failed",
+            detail: errorDetailFromUnknown(s3Err),
+          }),
+          { status: 502, headers: { ...cors, "Content-Type": "application/json" } }
+        );
+      }
 
       for (const obj of listRes.Contents ?? []) {
         if (obj.Key && obj.Key.endsWith(".pdf")) {
@@ -145,7 +182,7 @@ Deno.serve(async (req) => {
         track_code: trackCode,
         track_name: trackCode,
         race_date: raceDate,
-        uploaded_by: user.id,
+        ...(actingUserId ? { uploaded_by: actingUserId } : { uploaded_by: null }),
       };
     });
 
@@ -167,9 +204,9 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     console.error("sync-s3-racecards error:", err);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
-      headers: { ...cors, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: "S3 sync failed", detail: errorDetailFromUnknown(err) }),
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } },
+    );
   }
 });

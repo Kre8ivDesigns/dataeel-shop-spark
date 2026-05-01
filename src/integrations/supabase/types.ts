@@ -158,7 +158,7 @@ export type Database = {
           track_code: string
           track_name: string
           updated_at: string
-          uploaded_by: string
+          uploaded_by: string | null
         }
         Insert: {
           created_at?: string
@@ -172,7 +172,7 @@ export type Database = {
           track_code: string
           track_name: string
           updated_at?: string
-          uploaded_by: string
+          uploaded_by?: string | null
         }
         Update: {
           created_at?: string
@@ -186,7 +186,7 @@ export type Database = {
           track_code?: string
           track_name?: string
           updated_at?: string
-          uploaded_by?: string
+          uploaded_by?: string | null
         }
         Relationships: []
       }
@@ -383,7 +383,7 @@ export type Database = {
           race_date: string
           num_races: number | null
           file_name: string
-          uploaded_by: string
+          uploaded_by: string | null
           created_at: string
           updated_at: string
           metadata: Json

@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, RefreshCw, Upload, Trash2, Pencil } from "lucide-react";
+import { Search, RefreshCw, Upload, Trash2, Pencil, Info } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Json } from "@/integrations/supabase/types";
@@ -236,6 +237,21 @@ export function AdminRacecardsTab({
   return (
     <Card className="bg-card border-border">
       <CardHeader>
+        <Alert className="mb-4 border-primary/25 bg-muted/40">
+          <Info className="h-4 w-4" />
+          <AlertTitle className="text-sm">S3 connection</AlertTitle>
+          <AlertDescription className="text-xs text-muted-foreground leading-relaxed">
+            RaceCard PDFs are stored in <strong className="text-foreground font-medium">AWS S3</strong> and accessed through
+            Supabase Edge Functions. Configure credentials under{" "}
+            <strong className="text-foreground font-medium">Project Settings → Edge Functions → Secrets</strong>:{" "}
+            <code className="rounded bg-muted px-1 py-0.5 text-[11px]">AWS_S3_BUCKET</code>,{" "}
+            <code className="rounded bg-muted px-1 py-0.5 text-[11px]">AWS_REGION</code>,{" "}
+            <code className="rounded bg-muted px-1 py-0.5 text-[11px]">AWS_ACCESS_KEY_ID</code>,{" "}
+            <code className="rounded bg-muted px-1 py-0.5 text-[11px]">AWS_SECRET_ACCESS_KEY</code>.
+            Sync failures usually mean missing secrets, wrong region/bucket, or IAM permissions on{" "}
+            <code className="rounded bg-muted px-1 py-0.5 text-[11px]">racecards/*</code>.
+          </AlertDescription>
+        </Alert>
         <div className="flex items-center justify-between flex-wrap gap-3">
           <CardTitle className="text-foreground">RaceCards</CardTitle>
           <div className="flex gap-2">
