@@ -4,7 +4,7 @@ import { racecardPublicKeys } from "@/lib/queryKeys";
 import type { Tables } from "@/integrations/supabase/types";
 
 export type RacecardPublicRow = Pick<
-  Tables<"racecards_public">,
+  Tables<"racecards">,
   "id" | "track_name" | "track_code" | "race_date" | "num_races" | "metadata"
 >;
 
@@ -13,7 +13,7 @@ const RACE_LIST_GC_MS = 30 * 60 * 1000;
 
 export async function fetchRacecardsPublicByDate(raceDate: string): Promise<RacecardPublicRow[]> {
   const { data, error } = await supabase
-    .from("racecards_public")
+    .from("racecards")
     .select("id, track_name, track_code, race_date, num_races, metadata")
     .eq("race_date", raceDate)
     .order("track_name");

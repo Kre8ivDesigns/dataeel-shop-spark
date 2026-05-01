@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { describeFunctionInvokeError } from "@/lib/edgeFunctionErrors";
+import { getInvokeErrorMessage } from "@/lib/edgeFunctionErrors";
 import { RACING_ASSISTANT_MAX_HISTORY, RACING_ASSISTANT_MAX_MESSAGE_CHARS } from "@/lib/racingAssistantLimits";
 import { cn } from "@/lib/utils";
 
@@ -53,20 +53,19 @@ export function DataeelAiAssistant() {
 
     setLoading(false);
 
-    if (fnError || data?.error) {
-      const msg =
-        typeof data?.error === "string"
-          ? data.error
-          : describeFunctionInvokeError("racing-assistant", fnError);
+    const serverError =
+      data &&
+      typeof data === "object" &&
+      "error" in data &&
+      typeof (data as { error?: unknown }).error === "string" &&
+      (data as { error: string }).error.trim().length > 0;
+
+    if (fnError || serverError) {
+      const msg = await getInvokeErrorMessage("racing-assistant", fnError, data);
       setError(msg);
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content:
-            "I could not answer that just now. If AI is not configured yet, an admin can add keys under Admin → Settings → AI providers.",
-        },
-      ]);
+      const bubble =
+        msg.length > 480 ? `${msg.slice(0, 477).trim()}…` : msg;
+      setMessages((prev) => [...prev, { role: "assistant", content: bubble }]);
       return;
     }
 

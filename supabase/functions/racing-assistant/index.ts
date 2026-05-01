@@ -22,6 +22,32 @@ const DEFAULT_MODEL_OR = "openai/gpt-4o-mini";
 
 type Provider = "openrouter" | "anthropic" | "openai";
 
+function hasProviderApiKey(settings: Record<string, string>, p: Provider): boolean {
+  if (p === "openrouter") return !!(settings.openrouter_api_key || "").trim();
+  if (p === "anthropic") return !!(settings.anthropic_api_key || "").trim();
+  return !!(settings.openai_api_key || "").trim();
+}
+
+/** Prefer admin-selected provider; if that key is missing, use the first provider that has a stored key (fixes OpenRouter default + Anthropic-only keys). */
+function resolveChatProvider(settings: Record<string, string>): Provider {
+  let p = (settings.ai_chat_provider || DEFAULT_PROVIDER).trim().toLowerCase() as Provider;
+  if (p !== "openrouter" && p !== "anthropic" && p !== "openai") {
+    p = DEFAULT_PROVIDER;
+  }
+  if (hasProviderApiKey(settings, p)) return p;
+
+  const order: Provider[] = ["anthropic", "openai", "openrouter"];
+  for (const c of order) {
+    if (hasProviderApiKey(settings, c)) {
+      console.warn(
+        `[racing-assistant] ai_chat_provider="${settings.ai_chat_provider || DEFAULT_PROVIDER}" has no usable API key; using ${c}. Set Admin → AI providers → Chat provider to match.`,
+      );
+      return c;
+    }
+  }
+  return p;
+}
+
 function trimMessage(s: string, max: number): string {
   const t = s.trim();
   return t.length <= max ? t : t.slice(0, max);
@@ -91,18 +117,26 @@ Deno.serve(async (req) => {
     if (settingsErr) return respond({ error: "Could not load AI settings" }, 500);
 
     const settings: Record<string, string> = {};
+    let decryptFailures = 0;
     for (const row of rows ?? []) {
       try {
         settings[row.key] = await decryptSettingValue(row.encrypted_value, encryptionKey);
-      } catch {
-        /* skip */
+      } catch (e) {
+        decryptFailures += 1;
+        console.error(
+          "[racing-assistant] decrypt failed for app_settings key:",
+          row.key,
+          e instanceof Error ? e.message : e,
+        );
       }
     }
-
-    let provider = (settings.ai_chat_provider || DEFAULT_PROVIDER).trim().toLowerCase() as Provider;
-    if (provider !== "openrouter" && provider !== "anthropic" && provider !== "openai") {
-      provider = DEFAULT_PROVIDER;
+    if (decryptFailures > 0) {
+      console.error(
+        `[racing-assistant] ${decryptFailures} setting row(s) failed to decrypt — check APP_SETTINGS_ENCRYPTION_KEY matches manage-app-settings`,
+      );
     }
+
+    const provider = resolveChatProvider(settings);
 
     const orKey = (settings.openrouter_api_key || "").trim();
     const orModel = (settings.openrouter_model || "").trim() || DEFAULT_MODEL_OR;

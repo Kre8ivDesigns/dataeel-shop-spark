@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
+import { getInvokeErrorMessage } from "@/lib/edgeFunctionErrors";
 
 // Static display metadata keyed by package name (lowercase) for UI enrichment
 const PACKAGE_META: Record<string, { pricePerCredit?: number; savings?: number; popular?: boolean; description?: string; features?: string[] }> = {
@@ -104,17 +105,18 @@ const BuyCredits = () => {
     }
     setPurchasing(true);
     try {
-      const { data, error } = await supabase.functions.invoke("create-checkout-session", {
+      const { data, error, response: invokeResponse } = await supabase.functions.invoke("create-checkout-session", {
         body: { packageId: selected.id },
       });
       const payload = data as { url?: string; error?: string } | null;
-      if (payload?.error) {
-        toast.error(payload.error);
+      if (error) {
+        const msg = await getInvokeErrorMessage("create-checkout-session", error, data, invokeResponse);
+        console.error("Purchase error:", error);
+        toast.error(msg);
         return;
       }
-      if (error) {
-        console.error("Purchase error:", error);
-        toast.error(error.message ?? "Failed to start checkout.");
+      if (payload?.error) {
+        toast.error(payload.error);
         return;
       }
       if (payload?.url) {
@@ -122,9 +124,10 @@ const BuyCredits = () => {
         return;
       }
       toast.error("No checkout URL returned from the server.");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Purchase error:", err);
-      toast.error(err?.message ?? "Failed to start checkout. Please try again.");
+      const msg = await getInvokeErrorMessage("create-checkout-session", err, null);
+      toast.error(msg);
     } finally {
       setPurchasing(false);
     }

@@ -30,8 +30,13 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const stripeKey = await resolveStripeSecretKey(supabaseAdmin);
-    if (!stripeKey) {
+    const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
+    if (userError || !user?.email) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers });
+    }
+
+    const stripeConfig = await resolveStripeConfig(supabaseAdmin);
+    if (!stripeConfig.secretKey) {
       return new Response(
         JSON.stringify({
           error:
@@ -40,14 +45,6 @@ Deno.serve(async (req) => {
         { status: 503, headers },
       );
     }
-
-    const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
-    if (userError || !user?.email) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers });
-    }
-
-    const stripeConfig = await resolveStripeConfig(supabaseAdmin);
-    if (!stripeConfig.secretKey) throw new Error("Stripe secret key is not configured");
     const stripe = new Stripe(stripeConfig.secretKey, { apiVersion: "2025-08-27.basil" });
 
     // HIGH-03: look up customer ID from profiles first
