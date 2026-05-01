@@ -19,6 +19,43 @@ function errorDetailFromUnknown(err: unknown): string {
   return truncateDetail(String(err));
 }
 
+/** CORS for error responses if getCorsHeaders fails (should be rare). */
+function corsHeadersForError(req: Request): Record<string, string> {
+  try {
+    return getCorsHeaders(req);
+  } catch {
+    return {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers":
+        "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+      "Access-Control-Max-Age": "86400",
+      "Vary": "Origin",
+    };
+  }
+}
+
+function missingSupabaseEdgeKeys(requireAnon: boolean): string[] {
+  const missing: string[] = [];
+  const url = Deno.env.get("SUPABASE_URL")?.trim();
+  const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim();
+  if (!url) missing.push("SUPABASE_URL");
+  if (!service) missing.push("SUPABASE_SERVICE_ROLE_KEY");
+  if (requireAnon) {
+    const anon = Deno.env.get("SUPABASE_ANON_KEY")?.trim();
+    if (!anon) missing.push("SUPABASE_ANON_KEY");
+  }
+  return missing;
+}
+
+function formatPostgrestInsertDetail(err: { message: string; details?: string | null; hint?: string | null; code?: string | null }): string {
+  const parts = [err.message];
+  if (err.details) parts.push(err.details);
+  if (err.hint) parts.push(`hint: ${err.hint}`);
+  if (err.code) parts.push(`code: ${err.code}`);
+  return truncateDetail(parts.filter(Boolean).join(" — "));
+}
+
 /**
  * Parse a track code and race date from an S3 key.
  * Supported basename patterns (after optional `uuid-` prefix):
@@ -52,7 +89,7 @@ function parseS3Key(s3Key: string): { trackCode: string; raceDate: string; fileN
   return { trackCode, raceDate, fileName: baseName };
 }
 
-Deno.serve(async (req) => {
+async function handleRequest(req: Request): Promise<Response> {
   const cors = getCorsHeaders(req);
 
   if (req.method === "OPTIONS") {
@@ -68,23 +105,32 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
-    // Allow cron invocations via shared secret (no user session available)
     const cronSecret = Deno.env.get("CRON_SECRET");
     const isCron = !!(cronSecret && authHeader === `Bearer ${cronSecret}`);
+
+    const missingEdge = missingSupabaseEdgeKeys(!isCron);
+    if (missingEdge.length > 0) {
+      return new Response(
+        JSON.stringify({
+          error: "Supabase Edge environment is incomplete",
+          detail: `Set Edge Function secrets: ${missingEdge.join(", ")}`,
+        }),
+        { status: 503, headers: { ...cors, "Content-Type": "application/json" } },
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!.trim();
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!.trim();
+
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
     let actingUserId: string | null = null;
 
     if (!isCron) {
-      const supabaseUser = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_ANON_KEY")!,
-        { global: { headers: { Authorization: authHeader } } }
-      );
+      const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!.trim();
+      const supabaseUser = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
 
       const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
       if (userError || !user) {
@@ -150,7 +196,7 @@ Deno.serve(async (req) => {
             error: "S3 list failed",
             detail: errorDetailFromUnknown(s3Err),
           }),
-          { status: 502, headers: { ...cors, "Content-Type": "application/json" } }
+          { status: 502, headers: { ...cors, "Content-Type": "application/json" } },
         );
       }
 
@@ -169,7 +215,7 @@ Deno.serve(async (req) => {
     if (newKeys.length === 0) {
       return new Response(
         JSON.stringify({ added: 0, message: "No new racecards found in S3." }),
-        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } },
       );
     }
 
@@ -193,19 +239,38 @@ Deno.serve(async (req) => {
     if (insertError) {
       console.error("Insert error:", insertError);
       return new Response(
-        JSON.stringify({ error: "Failed to register new racecards", detail: insertError.message }),
-        { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
+        JSON.stringify({
+          error: "Failed to register new racecards",
+          detail: formatPostgrestInsertDetail(insertError),
+        }),
+        { status: 500, headers: { ...cors, "Content-Type": "application/json" } },
       );
     }
 
     return new Response(
       JSON.stringify({ added: count ?? rows.length }),
-      { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...cors, "Content-Type": "application/json" } },
     );
   } catch (err) {
     console.error("sync-s3-racecards error:", err);
     return new Response(
       JSON.stringify({ error: "S3 sync failed", detail: errorDetailFromUnknown(err) }),
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } },
+    );
+  }
+}
+
+Deno.serve(async (req) => {
+  try {
+    return await handleRequest(req);
+  } catch (err) {
+    console.error("sync-s3-racecards uncaught (outer):", err);
+    const cors = corsHeadersForError(req);
+    return new Response(
+      JSON.stringify({
+        error: "S3 sync failed",
+        detail: errorDetailFromUnknown(err),
+      }),
       { status: 500, headers: { ...cors, "Content-Type": "application/json" } },
     );
   }

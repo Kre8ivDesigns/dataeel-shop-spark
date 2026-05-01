@@ -1,3 +1,5 @@
+-- Canonical migration: nullable uploaded_by for cron/S3 sync (duplicate filename
+-- 20260502100000_racecards_uploaded_by_nullable.sql removed — same ALTER).
 -- Cron / S3 sync may register PDFs without an acting user session.
 ALTER TABLE public.racecards
   ALTER COLUMN uploaded_by DROP NOT NULL;
