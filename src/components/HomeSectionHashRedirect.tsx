@@ -2,7 +2,14 @@ import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 /** Section ids rendered on the marketing home page (`/`). */
-const HOME_PAGE_SECTION_IDS = new Set(["how-it-works", "results", "racecards", "about", "faq"]);
+const HOME_PAGE_SECTION_IDS = new Set([
+  "how-it-works",
+  "results",
+  "racecards",
+  "us-racing-news",
+  "about",
+  "faq",
+]);
 
 /**
  * Footer/header used to link with `#section`, which kept the current path (e.g.

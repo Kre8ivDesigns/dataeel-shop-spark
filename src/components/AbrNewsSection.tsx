@@ -45,23 +45,23 @@ export function AbrNewsSection() {
   });
 
   return (
-    <section id="racing-headlines" className="py-20 bg-muted/30 border-y border-border">
+    <section id="us-racing-news" className="py-20 bg-muted/30 border-y border-border">
       <div className="container mx-auto px-4 max-w-4xl">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
           <div>
             <h2 className="text-3xl md:text-4xl font-bold text-foreground font-heading flex items-center gap-2">
               <Newspaper className="h-8 w-8 text-primary shrink-0" aria-hidden />
-              Racing headlines
+              US racing news
             </h2>
             <p className="text-muted-foreground mt-2 text-sm md:text-base max-w-xl">
-              Latest stories from America&apos;s Best Racing (&quot;The Sport&quot; feed). Links open in a new tab.
+              US-focused stories from America&apos;s Best Racing (&quot;The Sport&quot; RSS). Links open in a new tab.
             </p>
           </div>
         </div>
 
         <Card className="bg-card border-border shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg text-foreground">America&apos;s Best Racing</CardTitle>
+            <CardTitle className="text-lg text-foreground">America&apos;s Best Racing — The Sport</CardTitle>
             <CardDescription>
               Syndicated via RSS for convenience. Dataeel is not affiliated with ABR.{" "}
               <a
