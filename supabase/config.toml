@@ -16,6 +16,21 @@ content_path = "./supabase/templates/confirmation.html"
 # Example: ALLOWED_ORIGINS=https://www.example.com,https://example.com,https://app.vercel.app
 # (scheme required, no trailing slash, comma-separated). See supabase/functions/_shared/cors.ts.
 
+# Custom branded auth emails (Supabase dashboard will pick these up on `supabase db push`
+# for local dev; for hosted projects, paste the HTML into Authentication → Email Templates
+# or wire the same file via the Management API).
+[auth.email.template.confirmation]
+subject = "Confirm your Dataeel account"
+content_path = "./templates/confirm-signup.html"
+
+[auth.email.template.recovery]
+subject = "Reset your Dataeel password"
+content_path = "./templates/reset-password.html"
+
+[auth.email.template.magic_link]
+subject = "Your Dataeel sign-in link"
+content_path = "./templates/magic-link.html"
+
 # stripe-webhook is called server-to-server by Stripe — no JWT
 [functions.stripe-webhook]
 verify_jwt = false

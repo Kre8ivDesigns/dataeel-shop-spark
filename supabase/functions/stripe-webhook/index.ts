@@ -1,7 +1,7 @@
 // Stripe calls this endpoint server-to-server — no CORS headers needed.
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { resolveStripeSecretKey } from "../_shared/stripe_secret.ts";
+import { resolveStripeConfig } from "../_shared/stripe_config.ts";
 
 Deno.serve(async (req) => {
   const supabaseAdmin = createClient(
@@ -10,19 +10,14 @@ Deno.serve(async (req) => {
     { auth: { persistSession: false } },
   );
 
-  const stripeSecret = await resolveStripeSecretKey(supabaseAdmin);
-  if (!stripeSecret) {
-    console.error("[stripe-webhook] Stripe secret not configured (Admin → Settings or STRIPE_SECRET_KEY)");
-    return new Response(JSON.stringify({ error: "Stripe not configured" }), { status: 503 });
-  }
-
-  const stripe = new Stripe(stripeSecret, {
+  const stripeConfig = await resolveStripeConfig(supabaseAdmin);
+  const stripe = new Stripe(stripeConfig.secretKey, {
     apiVersion: "2025-08-27.basil",
   });
 
-  const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
+  const webhookSecret = stripeConfig.webhookSecret;
   if (!webhookSecret) {
-    console.error("[stripe-webhook] STRIPE_WEBHOOK_SECRET not configured");
+    console.error("[stripe-webhook] Webhook signing secret not configured");
     return new Response(JSON.stringify({ error: "Webhook not configured" }), { status: 500 });
   }
 

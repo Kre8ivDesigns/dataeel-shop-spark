@@ -168,10 +168,11 @@ const App = () => (
                   </Suspense>
                 </ProtectedRoute>
               } />
+              {/* Public pages edited via /admin/page-editor render here. */}
               <Route
-                path="/pages/:slug"
+                path="/p/:slug"
                 element={
-                  <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-background"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>}>
+                  <Suspense fallback={adminChartFallback}>
                     <PublicPage />
                   </Suspense>
                 }

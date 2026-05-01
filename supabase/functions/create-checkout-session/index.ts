@@ -1,7 +1,7 @@
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, getValidatedOrigin } from "../_shared/cors.ts";
-import { resolveStripeSecretKey } from "../_shared/stripe_secret.ts";
+import { resolveStripeConfig } from "../_shared/stripe_config.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -49,13 +49,11 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Package has no associated Stripe price" }), { status: 400, headers });
     }
 
-    const stripeKey = await resolveStripeSecretKey(supabaseAdmin);
-
-    if (!stripeKey) {
-      return new Response(JSON.stringify({ error: "Stripe is not configured. An admin must add the Stripe key under Admin → Settings." }), { status: 503, headers });
+    const stripeConfig = await resolveStripeConfig(supabaseAdmin);
+    if (!stripeConfig.secretKey) {
+      return new Response(JSON.stringify({ error: "Stripe is not configured" }), { status: 500, headers });
     }
-
-    const stripe = new Stripe(stripeKey, {
+    const stripe = new Stripe(stripeConfig.secretKey, {
       apiVersion: "2025-08-27.basil",
     });
 

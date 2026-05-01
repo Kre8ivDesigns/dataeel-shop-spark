@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
-import { resolveStripeSecretKey } from "../_shared/stripe_secret.ts";
+import { resolveStripeConfig } from "../_shared/stripe_config.ts";
 
 Deno.serve(async (req) => {
   const cors = getCorsHeaders(req);
@@ -36,7 +36,13 @@ Deno.serve(async (req) => {
     const { data: isAdmin } = await supabaseAdmin.rpc("is_admin", { _user_id: user.id });
     if (!isAdmin) return respond({ error: "Forbidden" }, 403);
 
-    const stripeKey = await resolveStripeSecretKey(supabaseAdmin);
+    const stripeConfig = await resolveStripeConfig(supabaseAdmin);
+    if (!stripeConfig.secretKey) {
+      return respond({ error: "Stripe is not configured. Save Stripe keys in Admin > Settings > Stripe, or set STRIPE_SECRET_KEY as an Edge Function secret." }, 500);
+    }
+    const stripe = new Stripe(stripeConfig.secretKey, {
+      apiVersion: "2025-08-27.basil",
+    });
 
     const body = await req.json();
     const { action } = body;
@@ -50,17 +56,6 @@ Deno.serve(async (req) => {
 
       const unitAmount = Math.round(Number(price) * 100);
       if (unitAmount <= 0) return respond({ error: "Price must be greater than 0" }, 400);
-
-      if (!stripeKey) {
-        return respond(
-          {
-            error:
-              "Stripe is not configured. Add your Stripe secret key under Admin → Settings (requires APP_SETTINGS_ENCRYPTION_KEY on Edge Functions), or set STRIPE_SECRET_KEY as a function secret.",
-          },
-          503,
-        );
-      }
-      const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
       // Create Stripe product
       const product = await stripe.products.create({
@@ -104,17 +99,6 @@ Deno.serve(async (req) => {
         .single();
 
       if (fetchErr || !existing) return respond({ error: "Package not found" }, 404);
-
-      if (!stripeKey) {
-        return respond(
-          {
-            error:
-              "Stripe is not configured. Add your Stripe secret key under Admin → Settings (requires APP_SETTINGS_ENCRYPTION_KEY on Edge Functions), or set STRIPE_SECRET_KEY as a function secret.",
-          },
-          503,
-        );
-      }
-      const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
       const unitAmount = Math.round(Number(price) * 100);
       if (unitAmount <= 0) return respond({ error: "Price must be greater than 0" }, 400);
@@ -212,17 +196,12 @@ Deno.serve(async (req) => {
       if (existing?.stripe_price_id) {
         // Best-effort: archive the Stripe price/product. Errors are logged but
         // never block the database deletion so the package is always removed.
-        if (stripeKey) {
-          try {
-            const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-            const stripePrice = await stripe.prices.retrieve(existing.stripe_price_id);
-            await stripe.prices.update(existing.stripe_price_id, { active: false });
-            await stripe.products.update(stripePrice.product as string, { active: false });
-          } catch (stripeErr) {
-            console.error("Stripe archive error:", stripeErr);
-          }
-        } else {
-          console.warn("Stripe secret not resolved — skipping Stripe archive for deleted package");
+        try {
+          const stripePrice = await stripe.prices.retrieve(existing.stripe_price_id);
+          await stripe.prices.update(existing.stripe_price_id, { active: false });
+          await stripe.products.update(stripePrice.product as string, { active: false });
+        } catch (stripeErr) {
+          console.error("Stripe archive error:", stripeErr);
         }
       }
 

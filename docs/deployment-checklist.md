@@ -25,9 +25,10 @@ Use this when standing up or auditing an environment so **database, S3 files, Ed
 - [ ] Shared secrets:
   - `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (usually auto-injected; verify in dashboard).
   - `ALLOWED_ORIGINS` — comma-separated origins with scheme, no trailing slash (see `supabase/functions/_shared/cors.ts`).
-  - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` for payments.
-  - `APP_SETTINGS_ENCRYPTION_KEY` — **64+ hex chars** for `manage-app-settings` / AI key encryption.
+  - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` — fallback when Admin > Settings > Stripe is empty. Admins can now save both test and live key sets in the UI and flip modes via `stripe_mode`; the `resolveStripeConfig` helper prefers those values over the env secrets.
+  - `APP_SETTINGS_ENCRYPTION_KEY` — **64+ hex chars** for `manage-app-settings` / AI key encryption / Stripe mode resolution.
 - [ ] Optional: `SITE_PUBLIC_URL` for OpenRouter referrer header.
+- [ ] Auth → Email Templates: paste `supabase/templates/*.html` into Supabase Dashboard → Authentication → Email Templates (Confirm signup, Reset password, Magic link). Supabase CLI picks them up automatically on `supabase db push` via the `[auth.email.template.*]` entries in `supabase/config.toml`.
 
 | Function | Role |
 |----------|------|

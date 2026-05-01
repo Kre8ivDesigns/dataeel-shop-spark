@@ -16,6 +16,7 @@ import { AdminAiSettingsPanel } from "@/components/admin/AdminAiSettingsPanel";
 import { AdminSmtpSettingsPanel } from "@/components/admin/AdminSmtpSettingsPanel";
 import {
   EMPTY_SETTINGS_FORM,
+  SMTP_PROVIDER_PRESETS,
   type SettingStatus,
   type SettingsForm,
   type SettingsStatus,
@@ -228,7 +229,7 @@ const AdminSettings = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <main className="pt-24 pb-16">
-        <div className="container mx-auto px-4 max-w-4xl">
+        <div className="container mx-auto px-4 max-w-[1400px]">
           <Link
             to="/admin"
             className="inline-flex items-center gap-2 text-foreground/50 hover:text-foreground mb-6 transition-colors text-sm"
@@ -304,6 +305,7 @@ const AdminSettings = () => {
                   ])
                 }
               />
+
             </TabsContent>
 
             {/* ── CAPTCHA ── */}
@@ -542,8 +544,10 @@ const AdminSettings = () => {
                         <code className="bg-muted px-1 rounded">STRIPE_WEBHOOK_SECRET</code> there, and point Stripe to your{" "}
                         <code className="bg-muted px-1 rounded">stripe-webhook</code> URL.
                       </span>
+
                     </div>
                   </div>
+
                   <div className="pt-2 flex justify-end">
                     <SaveButton
                       onClick={() =>

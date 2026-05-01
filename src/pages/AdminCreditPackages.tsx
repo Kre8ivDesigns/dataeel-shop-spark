@@ -137,7 +137,7 @@ const AdminCreditPackages = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <main className="pt-24 pb-16">
-        <div className="container mx-auto px-4 max-w-4xl">
+        <div className="container mx-auto px-4 max-w-[1400px]">
           <Link
             to="/admin"
             className="inline-flex items-center gap-2 text-foreground/50 hover:text-foreground mb-6 transition-colors text-sm"
