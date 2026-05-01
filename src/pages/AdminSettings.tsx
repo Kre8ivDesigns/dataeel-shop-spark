@@ -145,6 +145,10 @@ const AdminSettings = () => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setStatus(data.settings ?? {});
+      const capReadable = data.settings?.ai_daily_cost_cap_usd?.readable;
+      if (typeof capReadable === "string") {
+        setForm((f) => ({ ...f, ai_daily_cost_cap_usd: capReadable }));
+      }
     } catch (err: any) {
       toast.error(err?.message ?? "Failed to load settings");
     } finally {
@@ -171,6 +175,14 @@ const AdminSettings = () => {
       }
       if (form.stripe_secret_key && !form.stripe_secret_key.startsWith("sk_live_")) {
         toast.error("Live secret key must start with sk_live_");
+        return;
+      }
+    }
+
+    if (section === "ai" && form.ai_daily_cost_cap_usd.trim()) {
+      const n = Number.parseFloat(form.ai_daily_cost_cap_usd.trim());
+      if (!Number.isFinite(n) || n < 0) {
+        toast.error("Daily AI cost cap must be a non-negative number");
         return;
       }
     }
@@ -272,6 +284,7 @@ const AdminSettings = () => {
                 onSaveAi={() =>
                   saveSection("ai", [
                     "ai_chat_provider",
+                    "ai_daily_cost_cap_usd",
                     "openrouter_api_key",
                     "openrouter_model",
                     "anthropic_api_key",

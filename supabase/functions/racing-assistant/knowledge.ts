@@ -1,7 +1,7 @@
 /**
- * Default knowledge base for the assistant (bundled in the Edge Function).
- * Override without redeploying: insert/update `site_content` row key `racing_assistant_knowledge` (see docs/data-layer.md).
- * Keep lean (~1.5–2.5k chars) to control prompt tokens.
+ * Fallback knowledge when retrieval yields little text (bundled in the Edge Function).
+ * Primary site-grounded copy lives in `knowledge_library.ts` (chunked RAG).
+ * Override without redeploying: `site_content` key `racing_assistant_knowledge` — paragraphs are merged into chunk retrieval.
  */
 export const RACING_ASSISTANT_KNOWLEDGE = `
 DATAEEL CONTEXT — DATAEEL offers RaceCard PDFs with analytics (e.g. Concert™ / Aptitude™ style insights). Outputs are informational, not gambling advice. Users spend credits to download racecards.

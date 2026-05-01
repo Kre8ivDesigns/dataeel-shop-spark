@@ -4,8 +4,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { sanitizeError } from "@/lib/errorHandler";
-import { describeFunctionInvokeError } from "@/lib/edgeFunctionErrors";
+import { describeFunctionInvokeError, getInvokeErrorMessage } from "@/lib/edgeFunctionErrors";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Download, ExternalLink, FileText, CreditCard, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -44,11 +43,12 @@ const Invoices = () => {
 
   const fetchInvoices = async () => {
     setLoading(true);
-    const { data, error } = await supabase.functions.invoke("list-invoices");
+    const { data, error, response: invokeResponse } = await supabase.functions.invoke("list-invoices");
     if (error) {
+      const description = await getInvokeErrorMessage("list-invoices", error, data, invokeResponse);
       toast({
         title: "Error loading invoices",
-        description: describeFunctionInvokeError("list-invoices", error),
+        description,
         variant: "destructive",
       });
     } else {

@@ -194,7 +194,7 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
-    // ── GET: return presence + 4-char preview only — never full values ─────
+    // ── GET: presence + preview; selected non-secret keys include full `readable` ──
     if (action === "get") {
       const { data: rows, error: fetchErr } = await supabaseAdmin
         .from("app_settings")
@@ -202,7 +202,13 @@ Deno.serve(async (req) => {
 
       if (fetchErr) return respond({ error: fetchErr.message }, 500);
 
-      const settings: Record<string, { configured: boolean; preview: string | null }> = {};
+      /** Non-secret keys returned in full so admins can edit accurate values (still encrypted at rest). */
+      const READABLE_FULL_KEYS = new Set(["ai_daily_cost_cap_usd"]);
+
+      const settings: Record<
+        string,
+        { configured: boolean; preview: string | null; readable?: string | null }
+      > = {};
       for (const row of rows ?? []) {
         try {
           const value = await decryptValue(row.encrypted_value, encryptionKey);
@@ -210,7 +216,11 @@ Deno.serve(async (req) => {
           const preview = configured
             ? (value.length > 4 ? `••••••••${value.slice(-4)}` : "••••")
             : null;
-          settings[row.key] = { configured, preview };
+          if (READABLE_FULL_KEYS.has(row.key)) {
+            settings[row.key] = { configured, preview, readable: configured ? value : null };
+          } else {
+            settings[row.key] = { configured, preview };
+          }
         } catch {
           settings[row.key] = { configured: false, preview: null };
         }

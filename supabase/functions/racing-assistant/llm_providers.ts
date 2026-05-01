@@ -1,9 +1,15 @@
-export type ChatTurn = { role: "user" | "assistant"; content: string };
+import {
+  estimateCostUsd as estimateCostUsdShared,
+  RACING_ASSISTANT_MAX_COMPLETION_TOKENS,
+  type ChatTurn,
+} from "../_shared/ai_cost_estimate.ts";
+
+export type { ChatTurn };
 
 export type LlmResult = {
   text: string;
   model: string;
-  provider: "openrouter" | "anthropic" | "openai";
+  provider: LlmProviderTag;
   usage: {
     prompt_tokens: number;
     completion_tokens: number;
@@ -13,18 +19,7 @@ export type LlmResult = {
   };
 };
 
-const MAX_OUT = 420;
-
-/** Fallback $ per 1M tokens (input / output) when provider does not return cost. */
-const FALLBACK_1M_USD: { test: (id: string) => boolean; in1m: number; out1m: number }[] = [
-  { test: (id) => id.includes("gpt-4o-mini"), in1m: 0.15, out1m: 0.6 },
-  { test: (id) => id.includes("gpt-4o") && !id.includes("mini"), in1m: 2.5, out1m: 10 },
-  { test: (id) => id.includes("gpt-3.5"), in1m: 0.5, out1m: 1.5 },
-  { test: (id) => id.includes("claude-3-5-haiku") || id.includes("claude-3-haiku"), in1m: 1.0, out1m: 5.0 },
-  { test: (id) => id.includes("claude-3-5-sonnet"), in1m: 3.0, out1m: 15.0 },
-  { test: (id) => id.includes("claude-3-opus"), in1m: 15.0, out1m: 75.0 },
-  { test: (id) => id.startsWith("claude"), in1m: 3.0, out1m: 15.0 },
-];
+const MAX_OUT = RACING_ASSISTANT_MAX_COMPLETION_TOKENS;
 
 export function estimateCostUsd(
   provider: LlmResult["provider"],
@@ -33,21 +28,7 @@ export function estimateCostUsd(
   completionTokens: number,
   nativeCost?: number | null,
 ): number {
-  if (typeof nativeCost === "number" && nativeCost >= 0 && !Number.isNaN(nativeCost)) {
-    return Math.round(nativeCost * 1e6) / 1e6;
-  }
-  for (const row of FALLBACK_1M_USD) {
-    if (row.test(model)) {
-      return (promptTokens * row.in1m + completionTokens * row.out1m) / 1_000_000;
-    }
-  }
-  if (provider === "openrouter") {
-    return (promptTokens * 0.5 + completionTokens * 1.5) / 1_000_000;
-  }
-  if (provider === "anthropic") {
-    return (promptTokens * 3 + completionTokens * 15) / 1_000_000;
-  }
-  return (promptTokens * 0.5 + completionTokens * 1.5) / 1_000_000;
+  return estimateCostUsdShared(provider, model, promptTokens, completionTokens, nativeCost);
 }
 
 function messagesToOpenAiFormat(system: string, history: ChatTurn[], userMessage: string) {

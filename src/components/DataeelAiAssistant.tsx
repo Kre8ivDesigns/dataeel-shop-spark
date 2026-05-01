@@ -84,7 +84,13 @@ export function DataeelAiAssistant() {
       | undefined;
     const prov = typeof data?.provider === "string" ? data.provider : "";
     const model = typeof data?.model === "string" ? data.model : "";
-    if (u && prov) {
+    const fromCache =
+      data &&
+      typeof data === "object" &&
+      (data as { cached?: boolean }).cached === true;
+    if (fromCache && prov === "cache") {
+      setLastUsageMeta("Saved answer (repeated question) · $0 · 0 tok");
+    } else if (u && prov) {
       const cost = typeof u.estimated_cost_usd === "number" ? u.estimated_cost_usd : 0;
       const tok =
         u.total_tokens ?? (u.prompt_tokens ?? 0) + (u.completion_tokens ?? 0);

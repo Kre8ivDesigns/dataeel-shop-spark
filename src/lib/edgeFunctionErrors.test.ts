@@ -62,6 +62,42 @@ describe("getInvokeErrorMessage", () => {
     expect(msg).toBe("Stripe is not configured");
   });
 
+  it("parses JSON when context is Response-like but fails instanceof Response", async () => {
+    const duck = {
+      status: 500,
+      clone() {
+        return this;
+      },
+      async json() {
+        return { error: "Nested runtime message" };
+      },
+      async text() {
+        return "";
+      },
+    };
+    const err = {
+      name: "FunctionsHttpError",
+      message: "Edge Function returned a non-2xx status code",
+      context: duck,
+    };
+    const msg = await getInvokeErrorMessage("create-checkout-session", err, null);
+    expect(msg).toBe("Nested runtime message");
+  });
+
+  it("parses FunctionsRelayError response body the same way", async () => {
+    const res = new Response(JSON.stringify({ error: "Upstream unavailable" }), {
+      status: 503,
+      headers: { "Content-Type": "application/json" },
+    });
+    const err = {
+      name: "FunctionsRelayError",
+      message: "Relay Error invoking the Edge Function",
+      context: res,
+    };
+    const msg = await getInvokeErrorMessage("fn", err, null);
+    expect(msg).toBe("Upstream unavailable");
+  });
+
   it("falls back to describeFunctionInvokeError when body has no error field", async () => {
     const res = new Response(null, { status: 404 });
     const err = {

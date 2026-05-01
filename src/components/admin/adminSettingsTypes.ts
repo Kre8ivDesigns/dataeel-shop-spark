@@ -1,12 +1,16 @@
 export interface SettingStatus {
   configured: boolean;
   preview: string | null;
+  /** Non-secret values returned in full for admin display (e.g. daily cost cap). */
+  readable?: string | null;
 }
 
 export type SettingsStatus = Record<string, SettingStatus>;
 
 export interface SettingsForm {
   ai_chat_provider: string;
+  /** USD per user per UTC day; empty = server default ($5). */
+  ai_daily_cost_cap_usd: string;
   openrouter_api_key: string;
   openrouter_model: string;
   anthropic_api_key: string;
@@ -38,6 +42,7 @@ export interface SettingsForm {
 
 export const EMPTY_SETTINGS_FORM: SettingsForm = {
   ai_chat_provider: "openrouter",
+  ai_daily_cost_cap_usd: "",
   openrouter_api_key: "",
   openrouter_model: "",
   anthropic_api_key: "",

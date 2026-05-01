@@ -44,6 +44,30 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_chat_answer_cache: {
+        Row: {
+          answer_text: string
+          created_at: string
+          hit_count: number
+          last_hit_at: string | null
+          question_hash: string
+        }
+        Insert: {
+          answer_text: string
+          created_at?: string
+          hit_count?: number
+          last_hit_at?: string | null
+          question_hash: string
+        }
+        Update: {
+          answer_text?: string
+          created_at?: string
+          hit_count?: number
+          last_hit_at?: string | null
+          question_hash?: string
+        }
+        Relationships: []
+      }
       credit_balances: {
         Row: {
           credits: number

@@ -192,6 +192,36 @@ export function AdminAiSettingsPanel({
 
       <Card className="bg-card border-border">
         <CardHeader>
+          <CardTitle className="text-foreground">Daily usage cap</CardTitle>
+          <CardDescription>
+            Estimated LLM spend per logged-in user per UTC calendar day. Requests are blocked if today&apos;s running total
+            plus a conservative estimate for the next reply would exceed this cap. Leave blank when saving to keep the
+            current stored value; when nothing is stored, the server defaults to{" "}
+            <span className="font-mono text-foreground">$5.00</span>.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="ai-daily-cap">Max spend per user / day (USD)</Label>
+              <ConfiguredBadge status={status.ai_daily_cost_cap_usd} />
+            </div>
+            <Input
+              id="ai-daily-cap"
+              type="text"
+              inputMode="decimal"
+              className="bg-muted border-border font-mono text-sm max-w-[140px]"
+              placeholder="5"
+              value={form.ai_daily_cost_cap_usd}
+              onChange={(e) => set("ai_daily_cost_cap_usd")(e.target.value)}
+              autoComplete="off"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-card border-border">
+        <CardHeader>
           <CardTitle className="text-foreground">Active provider</CardTitle>
           <CardDescription>
             The racing assistant uses this provider for all logged-in users. Configure keys below, then pick a model (load
