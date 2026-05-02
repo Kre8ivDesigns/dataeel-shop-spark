@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -14,12 +14,13 @@ import {
   Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { getInvokeErrorMessage } from "@/lib/edgeFunctionErrors";
+import { StripeTestModeDevBanner } from "@/components/StripeTestModeDevBanner";
 
 // Static display metadata keyed by package name (lowercase) for UI enrichment
 const PACKAGE_META: Record<string, { pricePerCredit?: number; savings?: number; popular?: boolean; description?: string; features?: string[] }> = {
@@ -65,6 +66,7 @@ interface CreditPackage {
 }
 
 const BuyCredits = () => {
+  const [searchParams] = useSearchParams();
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
   const [purchasing, setPurchasing] = useState(false);
   const { user } = useAuth();
@@ -80,6 +82,15 @@ const BuyCredits = () => {
       return data ?? [];
     },
   });
+
+  const creditsFromUrl = searchParams.get("credits");
+  useEffect(() => {
+    if (packagesLoading || packages.length === 0 || creditsFromUrl == null) return;
+    const n = Number.parseInt(creditsFromUrl, 10);
+    if (Number.isNaN(n)) return;
+    const match = packages.find((p) => p.credits === n);
+    if (match) setSelectedPackage(match.id);
+  }, [packagesLoading, packages, creditsFromUrl]);
 
   const { data: creditBalance } = useQuery({
     queryKey: ["credit-balance", user?.id],
@@ -139,6 +150,7 @@ const BuyCredits = () => {
 
       <main className="pt-24 pb-16">
         <div className="container mx-auto px-4">
+          <StripeTestModeDevBanner />
           <Link
             to="/dashboard"
             className="inline-flex items-center gap-2 text-foreground/50 hover:text-foreground mb-6 transition-colors text-sm"

@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, ShieldCheck, ShieldOff, Copy, CheckCircle2, Mail, FlaskConical } from "lucide-react";
+import { hasClientStripePublishableKey } from "@/lib/stripeViteDev";
 
 type MfaStep = "idle" | "enrolling" | "verifying";
 
@@ -230,6 +231,14 @@ const AccountSettings = () => {
       <main className="pb-16">
         <div className="container mx-auto px-4 sm:px-6 space-y-6">
           <h1 className="text-2xl font-bold text-foreground">Account Settings</h1>
+          {import.meta.env.DEV && !hasClientStripePublishableKey() && (
+            <p className="text-xs text-muted-foreground max-w-2xl">
+              Dev: add{" "}
+              <code className="bg-muted px-1 rounded text-[0.7rem]">VITE_STRIPE_PUBLISHABLE_KEY=pk_test_…</code> to{" "}
+              <code className="bg-muted px-1 rounded text-[0.7rem]">.env</code> to show the Stripe test-mode banner on Buy
+              credits and Dashboard.
+            </p>
+          )}
 
           <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
           {/* ── Email ── */}

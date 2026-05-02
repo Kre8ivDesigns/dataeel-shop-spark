@@ -60,7 +60,10 @@ export const Pricing = () => {
   return (
     <section id="pricing" className="py-24 bg-background relative overflow-hidden">
       {/* Decorative */}
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -translate-x-1/2 translate-y-1/2" />
+      <div
+        className="absolute bottom-0 left-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -translate-x-1/2 translate-y-1/2 pointer-events-none"
+        aria-hidden
+      />
 
       <div className="container mx-auto px-4 relative">
         {/* Header */}
@@ -146,14 +149,17 @@ export const Pricing = () => {
 
               {/* CTA */}
               <Button
+                asChild
                 className={`w-full py-6 font-semibold text-base ${
                   plan.popular
                     ? "bg-primary text-primary-foreground hover:brightness-110 shadow-neon"
                     : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
                 }`}
               >
-                {plan.cta}
-                {plan.popular && <Zap className="ml-2 h-4 w-4" />}
+                <Link to={`/buy-credits?credits=${plan.credits}`}>
+                  {plan.cta}
+                  {plan.popular && <Zap className="ml-2 h-4 w-4" />}
+                </Link>
               </Button>
             </motion.div>
           ))}

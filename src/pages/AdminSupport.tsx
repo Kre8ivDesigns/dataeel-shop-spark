@@ -28,25 +28,45 @@ import type { Tables } from "@/integrations/supabase/types";
 
 type Submission = Tables<"contact_submissions">;
 
+const TICKET_STATUSES = ["open", "in_progress", "closed"] as const;
+type TicketStatus = (typeof TICKET_STATUSES)[number];
+
+function normalizeTicketStatus(raw: string | null | undefined): TicketStatus {
+  return TICKET_STATUSES.includes(raw as TicketStatus) ? (raw as TicketStatus) : "open";
+}
+
 const AdminSupport = () => {
   const { isAdmin } = useAuth();
   const [rows, setRows] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("contact_submissions")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(200);
-    setLoading(false);
-    if (error) {
-      toast.error(sanitizeError(error));
-      return;
+    setLoadError(null);
+    try {
+      const { data, error } = await supabase
+        .from("contact_submissions")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (error) {
+        const msg = sanitizeError(error);
+        setLoadError(msg);
+        toast.error(msg);
+        setRows([]);
+        return;
+      }
+      setRows(data ?? []);
+    } catch (e: unknown) {
+      const msg = sanitizeError(e);
+      setLoadError(msg);
+      toast.error(msg);
+      setRows([]);
+    } finally {
+      setLoading(false);
     }
-    setRows(data ?? []);
   }, []);
 
   useEffect(() => {
@@ -88,6 +108,12 @@ const AdminSupport = () => {
             <p className="text-muted-foreground text-sm mt-1">Messages from the public contact form.</p>
           </div>
 
+          {loadError && (
+            <p className="text-sm text-destructive mb-4" role="alert">
+              {loadError}
+            </p>
+          )}
+
           <Card className="bg-card border-border">
             <CardHeader>
               <CardTitle className="text-foreground">Submissions</CardTitle>
@@ -120,8 +146,10 @@ const AdminSupport = () => {
                         <TableCell className="text-sm align-top">
                           <div className="text-foreground font-medium">{r.name}</div>
                           <div className="text-muted-foreground text-xs">{r.email}</div>
-                          {r.user_id && (
-                            <div className="text-[10px] font-mono text-muted-foreground mt-1">{r.user_id.slice(0, 8)}…</div>
+                          {r.user_id != null && String(r.user_id).length > 0 && (
+                            <div className="text-[10px] font-mono text-muted-foreground mt-1">
+                              {String(r.user_id).slice(0, 8)}…
+                            </div>
                           )}
                         </TableCell>
                         <TableCell className="text-sm align-top text-foreground capitalize">{r.category}</TableCell>
@@ -130,8 +158,8 @@ const AdminSupport = () => {
                         </TableCell>
                         <TableCell className="align-top">
                           <Select
-                            value={r.status}
-                            onValueChange={(status) => saveRow(r, { status })}
+                            value={normalizeTicketStatus(r.status)}
+                            onValueChange={(status) => saveRow(r, { status: status as TicketStatus })}
                             disabled={savingId === r.id}
                           >
                             <SelectTrigger className="w-[140px] bg-muted border-border h-9">

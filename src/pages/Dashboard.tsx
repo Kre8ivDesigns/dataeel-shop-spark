@@ -23,6 +23,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { format, formatDistanceToNow } from "date-fns";
 import { useUserDashboard } from "@/lib/queries/userDashboard";
 import { schedulePostPaymentCreditRefetch } from "@/lib/schedulePostPaymentCreditRefetch";
+import { StripeTestModeDevBanner } from "@/components/StripeTestModeDevBanner";
 
 const LOW_CREDITS_THRESHOLD = 3;
 
@@ -164,6 +165,7 @@ const Dashboard = () => {
 
       <main className="pt-24 pb-16">
         <div className="container mx-auto px-4">
+          <StripeTestModeDevBanner />
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

@@ -252,14 +252,17 @@ const PricingPage = () => {
 
                 {/* CTA */}
                 <Button
+                  asChild
                   className={`w-full font-semibold ${
                     plan.popular
                       ? "bg-primary text-primary-foreground hover:brightness-110 shadow-neon"
                       : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
                   }`}
                 >
-                  {plan.cta}
-                  {plan.popular && <Zap className="ml-2 h-4 w-4" />}
+                  <Link to={`/buy-credits?credits=${plan.credits}`}>
+                    {plan.cta}
+                    {plan.popular && <Zap className="ml-2 h-4 w-4" />}
+                  </Link>
                 </Button>
               </motion.div>
             ))}

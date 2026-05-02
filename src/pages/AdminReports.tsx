@@ -17,6 +17,11 @@ import {
 } from "@/components/ui/table";
 import { ArrowLeft, Download, Loader2 } from "lucide-react";
 import { sanitizeError } from "@/lib/errorHandler";
+import {
+  creditLedgerEntryTypeLabel,
+  creditLedgerUserDisplay,
+  emailByUserIdFromProfiles,
+} from "@/lib/adminCreditLedger";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -30,34 +35,56 @@ type DownloadJoin = {
 const AdminReports = () => {
   const { isAdmin } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [ledgerError, setLedgerError] = useState<string | null>(null);
   const [ledger, setLedger] = useState<LedgerRow[]>([]);
   const [downloads, setDownloads] = useState<DownloadJoin[]>([]);
   const [profiles, setProfiles] = useState<{ user_id: string; email: string }[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [ledRes, dlRes, profRes] = await Promise.all([
+    setLedgerError(null);
+    const [ledRes, dlRes] = await Promise.all([
       supabase.from("credit_ledger").select("*").order("created_at", { ascending: false }).limit(500),
       supabase.from("racecard_downloads")
         .select("racecard_id, racecards(track_name, track_code, race_date, file_name)"),
-      supabase.from("profiles").select("user_id, email"),
     ]);
-    setLoading(false);
-    if (ledRes.error) toast.error(sanitizeError(ledRes.error));
     if (dlRes.error) toast.error(sanitizeError(dlRes.error));
-    setLedger(ledRes.data ?? []);
     setDownloads((dlRes.data as DownloadJoin[]) ?? []);
-    setProfiles(profRes.data ?? []);
+
+    if (ledRes.error) {
+      const msg = sanitizeError(ledRes.error);
+      setLedgerError(msg);
+      toast.error(msg);
+      setLedger([]);
+      setProfiles([]);
+      setLoading(false);
+      return;
+    }
+
+    const rows = ledRes.data ?? [];
+    setLedger(rows);
+
+    const ids = [...new Set(rows.map((r) => r.user_id))];
+    if (ids.length === 0) {
+      setProfiles([]);
+    } else {
+      const profRes = await supabase.from("profiles").select("user_id, email").in("user_id", ids);
+      if (profRes.error) {
+        toast.error(sanitizeError(profRes.error));
+        setProfiles([]);
+      } else {
+        setProfiles(profRes.data ?? []);
+      }
+    }
+
+    setLoading(false);
   }, []);
 
   useEffect(() => {
     if (isAdmin) load();
   }, [isAdmin, load]);
 
-  const emailByUser = useMemo(
-    () => Object.fromEntries(profiles.map((p) => [p.user_id, p.email])),
-    [profiles],
-  );
+  const emailByUser = useMemo(() => emailByUserIdFromProfiles(profiles), [profiles]);
 
   const byRacecard = useMemo(() => {
     const m = new Map<
@@ -235,7 +262,13 @@ const AdminReports = () => {
                     <CardTitle className="text-foreground">Credit ledger</CardTitle>
                     <CardDescription>Purchases, admin grants, and download deductions (latest 500).</CardDescription>
                   </div>
-                  <Button variant="outline" size="sm" className="gap-2 shrink-0" onClick={exportLedgerCsv} disabled={!ledger.length}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 shrink-0"
+                    onClick={exportLedgerCsv}
+                    disabled={!ledger.length || Boolean(ledgerError)}
+                  >
                     <Download className="h-4 w-4" />
                     Export CSV
                   </Button>
@@ -243,6 +276,13 @@ const AdminReports = () => {
                 <CardContent className="overflow-x-auto">
                   {loading ? (
                     <LoaderRow />
+                  ) : ledgerError ? (
+                    <div className="flex flex-col items-start gap-3 py-6">
+                      <p className="text-destructive text-sm">{ledgerError}</p>
+                      <Button variant="outline" size="sm" onClick={() => void load()}>
+                        Try again
+                      </Button>
+                    </div>
                   ) : (
                     <Table>
                       <TableHeader>
@@ -261,11 +301,13 @@ const AdminReports = () => {
                               {new Date(r.created_at).toLocaleString()}
                             </TableCell>
                             <TableCell className="text-xs">
-                              {emailByUser[r.user_id] ?? r.user_id.slice(0, 8)}
+                              {creditLedgerUserDisplay(r.user_id, emailByUser)}
                             </TableCell>
                             <TableCell className="text-right font-mono-data">{r.delta}</TableCell>
                             <TableCell className="text-right font-mono-data">{r.balance_after}</TableCell>
-                            <TableCell className="text-xs capitalize text-muted-foreground">{r.entry_type.replace(/_/g, " ")}</TableCell>
+                            <TableCell className="text-xs capitalize text-muted-foreground">
+                              {creditLedgerEntryTypeLabel(r.entry_type)}
+                            </TableCell>
                           </TableRow>
                         ))}
                         {ledger.length === 0 && (

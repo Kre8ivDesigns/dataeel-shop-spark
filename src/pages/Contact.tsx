@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { sanitizeError } from "@/lib/errorHandler";
 import { motion } from "framer-motion";
-import { Mail, MessageCircle, HelpCircle, Clock, Send, AlertTriangle, ArrowLeft, CheckCircle } from "lucide-react";
+import { Mail, HelpCircle, Clock, Send, AlertTriangle, ArrowLeft, CheckCircle } from "lucide-react";
+import heroRacing from "@/assets/hero-racing.jpg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,16 +30,6 @@ const contactOptions = [
     href: "mailto:support@dataeel.com",
   },
   {
-    icon: MessageCircle,
-    title: "Live Chat",
-    description: "Chat with our team",
-    detail: "Mon-Fri, 9am-5pm ET",
-    bestFor: "Quick questions, urgent issues",
-    cta: "Start Chat",
-    href: "#",
-    status: "Online",
-  },
-  {
     icon: HelpCircle,
     title: "Help Center",
     description: "Find answers instantly",
@@ -56,7 +47,8 @@ const contactFaqs = [
   },
   {
     question: "What if a race is cancelled?",
-    answer: "If a race is cancelled after you've downloaded a RaceCard, we'll credit your account with a free replacement credit. Contact support with your order details.",
+    answer:
+      "Email support@dataeel.com with your account and the card you downloaded. For qualifying full-program cancellations, we may restore a credit at our discretion.",
   },
   {
     question: "Do credits expire?",
@@ -64,7 +56,8 @@ const contactFaqs = [
   },
   {
     question: "Can I get a refund?",
-    answer: "Unused credits can be refunded within 30 days of purchase. Contact our support team for assistance with your refund request.",
+    answer:
+      "Per our Terms & Conditions, all sales are final. If you have a billing error or need help with your account, contact support@dataeel.com.",
   },
   {
     question: "Which algorithm should I use?",
@@ -120,17 +113,31 @@ const ContactPage = () => {
     <div className="min-h-screen bg-background">
       <Header />
 
-      {/* Hero */}
-      <section
-        className="pt-32 pb-16 relative overflow-hidden"
-        style={{
-          background: "linear-gradient(135deg, hsl(232 59% 8%) 0%, hsl(214 52% 20%) 100%)",
-        }}
-      >
-        <div className="container mx-auto px-4 relative">
+      {/* Hero — same racing photo as Home Hero.tsx (bundled @/assets/hero-racing.jpg) */}
+      <section className="relative min-h-[22rem] flex flex-col justify-center overflow-hidden pt-28 pb-14 md:pt-32 md:pb-16">
+        <div className="absolute inset-0">
+          <img
+            src={heroRacing}
+            alt="Horse racing action"
+            className="w-full h-full object-cover object-center"
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(135deg, hsl(232 59% 8% / 0.92) 0%, hsl(214 52% 15% / 0.88) 50%, hsl(232 59% 6% / 0.9) 100%)",
+            }}
+          />
+          <div
+            className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent pointer-events-none"
+            aria-hidden
+          />
+        </div>
+
+        <div className="container mx-auto px-4 relative z-10">
           <Link
             to="/"
-            className="inline-flex items-center gap-2 text-foreground/50 hover:text-foreground mb-8 transition-colors"
+            className="inline-flex items-center gap-2 text-white/70 hover:text-white mb-8 transition-colors text-sm"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Home
@@ -141,10 +148,11 @@ const ContactPage = () => {
             animate={{ opacity: 1, y: 0 }}
             className="text-center max-w-3xl mx-auto"
           >
-            <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4 font-heading tracking-tight">
+            <div className="h-1 w-16 bg-primary mx-auto rounded-full mb-4" aria-hidden />
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 font-heading tracking-tight">
               Get in Touch
             </h1>
-            <p className="text-lg text-foreground/60">
+            <p className="text-lg text-white/85">
               We're here to help you win more
             </p>
           </motion.div>
@@ -154,7 +162,7 @@ const ContactPage = () => {
       {/* Contact Options */}
       <section className="py-16">
         <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
             {contactOptions.map((option, index) => (
               <motion.div
                 key={option.title}
@@ -168,12 +176,6 @@ const ContactPage = () => {
                 </div>
                 <h3 className="text-lg font-bold text-foreground mb-2 font-heading">{option.title}</h3>
                 <p className="text-foreground/80 text-sm mb-1">{option.description}</p>
-                {"status" in option && (
-                  <span className="inline-flex items-center gap-1.5 text-xs text-success mb-2">
-                    <span className="w-2 h-2 rounded-full bg-success" />
-                    {option.status}
-                  </span>
-                )}
                 <p className="text-muted-foreground text-xs mb-1">{option.detail}</p>
                 <p className="text-muted-foreground text-xs mb-4">Best for: {option.bestFor}</p>
                 <a href={option.href}>
@@ -310,7 +312,7 @@ const ContactPage = () => {
               <span className="font-semibold text-warning text-sm">Urgent Issue?</span>
             </div>
             <p className="text-muted-foreground text-xs">
-              If you're experiencing a critical problem during live racing, use the live chat for fastest response.
+              If you're experiencing a critical problem during live racing, email support@dataeel.com with "URGENT" in the subject for fastest response.
             </p>
           </div>
         </div>

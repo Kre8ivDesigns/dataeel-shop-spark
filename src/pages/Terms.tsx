@@ -9,7 +9,7 @@ const Terms = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <main className="pt-28 pb-16">
-        <div className="container mx-auto px-4 max-w-3xl">
+        <div className="container mx-auto px-4 sm:px-6">
           <p className="text-sm text-muted-foreground mb-2">
             <Link to="/" className="hover:text-primary transition-colors">
               Home

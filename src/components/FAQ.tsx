@@ -1,4 +1,6 @@
+import type { ReactNode } from "react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import {
   Accordion,
   AccordionContent,
@@ -6,53 +8,94 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
-const faqs = [
+type FaqItem = { question: string; answer: ReactNode };
+
+const faqs: FaqItem[] = [
   {
     question: "What is theDATA EEL™?",
-    answer:
-      "theDATA EEL™ has arrived – Algorithms for thoroughbred horse racing like no other. We provide horse racing predictions via downloadable EEL RaceCards that contain algorithmic picks from both our Concert™ and Aptitude™ algorithms for every race at a specific track on a given day.",
+    answer: (
+      <>
+        theDATA EEL™ delivers algorithms for thoroughbred racing like no other. You get predictions via
+        downloadable EEL RaceCards with Concert™ and Aptitude™ picks for every race at a track on a given
+        day. Content is for entertainment and information—past performance does not guarantee future
+        results; see our{" "}
+        <Link to="/disclaimer" className="text-primary underline underline-offset-2 hover:text-neon">
+          Disclaimer
+        </Link>{" "}
+        for details.
+      </>
+    ),
   },
   {
     question: "How much does a RaceCard cost?",
     answer:
-      "Registration is FREE. If you wish to purchase theDATA EEL™ RaceCard you will need to buy 1 Credit. Credits start at $5 each, but our larger packages bring the cost down to as low as $2/card. One credit = one full day of predictions at any track.",
+      "Registration is free. RaceCards are redeemed with credits (one credit = one track day, both algorithms). Credit packages start around $5 per credit and scale down with larger bundles. Buy credits when signed in, then download from RaceCards for your track and date.",
   },
   {
     question: "What tracks do you cover?",
     answer:
-      "We cover 28+ racetracks across the United States and Canada, including all major venues like Churchill Downs, Santa Anita, Gulfstream Park, Saratoga, Del Mar, Woodbine, Aqueduct, Tampa Bay Downs, Fair Grounds, Oaklawn Park, Keeneland, and many more.",
+      "We cover 28+ racetracks across the United States and Canada, including major venues such as Churchill Downs, Santa Anita, Gulfstream Park, Saratoga, Del Mar, Woodbine, Aqueduct, Tampa Bay Downs, Fair Grounds, Oaklawn Park, Keeneland, and many more.",
   },
   {
     question: "What are the Concert™ and Aptitude™ algorithms?",
     answer:
-      "Concert™ analyzes past live performance – how horses perform under pressure, in front of the crowd, from gate to finish. It focuses on proven winners. Aptitude™ evaluates inherent ability and future potential – running style, pace, stamina, and capability. It identifies future stars. Together, they provide a well-rounded prediction system powered by Equibase® data.",
+      "Concert™ focuses on live performance under race-day pressure—how horses run from gate to wire in front of the crowd. Aptitude™ emphasizes inherent ability and profile—style, pace, stamina, and upside. Every RaceCard includes both; they complement each other using Equibase® data.",
   },
   {
     question: "Do I need any special software?",
     answer:
-      "No! That's the beauty of DATAEEL. Horse Racing Simplified® means your RaceCard is delivered as a simple PDF that you can view on any device—your phone, tablet, or computer. Just download it before you head to the track.",
+      "No. Each RaceCard is a PDF you can open on phone, tablet, or desktop—download from your account after you sign in. No handicapping app required; take it to the track or review anywhere.",
   },
   {
     question: "Do credits expire?",
     answer:
-      "No, your credits never expire. Purchase them when you see a good deal, and use them whenever you're ready to hit the track. They'll always be in your account waiting for you.",
+      "No. Credits stay in your account until you use them, so you can buy when it suits you and redeem on race day.",
   },
   {
     question: "What if I'm new to horse racing?",
     answer:
-      "DATAEEL is perfect for newcomers! Our tagline is 'Horse Racing Simplified®' for a reason. Are you NEW to horse racing? theDATA EEL™ will change your horse racing life. The RaceCards are easy to understand—just follow the picks without needing to learn complex handicapping.",
+      "That is what Horse Racing Simplified® is for. RaceCards present picks in a straightforward way so you are not buried in past-performance sheets on day one—learn the game while you go.",
   },
   {
-    question: "What if a race is cancelled?",
+    question: "What if a race day is cancelled or changed?",
     answer:
-      "If a race day is cancelled and you've already downloaded the RaceCard, contact our support team and we'll credit your account. We stand behind our product and want to ensure you get value from every credit.",
+      "Reach out to support@dataeel.com with your account email and the card you downloaded. For qualifying full-program cancellations or similar issues, we may restore a credit at our discretion. We do not control weather, stewards, or track decisions.",
+  },
+  {
+    question: "How do payments, receipts, and refunds work?",
+    answer: (
+      <>
+        Purchases run through Stripe. We accept major cards (Visa, Mastercard, American Express, Discover)
+        in US dollars. Per our{" "}
+        <Link to="/terms" className="text-primary underline underline-offset-2 hover:text-neon">
+          Terms &amp; Conditions
+        </Link>
+        , all sales are final. For billing discrepancies or account problems, email support@dataeel.com.
+        Optionally review invoices or payment history in your account where available.
+      </>
+    ),
+  },
+  {
+    question: "How do I contact support?",
+    answer: (
+      <>
+        Email support@dataeel.com or use our{" "}
+        <Link to="/contact" className="text-primary underline underline-offset-2 hover:text-neon">
+          Contact
+        </Link>{" "}
+        page for billing, downloads, and account questions. We aim to respond within one business day.
+      </>
+    ),
   },
 ];
+
+const midFaq = Math.ceil(faqs.length / 2);
+const faqColumns = [faqs.slice(0, midFaq), faqs.slice(midFaq)] as const;
 
 export const FAQ = () => {
   return (
     <section id="faq" className="py-24 bg-card">
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto max-w-[1400px] px-4 sm:px-6">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -69,30 +112,35 @@ export const FAQ = () => {
           </p>
         </motion.div>
 
-        {/* FAQ Accordion */}
+        {/* FAQ Accordion — full band width; two columns on large screens */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ delay: 0.2 }}
-          className="max-w-3xl mx-auto"
+          className="grid max-w-none gap-6 lg:grid-cols-2 lg:items-start"
         >
-          <Accordion type="single" collapsible className="space-y-4">
-            {faqs.map((faq, index) => (
-              <AccordionItem
-                key={index}
-                value={`item-${index}`}
-                className="bg-muted rounded-xl px-6 border-none"
-              >
-                <AccordionTrigger className="text-left font-semibold text-foreground hover:text-primary py-5">
-                  {faq.question}
-                </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground pb-5">
-                  {faq.answer}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
+          {faqColumns.map((column, colIndex) => (
+            <Accordion key={colIndex} type="single" collapsible className="space-y-4">
+              {column.map((faq, index) => {
+                const globalIndex = colIndex === 0 ? index : index + midFaq;
+                return (
+                  <AccordionItem
+                    key={globalIndex}
+                    value={`item-${globalIndex}`}
+                    className="bg-muted rounded-xl px-6 border-none"
+                  >
+                    <AccordionTrigger className="text-left font-semibold text-foreground hover:text-primary py-5">
+                      {faq.question}
+                    </AccordionTrigger>
+                    <AccordionContent className="text-muted-foreground pb-5">
+                      {faq.answer}
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
+            </Accordion>
+          ))}
         </motion.div>
       </div>
     </section>
