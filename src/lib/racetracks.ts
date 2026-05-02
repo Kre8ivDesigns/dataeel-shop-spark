@@ -58,8 +58,9 @@ export const RACETRACK_BY_CODE: Record<string, string> = {
   WO: "Woodbine",
 };
 
-/** Uppercase, trim, strip trailing carets (PHP-style `CD^`). */
-export function normalizeTrackCode(trackCode: string): string {
+/** Uppercase, trim, strip trailing carets (PHP-style `CD^`). Safe for null/empty DB values. */
+export function normalizeTrackCode(trackCode: string | null | undefined): string {
+  if (trackCode == null || typeof trackCode !== "string") return "";
   let s = trackCode.trim().toUpperCase();
   while (s.endsWith("^")) {
     s = s.slice(0, -1);
@@ -70,7 +71,7 @@ export function normalizeTrackCode(trackCode: string): string {
 /**
  * DB/filename noise like `KEE2604111` → `KEE` for map lookup. Plain `CT`, `CD`, etc. unchanged.
  */
-export function extractCanonicalTrackCode(raw: string): string {
+export function extractCanonicalTrackCode(raw: string | null | undefined): string {
   const n = normalizeTrackCode(raw);
   const compact = n.replace(/[^A-Z0-9]/g, "");
   const prefixed = /^([A-Z]{2,4})(\d+)/.exec(compact);
@@ -80,10 +81,11 @@ export function extractCanonicalTrackCode(raw: string): string {
   return n;
 }
 
-export function getRacetrackLabel(trackCode: string): string {
+export function getRacetrackLabel(trackCode: string | null | undefined): string {
   const key = extractCanonicalTrackCode(trackCode);
   const label = RACETRACK_BY_CODE[key];
-  return label ?? key ?? trackCode;
+  const raw = trackCode != null && typeof trackCode === "string" ? trackCode.trim() : "";
+  return label ?? (key || raw || "Track");
 }
 
 /** City + state/province for cards and listings; Canadian tracks use province abbreviations. */
@@ -144,7 +146,7 @@ export const RACETRACK_LOCATION_BY_CODE: Record<string, RacetrackLocation> = {
   WO: { city: "Toronto", state: "ON" },
 };
 
-export function getRacetrackLocation(trackCode: string): RacetrackLocation | null {
+export function getRacetrackLocation(trackCode: string | null | undefined): RacetrackLocation | null {
   const key = extractCanonicalTrackCode(trackCode);
   return RACETRACK_LOCATION_BY_CODE[key] ?? null;
 }

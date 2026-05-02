@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getRacetrackLabel } from "./racetracks";
+import { extractCanonicalTrackCode, getRacetrackLabel, normalizeTrackCode } from "./racetracks";
 
 describe("getRacetrackLabel", () => {
   const churchill = "Churchill Downs";
@@ -14,5 +14,24 @@ describe("getRacetrackLabel", () => {
 
   it("strips trailing caret from CD^", () => {
     expect(getRacetrackLabel("CD^")).toBe(churchill);
+  });
+
+  it("does not throw on null or undefined track codes", () => {
+    expect(getRacetrackLabel(null)).toBe("Track");
+    expect(getRacetrackLabel(undefined)).toBe("Track");
+  });
+});
+
+describe("normalizeTrackCode", () => {
+  it("returns empty string for nullish input", () => {
+    expect(normalizeTrackCode(null)).toBe("");
+    expect(normalizeTrackCode(undefined)).toBe("");
+  });
+});
+
+describe("extractCanonicalTrackCode", () => {
+  it("handles nullish without throwing", () => {
+    expect(extractCanonicalTrackCode(null)).toBe("");
+    expect(extractCanonicalTrackCode(undefined)).toBe("");
   });
 });

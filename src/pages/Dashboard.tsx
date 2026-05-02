@@ -20,12 +20,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { sanitizeError } from "@/lib/errorHandler";
 import { useAuth } from "@/contexts/AuthContext";
-import { format, formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow, isValid } from "date-fns";
 import { useUserDashboard } from "@/lib/queries/userDashboard";
 import { schedulePostPaymentCreditRefetch } from "@/lib/schedulePostPaymentCreditRefetch";
 import { StripeTestModeDevBanner } from "@/components/StripeTestModeDevBanner";
 
 const LOW_CREDITS_THRESHOLD = 3;
+
+function formatLocalDate(d: Date, fmt: string, fallback: string): string {
+  return isValid(d) ? format(d, fmt) : fallback;
+}
 
 const Dashboard = () => {
   const { toast } = useToast();
@@ -308,10 +312,13 @@ const Dashboard = () => {
                   recentDownloads.map((dl) => {
                     const rc = dl.racecards;
                     const label = rc?.track_name ?? "Racecard";
+                    const raceDt = rc?.race_date ? new Date(`${rc.race_date}T12:00:00`) : null;
                     const sub = rc
-                      ? `${format(new Date(rc.race_date + "T12:00:00"), "MMM d, yyyy")}${
-                          rc.num_races != null ? ` · ${rc.num_races} races` : ""
-                        }`
+                      ? raceDt && isValid(raceDt)
+                        ? `${formatLocalDate(raceDt, "MMM d, yyyy", rc.race_date ?? "—")}${
+                            rc.num_races != null ? ` · ${rc.num_races} races` : ""
+                          }`
+                        : "Details unavailable"
                       : "Details unavailable";
                     return (
                       <div key={dl.id} className="flex items-center justify-between py-4 first:pt-4 last:pb-4 px-1">
@@ -326,7 +333,12 @@ const Dashboard = () => {
                         </div>
                         <div className="flex items-center gap-3 shrink-0">
                           <span className="text-xs text-muted-foreground hidden sm:inline">
-                            {formatDistanceToNow(new Date(dl.created_at), { addSuffix: true })}
+                            {(() => {
+                              const at = new Date(dl.created_at);
+                              return isValid(at)
+                                ? formatDistanceToNow(at, { addSuffix: true })
+                                : "—";
+                            })()}
                           </span>
                           <Link to="/racecards">
                             <Button variant="ghost" size="sm" className="text-xs text-foreground/60 hover:text-foreground">
@@ -365,8 +377,14 @@ const Dashboard = () => {
                         <div className="min-w-0">
                           <div className="font-medium text-foreground text-sm truncate">{race.track_name}</div>
                           <div className="text-xs text-muted-foreground">
-                            {format(new Date(race.race_date + "T12:00:00"), "EEE, MMM d")}
-                            {race.num_races != null ? ` · ${race.num_races} races` : ""}
+                            {(() => {
+                              const rd = new Date(`${race.race_date}T12:00:00`);
+                              return isValid(rd)
+                                ? `${formatLocalDate(rd, "EEE, MMM d", race.race_date)}${
+                                    race.num_races != null ? ` · ${race.num_races} races` : ""
+                                  }`
+                                : race.race_date ?? "—";
+                            })()}
                           </div>
                         </div>
                         <Link to="/racecards">
@@ -405,7 +423,8 @@ const Dashboard = () => {
                         <div className="min-w-0">
                           <div className="font-medium text-foreground truncate">{p.package_name}</div>
                           <div className="text-xs text-muted-foreground">
-                            {p.credits} credits · {format(new Date(p.created_at), "MMM d, yyyy")}
+                            {p.credits} credits ·{" "}
+                            {formatLocalDate(new Date(p.created_at), "MMM d, yyyy", "—")}
                           </div>
                         </div>
                         <span className="font-mono-data text-xs text-foreground shrink-0">

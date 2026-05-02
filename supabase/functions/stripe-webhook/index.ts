@@ -1,6 +1,13 @@
-// Stripe calls this endpoint server-to-server — no CORS headers needed.
+/**
+ * Stripe webhook (server-to-server).
+ *
+ * Required secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+ *   STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET (or app_settings + APP_SETTINGS_ENCRYPTION_KEY).
+ * Optional: WEBHOOK_EXPOSE_ERRORS=true — include `message` on 5xx JSON for debugging.
+ */
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { acknowledgeOnlyDbError, jsonErrBody } from "../_shared/stripe_webhook_errors.ts";
 import { resolveStripeConfig } from "../_shared/stripe_config.ts";
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
@@ -31,18 +38,29 @@ Deno.serve(async (req) => {
       "[stripe-webhook] Unhandled error:",
       err instanceof Error ? err.stack ?? err.message : String(err),
     );
-    return jsonResponse({ error: "Internal error" }, 500);
+    return jsonResponse(jsonErrBody("Internal error", err), 500);
   }
 });
 
 async function handleStripeWebhook(req: Request): Promise<Response> {
-  const supabaseAdmin = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    { auth: { persistSession: false } },
-  );
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim() ?? "";
+  const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim() ?? "";
+  if (!supabaseUrl || !serviceRole) {
+    console.error("[stripe-webhook] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+    return jsonResponse({ error: "Server misconfiguration" }, 503);
+  }
 
-  const stripeConfig = await resolveStripeConfig(supabaseAdmin);
+  const supabaseAdmin = createClient(supabaseUrl, serviceRole, {
+    auth: { persistSession: false },
+  });
+
+  let stripeConfig;
+  try {
+    stripeConfig = await resolveStripeConfig(supabaseAdmin);
+  } catch (err) {
+    console.error("[stripe-webhook] resolveStripeConfig failed:", err instanceof Error ? err.message : err);
+    return jsonResponse(jsonErrBody("Stripe config resolution failed", err), 503);
+  }
 
   const secretKey = stripeConfig.secretKey.trim();
   if (!secretKey) {
@@ -117,6 +135,16 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
         console.log("[stripe-webhook] Duplicate checkout ignored:", session.id, paymentIntentId ?? "");
         return jsonResponse({ received: true, duplicate: true }, 200);
       }
+      const ack = acknowledgeOnlyDbError(txError);
+      if (ack.acknowledge) {
+        console.error(
+          "[stripe-webhook] checkout: transaction insert skipped (non-retryable):",
+          ack.reason,
+          txError.code,
+          txError.message,
+        );
+        return jsonResponse({ received: true, skipped: true, reason: ack.reason }, 200);
+      }
       console.error("[stripe-webhook] Transaction insert failed:", txError.code, txError.message);
       return jsonResponse({ error: "Transaction recording failed" }, 500);
     }
@@ -136,9 +164,18 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
     });
 
     if (creditError) {
-      console.error("[stripe-webhook] Credit update failed:", creditError.code, creditError.message);
-      // Rollback the transaction record to allow a retry
+      const ack = acknowledgeOnlyDbError(creditError);
       await supabaseAdmin.from("transactions").delete().eq("stripe_session_id", session.id);
+      if (ack.acknowledge) {
+        console.error(
+          "[stripe-webhook] checkout: credits skipped (non-retryable):",
+          ack.reason,
+          creditError.code,
+          creditError.message,
+        );
+        return jsonResponse({ received: true, skipped: true, reason: ack.reason }, 200);
+      }
+      console.error("[stripe-webhook] Credit update failed:", creditError.code, creditError.message);
       return jsonResponse({ error: "Credit update failed" }, 500);
     }
 
@@ -245,6 +282,16 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
         console.log("[stripe-webhook] invoice.paid duplicate (same payment_intent):", paymentIntentId);
         return jsonResponse({ received: true, duplicate: true }, 200);
       }
+      const ack = acknowledgeOnlyDbError(txError);
+      if (ack.acknowledge) {
+        console.error(
+          "[stripe-webhook] invoice.paid: transaction insert skipped (non-retryable):",
+          ack.reason,
+          txError.code,
+          txError.message,
+        );
+        return jsonResponse({ received: true, skipped: true, reason: ack.reason }, 200);
+      }
       console.error("[stripe-webhook] invoice.paid transaction insert failed:", txError.code, txError.message);
       return jsonResponse({ error: "Transaction recording failed" }, 500);
     }
@@ -263,8 +310,18 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
     });
 
     if (creditError) {
-      console.error("[stripe-webhook] invoice.paid credit update failed:", creditError.code, creditError.message);
+      const ack = acknowledgeOnlyDbError(creditError);
       await supabaseAdmin.from("transactions").delete().eq("stripe_payment_intent_id", paymentIntentId);
+      if (ack.acknowledge) {
+        console.error(
+          "[stripe-webhook] invoice.paid: credits skipped (non-retryable):",
+          ack.reason,
+          creditError.code,
+          creditError.message,
+        );
+        return jsonResponse({ received: true, skipped: true, reason: ack.reason }, 200);
+      }
+      console.error("[stripe-webhook] invoice.paid credit update failed:", creditError.code, creditError.message);
       return jsonResponse({ error: "Credit update failed" }, 500);
     }
 

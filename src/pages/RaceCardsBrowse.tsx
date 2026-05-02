@@ -126,10 +126,11 @@ const RaceCardsBrowse = () => {
   const filtered = racecards.filter((card) => {
     const label = getRacetrackLabel(card.track_code).toLowerCase();
     const codeShort = extractCanonicalTrackCode(card.track_code).toLowerCase();
+    const rawCode = (card.track_code ?? "").toLowerCase();
     return (
       label.includes(q) ||
       card.track_name.toLowerCase().includes(q) ||
-      card.track_code.toLowerCase().includes(q) ||
+      rawCode.includes(q) ||
       codeShort.includes(q)
     );
   });

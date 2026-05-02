@@ -91,8 +91,8 @@ export function AbrNewsSection() {
           <CardHeader className="pb-2">
             <CardTitle className="text-lg text-foreground">
               {data?.source === "tdn"
-                ? data.channelTitle ?? "Thoroughbred Daily News"
-                : data.channelTitle ?? "America’s Best Racing — The Sport"}
+                ? (data?.channelTitle ?? "Thoroughbred Daily News")
+                : (data?.channelTitle ?? "America’s Best Racing — The Sport")}
             </CardTitle>
             <CardDescription>
               {data?.source === "tdn" ? (
