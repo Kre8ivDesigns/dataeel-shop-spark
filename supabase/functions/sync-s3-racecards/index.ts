@@ -68,6 +68,15 @@ function parseS3Key(s3Key: string): { trackCode: string; raceDate: string; fileN
   return { trackCode, raceDate, fileName: baseName };
 }
 
+/** Rejects malformed calendar dates that Postgres DATE would error on (e.g. 2026-02-31). */
+function isValidPostgresDate(iso: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false;
+  const ms = Date.parse(`${iso}T12:00:00.000Z`);
+  if (Number.isNaN(ms)) return false;
+  const roundTrip = new Date(ms).toISOString().slice(0, 10);
+  return roundTrip === iso;
+}
+
 async function handleRequest(req: Request): Promise<Response> {
   const cors = getCorsHeaders(req);
 
@@ -198,18 +207,47 @@ async function handleRequest(req: Request): Promise<Response> {
       );
     }
 
-    // Insert a DB row for each new S3 key
-    const rows = newKeys.map((s3Key) => {
+    // Insert a DB row for each new S3 key (skip keys whose filename parses to an invalid DATE)
+    const skippedInvalidDate: { key: string; race_date: string }[] = [];
+    const rows = [] as Array<{
+      file_name: string;
+      file_url: string;
+      track_code: string;
+      track_name: string;
+      race_date: string;
+      uploaded_by: string | null;
+    }>;
+
+    for (const s3Key of newKeys) {
       const { trackCode, raceDate, fileName } = parseS3Key(s3Key);
-      return {
+      if (!isValidPostgresDate(raceDate)) {
+        skippedInvalidDate.push({ key: s3Key, race_date: raceDate });
+        console.warn(`sync-s3-racecards: skip invalid race_date for ${s3Key}: ${raceDate}`);
+        continue;
+      }
+      rows.push({
         file_name: fileName,
         file_url: s3Key,
         track_code: trackCode,
         track_name: getRacetrackLabel(trackCode),
         race_date: raceDate,
-        ...(actingUserId ? { uploaded_by: actingUserId } : { uploaded_by: null }),
-      };
-    });
+        uploaded_by: actingUserId,
+      });
+    }
+
+    if (rows.length === 0) {
+      return new Response(
+        JSON.stringify({
+          added: 0,
+          message:
+            skippedInvalidDate.length > 0
+              ? `No rows inserted — ${skippedInvalidDate.length} PDF(s) have filenames that do not yield a valid race date. Rename files to TRACKCODE_YYYY-MM-DD.pdf (or supported legacy shapes).`
+              : "No new racecards found in S3.",
+          skipped_invalid_date: skippedInvalidDate.slice(0, 50),
+        }),
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } },
+      );
+    }
 
     const { error: insertError, count } = await supabaseAdmin
       .from("racecards")
@@ -227,7 +265,10 @@ async function handleRequest(req: Request): Promise<Response> {
     }
 
     return new Response(
-      JSON.stringify({ added: count ?? rows.length }),
+      JSON.stringify({
+        added: count ?? rows.length,
+        ...(skippedInvalidDate.length > 0 ? { skipped_invalid_date: skippedInvalidDate.slice(0, 50) } : {}),
+      }),
       { status: 200, headers: { ...cors, "Content-Type": "application/json" } },
     );
   } catch (err) {
