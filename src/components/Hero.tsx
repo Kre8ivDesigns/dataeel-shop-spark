@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { ArrowRight, Play, TrendingUp, MapPin, Award } from "lucide-react";
+import { ArrowRight, Play, MapPin, Sparkles, Infinity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-racing.jpg";
@@ -54,9 +54,9 @@ const breakingNews = [
 ];
 
 const trustBadges = [
-  { icon: TrendingUp, label: "65-75% Win Rate" },
+  { icon: Sparkles, label: "Concert™ & Aptitude™" },
   { icon: MapPin, label: "28+ Racetracks" },
-  { icon: Award, label: "2,000+ Active Bettors" },
+  { icon: Infinity, label: "Credits never expire" },
 ];
 
 export const Hero = () => {

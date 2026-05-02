@@ -1,11 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, Loader2, Trophy } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { parseRss2ChannelTitle, parseRss2Items, type Rss2Item } from "@/lib/parseRss2Xml";
+import { filterRssItemsNewerThanDays, RSS_FEED_MAX_AGE_DAYS } from "@/lib/rssRecentItems";
 
 const QUERY_KEY = ["dashboard-racing-results-feed"] as const;
 const MAX_ITEMS = 12;
+/** Parse more than we display so age filtering still yields up to MAX_ITEMS recent entries. */
+const MAX_PARSE_ITEMS = 80;
 
 type FeedResult = {
   items: Rss2Item[];
@@ -27,6 +29,11 @@ async function fetchFunctionXml(functionName: string, base: string, key: string)
   return res.text();
 }
 
+function takeRecentFeedItems(xml: string): Rss2Item[] {
+  const parsed = parseRss2Items(xml, MAX_PARSE_ITEMS);
+  return filterRssItemsNewerThanDays(parsed, RSS_FEED_MAX_AGE_DAYS).slice(0, MAX_ITEMS);
+}
+
 async function fetchRacingResultsFeed(): Promise<FeedResult> {
   const base = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "");
   const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -36,7 +43,7 @@ async function fetchRacingResultsFeed(): Promise<FeedResult> {
 
   try {
     const xml = await fetchFunctionXml("otb-results-rss", base, key);
-    const items = parseRss2Items(xml, MAX_ITEMS);
+    const items = takeRecentFeedItems(xml);
     if (items.length > 0) {
       return {
         items,
@@ -50,7 +57,7 @@ async function fetchRacingResultsFeed(): Promise<FeedResult> {
 
   const hrnXml = await fetchFunctionXml("hrn-headlines-rss", base, key);
   return {
-    items: parseRss2Items(hrnXml, MAX_ITEMS),
+    items: takeRecentFeedItems(hrnXml),
     source: "hrn",
     channelTitle: parseRss2ChannelTitle(hrnXml),
   };
@@ -65,6 +72,7 @@ function formatPubDate(pubDate?: string): string | null {
 
 /**
  * Logged-in dashboard: recent North American results via syndicated RSS (OTB first; Horse-Races.net fallback).
+ * Only items from the last {@link RSS_FEED_MAX_AGE_DAYS} days are shown.
  */
 export function DashboardRacingResultsSection() {
   const { data, isLoading, isError, refetch } = useQuery({
@@ -76,51 +84,56 @@ export function DashboardRacingResultsSection() {
   });
 
   return (
-    <section className="mb-8">
-      <Card className="bg-card border-border shadow-sm overflow-hidden">
-        <CardHeader className="pb-2 border-b border-border/80 bg-muted/20">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
-                <Trophy className="h-5 w-5 text-primary" aria-hidden />
-              </div>
-              <div>
-                <CardTitle className="text-lg text-foreground font-heading">Recent racing results</CardTitle>
-                <CardDescription className="mt-1">
-                  {data?.source === "otb"
-                    ? "Major North American tracks (OffTrackBetting.com results RSS)."
-                    : data?.source === "hrn"
-                      ? "Headlines feed from Horse-Races.net (fallback when results RSS is unavailable)."
-                      : "Major tracks and racing headlines via RSS."}
-                </CardDescription>
-              </div>
-            </div>
-            <Button type="button" variant="outline" size="sm" className="shrink-0 self-start" onClick={() => refetch()}>
-              Refresh
-            </Button>
+    <section className="flex flex-col min-h-0 md:min-h-[280px]">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+        <div className="flex items-start gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
+            <Trophy className="h-5 w-5 text-primary" aria-hidden />
           </div>
-          {data?.channelTitle ? (
-            <p className="text-xs text-muted-foreground pt-2 font-medium">{data.channelTitle}</p>
-          ) : null}
-        </CardHeader>
-        <CardContent className="pt-4">
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold text-foreground font-heading">Recent racing results</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              {data?.source === "otb"
+                ? "Major North American tracks (OffTrackBetting.com results RSS)."
+                : data?.source === "hrn"
+                  ? "Headlines feed from Horse-Races.net (fallback when results RSS is unavailable)."
+                  : "Major tracks and racing headlines via RSS."}{" "}
+              <span className="text-muted-foreground/90">Showing entries from the last {RSS_FEED_MAX_AGE_DAYS} days.</span>
+            </p>
+          </div>
+        </div>
+        <Button type="button" variant="outline" size="sm" className="shrink-0 self-start" onClick={() => refetch()}>
+          Refresh
+        </Button>
+      </div>
+
+      <div className="card-dark flex flex-col flex-1 min-h-[200px] overflow-hidden">
+        {data?.channelTitle ? (
+          <p className="text-xs text-muted-foreground px-4 pt-4 pb-3 font-medium border-b border-border/60">
+            {data.channelTitle}
+          </p>
+        ) : null}
+
+        <div className="flex-1 px-1 sm:px-2 pt-4 pb-4">
           {isLoading && (
             <div className="flex justify-center py-10 text-muted-foreground">
               <Loader2 className="h-7 w-7 animate-spin" />
             </div>
           )}
           {isError && !isLoading && (
-            <p className="text-sm text-muted-foreground text-center py-6">
+            <p className="text-sm text-muted-foreground text-center py-6 px-2">
               Results feed unavailable. Try again later.
             </p>
           )}
           {!isLoading && !isError && data && data.items.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-6">No entries in the feed right now.</p>
+            <p className="text-sm text-muted-foreground text-center py-6 px-2">
+              No entries from the last {RSS_FEED_MAX_AGE_DAYS} days.
+            </p>
           )}
           {!isLoading && !isError && data && data.items.length > 0 && (
             <ul className="divide-y divide-border/80">
               {data.items.map((item, i) => (
-                <li key={`${item.link}-${i}`} className="py-3 first:pt-0 last:pb-0">
+                <li key={`${item.link}-${i}`} className="py-3 first:pt-0 last:pb-0 px-1">
                   <a
                     href={item.link}
                     target="_blank"
@@ -144,12 +157,13 @@ export function DashboardRacingResultsSection() {
               ))}
             </ul>
           )}
-          <p className="text-[11px] text-muted-foreground mt-4 pt-3 border-t border-border/60 leading-relaxed">
-            Syndicated third-party RSS for convenience. DATAEEL is not affiliated with OffTrackBetting, Horse-Races.net,
-            or linked sites. Odds &amp; results on destination pages may differ from your jurisdiction or tote.
-          </p>
-        </CardContent>
-      </Card>
+        </div>
+
+        <p className="text-[11px] text-muted-foreground px-4 pb-4 pt-0 border-t border-border/60 leading-relaxed">
+          Syndicated third-party RSS for convenience. DATAEEL is not affiliated with OffTrackBetting, Horse-Races.net,
+          or linked sites. Odds &amp; results on destination pages may differ from your jurisdiction or tote.
+        </p>
+      </div>
     </section>
   );
 }

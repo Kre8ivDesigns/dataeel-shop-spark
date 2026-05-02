@@ -20,7 +20,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { sanitizeError } from "@/lib/errorHandler";
 import { useAuth } from "@/contexts/AuthContext";
-import { format, formatDistanceToNow, isValid } from "date-fns";
 import { useUserDashboard } from "@/lib/queries/userDashboard";
 import { invoiceListKeys, userDashboardKeys } from "@/lib/queryKeys";
 import {
@@ -32,13 +31,12 @@ import {
 import { schedulePostPaymentCreditRefetch } from "@/lib/schedulePostPaymentCreditRefetch";
 import { StripeTestModeDevBanner } from "@/components/StripeTestModeDevBanner";
 import { DashboardRacingResultsSection } from "@/components/DashboardRacingResultsSection";
+import { DashboardRecentDownloadsColumn } from "@/components/dashboard/DashboardRecentDownloadsColumn";
+import { DashboardUpcomingRacecardsColumn } from "@/components/dashboard/DashboardUpcomingRacecardsColumn";
+import { DashboardPurchasesAndCredits } from "@/components/dashboard/DashboardPurchasesAndCredits";
 import { extractCanonicalTrackCode, getRacetrackLabel } from "@/lib/racetracks";
 
 const LOW_CREDITS_THRESHOLD = 3;
-
-function formatLocalDate(d: Date, fmt: string, fallback: string): string {
-  return isValid(d) ? format(d, fmt) : fallback;
-}
 
 const Dashboard = () => {
   const { toast } = useToast();
@@ -402,210 +400,18 @@ const Dashboard = () => {
             </div>
           </motion.div>
 
-          <DashboardRacingResultsSection />
-
-          <div className="grid lg:grid-cols-3 gap-8">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="lg:col-span-2"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-foreground font-heading">Recent downloads</h2>
-                <Link to="/racecards">
-                  <Button variant="ghost" size="sm" className="text-primary text-xs hover:text-primary/80">
-                    Browse racecards →
-                  </Button>
-                </Link>
-              </div>
-              <div className="card-dark divide-y divide-border min-h-[200px]">
-                {loading && (
-                  <div className="py-12 flex justify-center text-muted-foreground">
-                    <Loader2 className="h-6 w-6 animate-spin" />
-                  </div>
-                )}
-                {!loading && recentDownloads.length === 0 && (
-                  <div className="py-10 px-4 text-center text-sm text-muted-foreground">
-                    No downloads yet.{" "}
-                    <Link to="/racecards" className="text-primary font-medium hover:underline">
-                      Browse available racecards
-                    </Link>
-                    .
-                  </div>
-                )}
-                {!loading &&
-                  recentDownloads.map((dl) => {
-                    const rc = dl.racecards;
-                    const label = rc?.track_name ?? "Racecard";
-                    const raceDt = rc?.race_date ? new Date(`${rc.race_date}T12:00:00`) : null;
-                    const sub = rc
-                      ? raceDt && isValid(raceDt)
-                        ? `${formatLocalDate(raceDt, "MMM d, yyyy", rc.race_date ?? "—")}${
-                            rc.num_races != null ? ` · ${rc.num_races} races` : ""
-                          }`
-                        : "Details unavailable"
-                      : "Details unavailable";
-                    return (
-                      <div key={dl.id} className="flex items-center justify-between py-4 first:pt-4 last:pb-4 px-1">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                            <MapPin className="h-4 w-4 text-foreground/50" />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="font-medium text-foreground text-sm truncate">{label}</div>
-                            <div className="text-xs text-muted-foreground truncate">{sub}</div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3 shrink-0">
-                          <span className="text-xs text-muted-foreground hidden sm:inline">
-                            {(() => {
-                              const at = new Date(dl.created_at);
-                              return isValid(at)
-                                ? formatDistanceToNow(at, { addSuffix: true })
-                                : "—";
-                            })()}
-                          </span>
-                          <Link to="/racecards">
-                            <Button variant="ghost" size="sm" className="text-xs text-foreground/60 hover:text-foreground">
-                              <Download className="h-3.5 w-3.5" />
-                            </Button>
-                          </Link>
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-              className="space-y-6"
-            >
-              <div>
-                <h2 className="text-lg font-semibold text-foreground mb-4 font-heading">Upcoming racecards</h2>
-                <div className="space-y-3">
-                  {loading && (
-                    <div className="card-dark py-8 flex justify-center text-muted-foreground">
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    </div>
-                  )}
-                  {!loading && upcomingForDisplay.length === 0 && (
-                    <div className="card-dark py-6 px-4 text-sm text-muted-foreground text-center">
-                      No published cards in the next few days. Check back soon.
-                    </div>
-                  )}
-                  {!loading &&
-                    upcomingForDisplay.map(({ primary: race, mergedCount }) => {
-                      const codeRaw = race.track_code ?? race.track_name;
-                      const title = getRacetrackLabel(codeRaw);
-                      const codeBadge = extractCanonicalTrackCode(codeRaw);
-                      const rd = new Date(`${race.race_date}T12:00:00`);
-                      const datePart = isValid(rd)
-                        ? `${formatLocalDate(rd, "EEE, MMM d", race.race_date)}${
-                            race.num_races != null ? ` · ${race.num_races} races` : ""
-                          }`
-                        : (race.race_date ?? "—");
-                      const mergedNote =
-                        mergedCount > 1 ? ` · ${mergedCount} racecards` : "";
-                      return (
-                        <div
-                          key={`${codeBadge}|${race.race_date}|${race.id}`}
-                          className="card-dark flex items-center justify-between gap-2 sm:gap-3"
-                        >
-                          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-secondary flex items-center justify-center shrink-0">
-                              <span className="font-mono-data font-bold text-foreground text-[11px] sm:text-sm">
-                                {codeBadge || "—"}
-                              </span>
-                            </div>
-                            <div className="min-w-0">
-                              <div className="font-medium text-foreground text-sm truncate">{title}</div>
-                              <div className="text-xs text-muted-foreground truncate">
-                                {datePart}
-                                {mergedNote}
-                              </div>
-                            </div>
-                          </div>
-                          <Link to="/racecards" className="shrink-0">
-                            <Button
-                              size="sm"
-                              className="bg-primary text-primary-foreground hover:brightness-110 text-xs"
-                            >
-                              Open
-                            </Button>
-                          </Link>
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
-
-              <div>
-                <h2 className="text-lg font-semibold text-foreground mb-4 font-heading">Recent purchases</h2>
-                <div className="card-dark space-y-3">
-                  {loading && (
-                    <div className="py-6 flex justify-center text-muted-foreground">
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    </div>
-                  )}
-                  {!loading && recentPurchases.length === 0 && (
-                    <p className="text-xs text-muted-foreground py-2">
-                      No completed purchases yet.{" "}
-                      <Link to="/buy-credits" className="text-primary hover:underline">
-                        Buy credits
-                      </Link>
-                      .
-                    </p>
-                  )}
-                  {!loading &&
-                    recentPurchases.map((p) => (
-                      <div key={p.id} className="flex items-center justify-between gap-2 text-sm border-b border-border/60 last:border-0 pb-3 last:pb-0">
-                        <div className="min-w-0">
-                          <div className="font-medium text-foreground truncate">{p.package_name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {p.unlimited_credits ? "Unlimited access · " : `${p.credits} credits · `}
-                            {formatLocalDate(new Date(p.created_at), "MMM d, yyyy", "—")}
-                          </div>
-                        </div>
-                        <span className="font-mono-data text-xs text-foreground shrink-0">
-                          ${Number(p.amount).toFixed(2)}
-                        </span>
-                      </div>
-                    ))}
-                  {!loading && recentPurchases.length > 0 && (
-                    <Link to="/invoices" className="inline-block text-xs text-primary hover:underline pt-1">
-                      View all invoices →
-                    </Link>
-                  )}
-                </div>
-              </div>
-
-              {showLowCredits && (
-                <div className="rounded-xl p-4 border border-warning/30 bg-warning/5">
-                  <div className="flex items-start gap-3">
-                    <CreditCard className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
-                    <div>
-                      <div className="text-sm font-semibold text-foreground">Credits running low</div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        You have {credits} credit{credits === 1 ? "" : "s"} left. Add more before race day.
-                      </p>
-                      <Link to="/buy-credits">
-                        <Button
-                          size="sm"
-                          className="mt-3 bg-warning text-warning-foreground hover:brightness-110 text-xs"
-                        >
-                          Buy more credits
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </motion.div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 mb-8">
+            <DashboardRacingResultsSection />
+            <DashboardRecentDownloadsColumn loading={loading} recentDownloads={recentDownloads} />
+            <DashboardUpcomingRacecardsColumn loading={loading} upcomingForDisplay={upcomingForDisplay} />
           </div>
+
+          <DashboardPurchasesAndCredits
+            loading={loading}
+            recentPurchases={recentPurchases}
+            showLowCredits={showLowCredits}
+            credits={credits}
+          />
         </div>
       </main>
 
