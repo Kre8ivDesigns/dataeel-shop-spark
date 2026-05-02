@@ -13,3 +13,9 @@ export const userDashboardKeys = {
   all: ["user-dashboard"] as const,
   detail: (userId: string) => [...userDashboardKeys.all, userId] as const,
 };
+
+/** Stripe invoice list from `list-invoices` edge function (scoped per user for invalidation). */
+export const invoiceListKeys = {
+  all: ["invoices"] as const,
+  list: (userId: string) => [...invoiceListKeys.all, "list", userId] as const,
+};

@@ -1,5 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { userDashboardKeys } from "@/lib/queryKeys";
+import { invoiceListKeys, userDashboardKeys } from "@/lib/queryKeys";
 
 /**
  * Stripe redirects to the app before `checkout.session.completed` may finish.
@@ -18,6 +18,7 @@ export function schedulePostPaymentCreditRefetch(queryClient: QueryClient, userI
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: userDashboardKeys.detail(userId) });
     void queryClient.invalidateQueries({ queryKey: ["credit-balance", userId] });
+    void queryClient.invalidateQueries({ queryKey: invoiceListKeys.list(userId) });
   };
 
   for (const ms of POST_PAYMENT_CREDIT_REFETCH_DELAYS_MS) {

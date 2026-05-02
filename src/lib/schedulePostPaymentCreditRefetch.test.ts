@@ -14,7 +14,7 @@ describe("schedulePostPaymentCreditRefetch", () => {
     vi.useRealTimers();
   });
 
-  it("invalidates dashboard and credit-balance at each staggered delay", () => {
+  it("invalidates dashboard, credit-balance, and invoices at each staggered delay", () => {
     const invalidateQueries = vi.fn();
     const queryClient = { invalidateQueries } as unknown as QueryClient;
 
@@ -26,7 +26,7 @@ describe("schedulePostPaymentCreditRefetch", () => {
     for (const ms of POST_PAYMENT_CREDIT_REFETCH_DELAYS_MS) {
       vi.advanceTimersByTime(ms - prev);
       prev = ms;
-      expect(invalidateQueries).toHaveBeenCalledTimes((POST_PAYMENT_CREDIT_REFETCH_DELAYS_MS.indexOf(ms) + 1) * 2);
+      expect(invalidateQueries).toHaveBeenCalledTimes((POST_PAYMENT_CREDIT_REFETCH_DELAYS_MS.indexOf(ms) + 1) * 3);
     }
   });
 

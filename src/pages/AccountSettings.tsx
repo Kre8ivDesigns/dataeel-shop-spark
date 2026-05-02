@@ -20,6 +20,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
+import { Link } from "react-router-dom";
+import { useCreditBalance } from "@/lib/queries/creditBalance";
 import { Loader2, ShieldCheck, ShieldOff, Copy, CheckCircle2, Mail, FlaskConical } from "lucide-react";
 import { hasClientStripePublishableKey } from "@/lib/stripeViteDev";
 
@@ -39,6 +41,7 @@ interface TotpFactor {
 
 const AccountSettings = () => {
   const { user } = useAuth();
+  const { data: creditBalance, isLoading: creditsLoading } = useCreditBalance(user?.id);
 
   // ── Email ──────────────────────────────────────────────────────────────
   const [email, setEmail] = useState(user?.email ?? "");
@@ -230,7 +233,19 @@ const AccountSettings = () => {
       <Header />
       <main className="pb-16">
         <div className="container mx-auto px-4 sm:px-6 space-y-6">
-          <h1 className="text-2xl font-bold text-foreground">Account Settings</h1>
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold text-foreground">Account Settings</h1>
+            <p className="text-sm text-muted-foreground">
+              RaceCard credits:{" "}
+              <span className="font-mono font-medium text-foreground tabular-nums">
+                {creditsLoading ? "…" : creditBalance ?? 0}
+              </span>
+              .{" "}
+              <Link to="/buy-credits" className="text-primary hover:underline">
+                Buy credits
+              </Link>
+            </p>
+          </div>
           {import.meta.env.DEV && !hasClientStripePublishableKey() && (
             <p className="text-xs text-muted-foreground max-w-2xl">
               Dev: add{" "}

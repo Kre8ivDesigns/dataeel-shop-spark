@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { getInvokeErrorMessage } from "@/lib/edgeFunctionErrors";
+import { useCreditBalance } from "@/lib/queries/creditBalance";
 import { StripeTestModeDevBanner } from "@/components/StripeTestModeDevBanner";
 
 // Static display metadata keyed by package name (lowercase) for UI enrichment
@@ -92,20 +93,7 @@ const BuyCredits = () => {
     if (match) setSelectedPackage(match.id);
   }, [packagesLoading, packages, creditsFromUrl]);
 
-  const { data: creditBalance } = useQuery({
-    queryKey: ["credit-balance", user?.id],
-    queryFn: async () => {
-      if (!user) return 0;
-      const { data } = await supabase
-        .from("credit_balances")
-        .select("credits")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      return data?.credits ?? 0;
-    },
-    enabled: !!user,
-    refetchOnWindowFocus: "always",
-  });
+  const { data: creditBalance } = useCreditBalance(user?.id);
 
   const currentCredits = creditBalance ?? 0;
   const selected = packages.find((p) => p.id === selectedPackage);

@@ -4,31 +4,24 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { describeFunctionInvokeError, getInvokeErrorMessage } from "@/lib/edgeFunctionErrors";
+import { describeFunctionInvokeError } from "@/lib/edgeFunctionErrors";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Download, ExternalLink, FileText, CreditCard, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
-
-interface Invoice {
-  id: string;
-  number: string | null;
-  amount: number;
-  currency: string;
-  status: string | null;
-  created: number;
-  description: string;
-  pdf_url: string | null;
-  hosted_url: string | null;
-}
+import { useInvoiceList } from "@/lib/queries/invoices";
 
 const Invoices = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    data: invoices = [],
+    isLoading: loading,
+    isError,
+    error,
+  } = useInvoiceList(user?.id);
   const [portalLoading, setPortalLoading] = useState(false);
 
   useEffect(() => {
@@ -38,24 +31,13 @@ const Invoices = () => {
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    if (user) fetchInvoices();
-  }, [user]);
-
-  const fetchInvoices = async () => {
-    setLoading(true);
-    const { data, error, response: invokeResponse } = await supabase.functions.invoke("list-invoices");
-    if (error) {
-      const description = await getInvokeErrorMessage("list-invoices", error, data, invokeResponse);
-      toast({
-        title: "Error loading invoices",
-        description,
-        variant: "destructive",
-      });
-    } else {
-      setInvoices(data?.invoices || []);
-    }
-    setLoading(false);
-  };
+    if (!isError || !error) return;
+    toast({
+      title: "Error loading invoices",
+      description: error instanceof Error ? error.message : String(error),
+      variant: "destructive",
+    });
+  }, [isError, error, toast]);
 
   const openCustomerPortal = async () => {
     setPortalLoading(true);

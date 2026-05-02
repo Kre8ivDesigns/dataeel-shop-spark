@@ -15,10 +15,12 @@ import {
   Inbox,
   Table2,
   LayoutList,
+  Coins,
 } from "lucide-react";
 import logo from "@/assets/dataeel-logo.png";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCreditBalance } from "@/lib/queries/creditBalance";
 
 const navItems = [
   { label: "Home", href: "/" },
@@ -37,6 +39,7 @@ export const Header = () => {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
+  const { data: creditBalance, isLoading: creditsLoading } = useCreditBalance(user?.id);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -106,8 +109,17 @@ export const Header = () => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -4 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg overflow-hidden z-50"
+                    className="absolute right-0 mt-2 w-56 bg-card border border-border rounded-lg shadow-lg overflow-hidden z-50"
                   >
+                    <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border text-xs text-muted-foreground">
+                      <Coins className="h-3.5 w-3.5 shrink-0 text-primary" />
+                      <span>
+                        <span className="font-semibold tabular-nums text-foreground">
+                          {creditsLoading ? "—" : creditBalance ?? 0}
+                        </span>{" "}
+                        credits
+                      </span>
+                    </div>
                     <Link
                       to="/dashboard"
                       onClick={() => setIsUserMenuOpen(false)}
@@ -248,6 +260,15 @@ export const Header = () => {
               <div className="pt-4 border-t border-border space-y-3">
                 {user ? (
                   <>
+                    <p className="text-xs text-muted-foreground flex items-center gap-2 px-1 pb-1">
+                      <Coins className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <span>
+                        <span className="font-semibold tabular-nums text-foreground">
+                          {creditsLoading ? "—" : creditBalance ?? 0}
+                        </span>{" "}
+                        RaceCard credits
+                      </span>
+                    </p>
                     <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
                       <Button variant="outline" className="w-full border-secondary text-foreground gap-2">
                         <LayoutDashboard className="h-4 w-4" /> Dashboard
