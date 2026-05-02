@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
     // purchases to `transactions` — that is the source of truth for this app.
     const { data: txs, error: txError } = await supabaseAdmin
       .from("transactions")
-      .select("id, created_at, amount, credits, package_name, status, stripe_session_id")
+      .select("id, created_at, amount, credits, package_name, status, stripe_session_id, unlimited_credits")
       .eq("user_id", user.id)
       .eq("status", "completed")
       .order("created_at", { ascending: false })
@@ -107,7 +107,9 @@ Deno.serve(async (req) => {
         currency: invoiceObj?.currency ?? "usd",
         status: invoiceObj?.status ?? "paid",
         created,
-        description: `${tx.package_name} (${tx.credits} credits)`,
+        description: tx.unlimited_credits
+          ? `${tx.package_name} (Unlimited)`
+          : `${tx.package_name} (${tx.credits} credits)`,
         pdf_url: invoiceObj?.invoice_pdf ?? null,
         hosted_url: invoiceObj?.hosted_invoice_url ?? null,
       };

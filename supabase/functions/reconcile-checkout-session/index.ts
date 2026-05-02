@@ -91,7 +91,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (session.payment_status !== "paid") {
+    const paidLike =
+      session.payment_status === "paid" || session.payment_status === "no_payment_required";
+    if (!paidLike) {
       return new Response(
         JSON.stringify({
           ok: false,
@@ -120,6 +122,15 @@ Deno.serve(async (req) => {
       case "skipped_metadata":
         return new Response(
           JSON.stringify({ ok: false, error: "Session is missing app metadata (not a Dataeel credit checkout)" }),
+          { status: 400, headers },
+        );
+      case "skipped_unpaid":
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            error: "Checkout Session is not paid yet",
+            payment_status: result.payment_status,
+          }),
           { status: 400, headers },
         );
       case "skipped_acknowledged":

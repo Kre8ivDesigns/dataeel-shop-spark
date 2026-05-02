@@ -66,10 +66,24 @@ export async function resolveStripeConfig(
     return fallback;
   }
 
+  const trimmedSecret = secretKey.trim();
+  const trimmedWh = (webhookSecret ?? "").trim() || envWebhook;
+
+  if (mode === "live" && trimmedSecret.startsWith("sk_test")) {
+    console.warn(
+      "[resolveStripeConfig] stripe_mode is live but secret key looks like test (sk_test_). Check Admin → Settings.",
+    );
+  }
+  if (mode === "test" && trimmedSecret.startsWith("sk_live")) {
+    console.warn(
+      "[resolveStripeConfig] stripe_mode is test but secret key looks like live (sk_live_). Check Admin → Settings.",
+    );
+  }
+
   return {
     mode,
-    secretKey: secretKey.trim(),
-    webhookSecret: (webhookSecret ?? "").trim() || envWebhook,
+    secretKey: trimmedSecret,
+    webhookSecret: trimmedWh,
     source: "app_settings",
   };
 }

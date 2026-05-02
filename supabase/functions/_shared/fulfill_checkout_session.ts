@@ -17,6 +17,7 @@ export type FulfillCheckoutCompletedOutcome =
   | { outcome: "fulfilled" }
   | { outcome: "duplicate" }
   | { outcome: "skipped_metadata" }
+  | { outcome: "skipped_unpaid"; payment_status: string }
   | { outcome: "skipped_acknowledged"; reason: string }
   | { outcome: "transaction_error"; error: unknown }
   | { outcome: "fulfillment_error"; error: unknown };
@@ -33,10 +34,24 @@ export async function fulfillCheckoutSessionCompleted(
   let session = sessionIn;
   if (!paymentIntentIdFromSession(session)) {
     try {
-      session = await stripe.checkout.sessions.retrieve(session.id, { expand: ["payment_intent"] });
+      session = await stripe.checkout.sessions.retrieve(session.id, {
+        expand: ["payment_intent"],
+      });
     } catch (e) {
       console.error("[fulfillCheckoutSessionCompleted] session retrieve failed:", e instanceof Error ? e.message : e);
     }
+  }
+
+  const paidLike =
+    session.payment_status === "paid" || session.payment_status === "no_payment_required";
+  if (!paidLike) {
+    console.log(
+      "[fulfillCheckoutSessionCompleted] skip until paid:",
+      session.id,
+      "payment_status=",
+      session.payment_status,
+    );
+    return { outcome: "skipped_unpaid", payment_status: session.payment_status ?? "unknown" };
   }
 
   const paymentIntentId = paymentIntentIdFromSession(session);
@@ -71,7 +86,46 @@ export async function fulfillCheckoutSessionCompleted(
 
   if (txError) {
     if (txError.code === "23505") {
-      console.log("[fulfillCheckoutSessionCompleted] duplicate session:", session.id, paymentIntentId ?? "");
+      console.log(
+        "[fulfillCheckoutSessionCompleted] unique violation (session or payment_intent):",
+        session.id,
+        paymentIntentId ?? "",
+      );
+      const { data: existingBySession } = await supabaseAdmin
+        .from("transactions")
+        .select("id")
+        .eq("stripe_session_id", session.id)
+        .maybeSingle();
+      if (existingBySession) {
+        return { outcome: "duplicate" };
+      }
+      if (paymentIntentId) {
+        const { data: existingByPi } = await supabaseAdmin
+          .from("transactions")
+          .select("id, stripe_session_id")
+          .eq("stripe_payment_intent_id", paymentIntentId)
+          .maybeSingle();
+        if (existingByPi) {
+          if (!existingByPi.stripe_session_id?.trim()) {
+            const { error: updErr } = await supabaseAdmin
+              .from("transactions")
+              .update({ stripe_session_id: session.id })
+              .eq("id", existingByPi.id);
+            if (updErr) {
+              console.error(
+                "[fulfillCheckoutSessionCompleted] backfill stripe_session_id failed:",
+                updErr.message,
+              );
+            } else {
+              console.log(
+                "[fulfillCheckoutSessionCompleted] backfilled stripe_session_id for invoice-first row:",
+                session.id,
+              );
+            }
+          }
+          return { outcome: "duplicate" };
+        }
+      }
       return { outcome: "duplicate" };
     }
     const ack = acknowledgeOnlyDbError(txError);

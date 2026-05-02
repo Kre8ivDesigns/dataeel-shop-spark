@@ -88,7 +88,13 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
     return jsonResponse({ error: "Invalid signature" }, 400);
   }
 
-  if (event.type === "checkout.session.completed") {
+  const checkoutSessionEvents = new Set([
+    "checkout.session.completed",
+    // Deferred payment methods (e.g. some wallets / regional methods): completed may be unpaid until this fires.
+    "checkout.session.async_payment_succeeded",
+  ]);
+
+  if (checkoutSessionEvents.has(event.type)) {
     const sessionObj = event.data.object as Stripe.Checkout.Session;
     const isUnlimitedMeta = sessionObj.metadata?.unlimited_credits === "true";
     const result = await fulfillCheckoutSessionCompleted(supabaseAdmin, stripe, sessionObj);
@@ -99,6 +105,11 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
         return jsonResponse({ received: true, duplicate: true }, 200);
       case "skipped_metadata":
         return jsonResponse({ received: true, skipped: true }, 200);
+      case "skipped_unpaid":
+        return jsonResponse(
+          { received: true, skipped: true, reason: "payment_not_final", payment_status: result.payment_status },
+          200,
+        );
       case "skipped_acknowledged":
         return jsonResponse({ received: true, skipped: true, reason: result.reason }, 200);
       case "transaction_error":
