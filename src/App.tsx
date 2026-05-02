@@ -23,6 +23,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Disclaimer from "./pages/Disclaimer";
 import NotFound from "./pages/NotFound";
 import BettingBasics from "./pages/BettingBasics";
+import HowToReadRacecard from "./pages/HowToReadRacecard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { HomeSectionHashRedirect } from "./components/HomeSectionHashRedirect";
 import { DataeelAiAssistant } from "./components/DataeelAiAssistant";
@@ -121,6 +122,7 @@ const App = () => (
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/betting-basics" element={<BettingBasics />} />
+              <Route path="/how-to-read-racecard" element={<HowToReadRacecard />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/disclaimer" element={<Disclaimer />} />

@@ -10,11 +10,12 @@ import {
 } from "@/lib/queries/creditPackages";
 
 /**
- * Homepage pricing strip: same data as /pricing (public.credit_packages, purchasable rows only).
- * No "Most popular" until a DB column exists; see Pricing page comment.
+ * Homepage pricing strip: same query as /pricing (`credit_packages` ordered by price).
+ * Matches full Pricing page — do not use purchasableOnly here or packages without
+ * `stripe_price_id` vanish from the homepage while still appearing on /pricing.
  */
 export const Pricing = () => {
-  const { data: packages = [], isLoading, isError } = useCreditPackages({ purchasableOnly: true });
+  const { data: packages = [], isLoading, isError } = useCreditPackages();
 
   return (
     <section id="pricing" className="py-24 bg-background relative overflow-hidden">
@@ -59,7 +60,7 @@ export const Pricing = () => {
             </Link>
           </p>
         ) : (
-          <div className="grid gap-8 max-w-6xl mx-auto items-stretch justify-center [grid-template-columns:repeat(auto-fill,minmax(220px,320px))]">
+          <div className="grid grid-cols-1 gap-8 max-w-7xl mx-auto items-stretch sm:grid-cols-2 lg:grid-cols-4">
             {packages.map((pkg, index) => {
               const isUnlimited = pkg.unlimited_credits;
               const pricePerCredit =

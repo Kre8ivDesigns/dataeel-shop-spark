@@ -30,6 +30,7 @@ const navItems = [
   { label: "Results", href: "/#results" },
   { label: "Pricing", href: "/pricing" },
   { label: "Betting Basics", href: "/betting-basics" },
+  { label: "Reading the RaceCard", href: "/how-to-read-racecard" },
   { label: "Contact", href: "/contact" },
 ];
 

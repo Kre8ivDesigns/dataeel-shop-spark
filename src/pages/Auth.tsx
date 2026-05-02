@@ -18,6 +18,7 @@ const Auth = () => {
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
   const [awaitingEmailConfirm, setAwaitingEmailConfirm] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -46,6 +47,31 @@ const Auth = () => {
       toast({
         title: "Confirmation sent",
         description: "Check your inbox and spam folder for the link.",
+      });
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    const trimmed = email.trim();
+    if (!trimmed) {
+      toast({
+        title: "Email required",
+        description: "Enter your email above and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setForgotPasswordLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(trimmed, {
+      redirectTo: `${window.location.origin}/account-settings`,
+    });
+    setForgotPasswordLoading(false);
+    if (error) {
+      toast({ title: "Could not send reset email", description: sanitizeError(error), variant: "destructive" });
+    } else {
+      toast({
+        title: "Check your email",
+        description: "If an account exists for that address, we sent a link to reset your password.",
       });
     }
   };
@@ -119,7 +145,17 @@ const Auth = () => {
                     <Input id="login-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="you@example.com" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="login-password">Password</Label>
+                    <div className="flex items-center justify-between gap-2">
+                      <Label htmlFor="login-password">Password</Label>
+                      <button
+                        type="button"
+                        className="text-xs text-primary underline underline-offset-4 hover:text-primary/90 disabled:opacity-50 shrink-0"
+                        disabled={forgotPasswordLoading || loading}
+                        onClick={() => void handleForgotPassword()}
+                      >
+                        {forgotPasswordLoading ? "Sending…" : "Forgot password?"}
+                      </button>
+                    </div>
                     <Input id="login-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" />
                   </div>
                   <Button type="submit" disabled={loading} className="w-full bg-primary text-primary-foreground font-semibold">
