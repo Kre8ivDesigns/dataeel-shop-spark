@@ -140,16 +140,14 @@ export const Hero = () => {
               </div>
             ))}
           </motion.div>
-        </div>
 
-        {/* Scroll Indicator */}
-        <motion.div
-          initial={false}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4 }}
-          className="absolute bottom-8 left-1/2 -translate-x-1/2"
-        >
-          <div className="flex flex-col items-center gap-2 text-foreground/40">
+          {/* Scroll Indicator */}
+          <motion.div
+            initial={false}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4 }}
+            className="mt-12 sm:mt-14 md:mt-16 flex flex-col items-center gap-2 text-foreground/40"
+          >
             <span className="text-xs uppercase tracking-wider">Scroll to explore</span>
             <motion.div
               animate={{ y: [0, 8, 0] }}
@@ -158,8 +156,8 @@ export const Hero = () => {
             >
               <div className="w-1.5 h-3 bg-foreground/40 rounded-full" />
             </motion.div>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
       </div>
     </section>
   );

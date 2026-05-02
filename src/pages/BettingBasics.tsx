@@ -58,7 +58,7 @@ const BettingBasics = () => {
           background: "linear-gradient(135deg, hsl(232 59% 8%) 0%, hsl(214 52% 20%) 100%)",
         }}
       >
-        <div className="container mx-auto px-4 relative max-w-3xl">
+        <div className="container mx-auto px-4 relative">
           <Link
             to="/"
             className="inline-flex items-center gap-2 text-foreground/50 hover:text-foreground mb-8 text-sm transition-colors"
@@ -89,7 +89,7 @@ const BettingBasics = () => {
       </section>
 
       <section className="py-16">
-        <div className="container mx-auto px-4 max-w-3xl space-y-14">
+        <div className="container mx-auto px-4 space-y-14">
           {sections.map((s, i) => (
             <motion.article
               key={s.id}

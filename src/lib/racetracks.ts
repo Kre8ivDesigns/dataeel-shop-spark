@@ -1,22 +1,27 @@
 /**
- * Track code → display name. Keys are normalized: uppercase, no trailing `^`.
- * Keep in sync with `supabase/functions/_shared/racetracks.ts` (Deno cannot import from src/).
+ * Track code → display name. Keys normalized: uppercase, trailing `^` stripped.
+ * Caret-suffixed codes (e.g. `CD^`) collapse to `CD` via `normalizeTrackCode`.
+ * Keep in sync with `supabase/functions/_shared/racetracks.ts` (Deno cannot import from Vite `src/`).
  */
 export const RACETRACK_BY_CODE: Record<string, string> = {
   AP: "Arlington Park",
   AQU: "Aqueduct",
   ASD: "Assiniboia Downs",
+  BAQ: "Belmont at the Big A",
   BEL: "Belmont Park",
+  BTP: "Belterra Park",
   CBY: "Canterbury Park",
   CD: "Churchill Downs",
-  CMR: "Charles Town",
+  CMR: "Camarero Race Track",
   CNL: "Colonial Downs",
   CRC: "Gulfstream Park West",
   CT: "Charles Town",
   DED: "Delta Downs",
   DEL: "Delaware Park",
   DM: "Del Mar",
+  DMR: "Del Mar",
   EL: "Ellis Park",
+  ELP: "Ellis Park",
   EM: "Emerald Downs",
   EV: "Evangeline Downs",
   FE: "Fort Erie",
@@ -33,7 +38,8 @@ export const RACETRACK_BY_CODE: Record<string, string> = {
   LA: "Los Alamitos",
   LAD: "Louisiana Downs",
   LRL: "Laurel Park",
-  MNR: "Mountaineer",
+  MED: "Meadow Lands",
+  MNR: "Mountaineer Park",
   MTH: "Monmouth Park",
   MVR: "Mahoning Valley",
   OP: "Oaklawn Park",
@@ -41,7 +47,7 @@ export const RACETRACK_BY_CODE: Record<string, string> = {
   PID: "Presque Isle Downs",
   PIM: "Pimlico",
   PRM: "Prairie Meadows",
-  PRX: "Parx",
+  PRX: "Parx Racing",
   RP: "Remington Park",
   SA: "Santa Anita Park",
   SAR: "Saratoga",
@@ -61,10 +67,23 @@ export function normalizeTrackCode(trackCode: string): string {
   return s;
 }
 
+/**
+ * DB/filename noise like `KEE2604111` → `KEE` for map lookup. Plain `CT`, `CD`, etc. unchanged.
+ */
+export function extractCanonicalTrackCode(raw: string): string {
+  const n = normalizeTrackCode(raw);
+  const compact = n.replace(/[^A-Z0-9]/g, "");
+  const prefixed = /^([A-Z]{2,4})(\d+)/.exec(compact);
+  if (prefixed && prefixed[2].length >= 4) {
+    return prefixed[1];
+  }
+  return n;
+}
+
 export function getRacetrackLabel(trackCode: string): string {
-  const key = normalizeTrackCode(trackCode);
+  const key = extractCanonicalTrackCode(trackCode);
   const label = RACETRACK_BY_CODE[key];
-  return label ?? (key || trackCode);
+  return label ?? key ?? trackCode;
 }
 
 /** City + state/province for cards and listings; Canadian tracks use province abbreviations. */
@@ -74,17 +93,21 @@ export const RACETRACK_LOCATION_BY_CODE: Record<string, RacetrackLocation> = {
   AP: { city: "Arlington Heights", state: "IL" },
   AQU: { city: "Ozone Park", state: "NY" },
   ASD: { city: "Winnipeg", state: "MB" },
+  BAQ: { city: "Ozone Park", state: "NY" },
   BEL: { city: "Elmont", state: "NY" },
+  BTP: { city: "Florence", state: "IN" },
   CBY: { city: "Shakopee", state: "MN" },
   CD: { city: "Louisville", state: "KY" },
-  CMR: { city: "Charles Town", state: "WV" },
+  CMR: { city: "Canovanas", state: "PR" },
   CNL: { city: "New Kent", state: "VA" },
   CRC: { city: "Hallandale Beach", state: "FL" },
   CT: { city: "Charles Town", state: "WV" },
   DED: { city: "Vinton", state: "LA" },
   DEL: { city: "Wilmington", state: "DE" },
   DM: { city: "Del Mar", state: "CA" },
+  DMR: { city: "Del Mar", state: "CA" },
   EL: { city: "Henderson", state: "KY" },
+  ELP: { city: "Henderson", state: "KY" },
   EM: { city: "Auburn", state: "WA" },
   EV: { city: "Opelousas", state: "LA" },
   FE: { city: "Fort Erie", state: "ON" },
@@ -101,7 +124,8 @@ export const RACETRACK_LOCATION_BY_CODE: Record<string, RacetrackLocation> = {
   LA: { city: "Los Alamitos", state: "CA" },
   LAD: { city: "Bossier City", state: "LA" },
   LRL: { city: "Laurel", state: "MD" },
-  MNR: { city: "New Cumberland", state: "WV" },
+  MED: { city: "East Rutherford", state: "NJ" },
+  MNR: { city: "Chester", state: "WV" },
   MTH: { city: "Oceanport", state: "NJ" },
   MVR: { city: "Youngstown", state: "OH" },
   OP: { city: "Hot Springs", state: "AR" },
@@ -121,6 +145,6 @@ export const RACETRACK_LOCATION_BY_CODE: Record<string, RacetrackLocation> = {
 };
 
 export function getRacetrackLocation(trackCode: string): RacetrackLocation | null {
-  const key = normalizeTrackCode(trackCode);
+  const key = extractCanonicalTrackCode(trackCode);
   return RACETRACK_LOCATION_BY_CODE[key] ?? null;
 }

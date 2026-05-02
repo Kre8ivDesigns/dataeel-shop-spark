@@ -68,6 +68,9 @@
     --sidebar-accent-foreground: 210 17% 97%;
     --sidebar-border: 229 19% 22%;
     --sidebar-ring: 67 100% 50%;
+
+    /* Fixed header: py-5 + h-10 row (max); sync scroll-padding with Header.tsx */
+    --header-height: 5rem;
   }
 }
 
@@ -78,6 +81,7 @@
 
   html {
     scroll-behavior: smooth;
+    scroll-padding-top: var(--header-height);
   }
 
   body {

@@ -6,17 +6,21 @@ export const RACETRACK_BY_CODE: Record<string, string> = {
   AP: "Arlington Park",
   AQU: "Aqueduct",
   ASD: "Assiniboia Downs",
+  BAQ: "Belmont at the Big A",
   BEL: "Belmont Park",
+  BTP: "Belterra Park",
   CBY: "Canterbury Park",
   CD: "Churchill Downs",
-  CMR: "Charles Town",
+  CMR: "Camarero Race Track",
   CNL: "Colonial Downs",
   CRC: "Gulfstream Park West",
   CT: "Charles Town",
   DED: "Delta Downs",
   DEL: "Delaware Park",
   DM: "Del Mar",
+  DMR: "Del Mar",
   EL: "Ellis Park",
+  ELP: "Ellis Park",
   EM: "Emerald Downs",
   EV: "Evangeline Downs",
   FE: "Fort Erie",
@@ -33,7 +37,8 @@ export const RACETRACK_BY_CODE: Record<string, string> = {
   LA: "Los Alamitos",
   LAD: "Louisiana Downs",
   LRL: "Laurel Park",
-  MNR: "Mountaineer",
+  MED: "Meadow Lands",
+  MNR: "Mountaineer Park",
   MTH: "Monmouth Park",
   MVR: "Mahoning Valley",
   OP: "Oaklawn Park",
@@ -41,7 +46,7 @@ export const RACETRACK_BY_CODE: Record<string, string> = {
   PID: "Presque Isle Downs",
   PIM: "Pimlico",
   PRM: "Prairie Meadows",
-  PRX: "Parx",
+  PRX: "Parx Racing",
   RP: "Remington Park",
   SA: "Santa Anita Park",
   SAR: "Saratoga",
@@ -60,8 +65,18 @@ export function normalizeTrackCode(trackCode: string): string {
   return s;
 }
 
+export function extractCanonicalTrackCode(raw: string): string {
+  const n = normalizeTrackCode(raw);
+  const compact = n.replace(/[^A-Z0-9]/g, "");
+  const prefixed = /^([A-Z]{2,4})(\d+)/.exec(compact);
+  if (prefixed && prefixed[2].length >= 4) {
+    return prefixed[1];
+  }
+  return n;
+}
+
 export function getRacetrackLabel(trackCode: string): string {
-  const key = normalizeTrackCode(trackCode);
+  const key = extractCanonicalTrackCode(trackCode);
   const label = RACETRACK_BY_CODE[key];
-  return label ?? (key || trackCode);
+  return label ?? key ?? trackCode;
 }

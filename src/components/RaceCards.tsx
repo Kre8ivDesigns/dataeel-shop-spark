@@ -11,7 +11,7 @@ import {
   type RacecardDisplayMetadata,
 } from "@/lib/raceMetadata";
 import { useRacecardsPublicForDate } from "@/lib/queries/racecardsPublic";
-import { getRacetrackLabel, getRacetrackLocation } from "@/lib/racetracks";
+import { extractCanonicalTrackCode, getRacetrackLabel, getRacetrackLocation } from "@/lib/racetracks";
 
 export const RaceCards = () => {
   const { user } = useAuth();
@@ -109,7 +109,7 @@ export const RaceCards = () => {
                 >
                   <div className="absolute top-4 right-4">
                     <span className="px-2 py-1 rounded bg-secondary text-secondary-foreground text-xs font-bold">
-                      {track.track_code}
+                      {extractCanonicalTrackCode(track.track_code)}
                     </span>
                   </div>
 
@@ -141,22 +141,34 @@ export const RaceCards = () => {
                     </div>
                   </div>
 
-                  <div className="flex gap-2 mb-6">
-                    <span className="px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">Concert</span>
-                    <span className="px-2 py-1 rounded-full bg-warning/10 text-warning text-xs font-medium">
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    <span className="px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                      Concert
+                    </span>
+                    <span className="px-3 py-1.5 rounded-full bg-warning/10 text-warning text-xs font-medium">
                       Aptitude
                     </span>
                   </div>
 
                   {status === "available" ? (
-                    <Button asChild className="w-full bg-primary text-primary-foreground hover:brightness-110 font-semibold">
-                      <Link to={ctaHref}>
-                        <Download className="h-4 w-4 mr-2" />
-                        Get RaceCard – 1 Credit
+                    <Button
+                      asChild
+                      className="w-full h-auto min-h-11 bg-primary px-4 py-3.5 text-primary-foreground shadow-neon hover:brightness-110 font-semibold whitespace-normal text-center leading-snug"
+                    >
+                      <Link
+                        to={ctaHref}
+                        className="inline-flex w-full min-w-0 flex-wrap items-center justify-center gap-x-2 gap-y-1"
+                      >
+                        <Download className="h-4 w-4 shrink-0" aria-hidden />
+                        <span className="min-w-0">Get RaceCard – 1 Credit</span>
                       </Link>
                     </Button>
                   ) : (
-                    <Button variant="outline" disabled className="w-full border-border text-muted-foreground">
+                    <Button
+                      variant="outline"
+                      disabled
+                      className="w-full h-auto min-h-11 border-border px-4 py-3.5 text-muted-foreground"
+                    >
                       Coming Soon
                     </Button>
                   )}

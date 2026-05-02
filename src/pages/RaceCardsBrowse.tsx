@@ -28,7 +28,7 @@ import {
   getRacecardDownloadUiBlock,
 } from "@/lib/racecardDownloadDeadline";
 import { getInvokeErrorMessage } from "@/lib/edgeFunctionErrors";
-import { getRacetrackLabel, getRacetrackLocation } from "@/lib/racetracks";
+import { extractCanonicalTrackCode, getRacetrackLabel, getRacetrackLocation } from "@/lib/racetracks";
 
 const RACECARD_DOWNLOAD_TZ =
   import.meta.env.VITE_RACECARD_DOWNLOAD_TZ ?? DEFAULT_RACECARD_DOWNLOAD_TZ;
@@ -124,10 +124,12 @@ const RaceCardsBrowse = () => {
   const q = searchQuery.toLowerCase();
   const filtered = racecards.filter((card) => {
     const label = getRacetrackLabel(card.track_code).toLowerCase();
+    const codeShort = extractCanonicalTrackCode(card.track_code).toLowerCase();
     return (
       label.includes(q) ||
       card.track_name.toLowerCase().includes(q) ||
-      card.track_code.toLowerCase().includes(q)
+      card.track_code.toLowerCase().includes(q) ||
+      codeShort.includes(q)
     );
   });
 
@@ -277,7 +279,9 @@ const RaceCardsBrowse = () => {
 
                     <div className="flex items-start gap-3 mb-4">
                       <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
-                        <span className="font-mono-data font-bold text-foreground text-sm">{card.track_code}</span>
+                        <span className="font-mono-data font-bold text-foreground text-sm">
+                          {extractCanonicalTrackCode(card.track_code)}
+                        </span>
                       </div>
                       <div className="min-w-0">
                         <h3 className="font-semibold text-foreground text-sm">

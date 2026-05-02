@@ -56,9 +56,9 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pt-[var(--header-height)]">
       <Header />
-      <main className="pt-28 pb-16 flex items-center justify-center">
+      <main className="pb-16 flex items-center justify-center min-h-[calc(100dvh-var(--header-height))]">
         <Card className="w-full max-w-md bg-card border-border">
           <CardHeader className="text-center">
             <img src={logo} alt="DATAEEL" className="h-10 mx-auto mb-4" />
