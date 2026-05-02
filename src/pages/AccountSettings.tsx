@@ -225,12 +225,13 @@ const AccountSettings = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pt-[var(--header-height)]">
       <Header />
-      <main className="pt-24 pb-16">
-        <div className="container mx-auto px-4 max-w-2xl space-y-6">
+      <main className="pb-16">
+        <div className="container mx-auto px-4 sm:px-6 space-y-6">
           <h1 className="text-2xl font-bold text-foreground">Account Settings</h1>
 
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
           {/* ── Email ── */}
           <Card className="bg-card border-border">
             <CardHeader>
@@ -321,7 +322,7 @@ const AccountSettings = () => {
           </Card>
 
           {/* ── Stripe test data cleanup (account-scoped) ── */}
-          <Card className="bg-card border-border border-dashed">
+          <Card className="bg-card border-border border-dashed md:col-span-2">
             <CardHeader>
               <CardTitle className="text-foreground flex items-center gap-2">
                 <FlaskConical className="h-5 w-5 text-muted-foreground" />
@@ -380,7 +381,7 @@ const AccountSettings = () => {
           </Card>
 
           {/* ── MFA ── */}
-          <Card className="bg-card border-border">
+          <Card className="bg-card border-border md:col-span-2">
             <CardHeader>
               <CardTitle className="text-foreground flex items-center gap-2">
                 {totpFactor ? (
@@ -496,6 +497,7 @@ const AccountSettings = () => {
               )}
             </CardContent>
           </Card>
+          </div>
         </div>
       </main>
       <Footer />
