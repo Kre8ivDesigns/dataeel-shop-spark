@@ -72,18 +72,21 @@ export type Database = {
         Row: {
           credits: number
           id: string
+          unlimited_credits: boolean
           updated_at: string
           user_id: string
         }
         Insert: {
           credits?: number
           id?: string
+          unlimited_credits?: boolean
           updated_at?: string
           user_id: string
         }
         Update: {
           credits?: number
           id?: string
+          unlimited_credits?: boolean
           updated_at?: string
           user_id?: string
         }
@@ -200,6 +203,7 @@ export type Database = {
           status: string
           stripe_payment_intent_id: string | null
           stripe_session_id: string | null
+          unlimited_credits: boolean
           user_id: string
         }
         Insert: {
@@ -211,6 +215,7 @@ export type Database = {
           status?: string
           stripe_payment_intent_id?: string | null
           stripe_session_id?: string | null
+          unlimited_credits?: boolean
           user_id: string
         }
         Update: {
@@ -222,6 +227,7 @@ export type Database = {
           status?: string
           stripe_payment_intent_id?: string | null
           stripe_session_id?: string | null
+          unlimited_credits?: boolean
           user_id?: string
         }
         Relationships: []
@@ -414,6 +420,14 @@ export type Database = {
           new_balance: number
           success: boolean
         }[]
+      }
+      grant_unlimited_credits_atomic: {
+        Args: {
+          p_meta?: Json
+          p_ref_id: string | null
+          p_user_id: string
+        }
+        Returns: null
       }
       has_role: {
         Args: {

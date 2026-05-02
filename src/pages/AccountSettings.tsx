@@ -22,6 +22,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { useCreditBalance } from "@/lib/queries/creditBalance";
+import { EMPTY_CREDIT_SNAPSHOT } from "@/lib/creditDisplay";
 import { Loader2, ShieldCheck, ShieldOff, Copy, CheckCircle2, Mail, FlaskConical } from "lucide-react";
 import { hasClientStripePublishableKey } from "@/lib/stripeViteDev";
 
@@ -42,6 +43,7 @@ interface TotpFactor {
 const AccountSettings = () => {
   const { user } = useAuth();
   const { data: creditBalance, isLoading: creditsLoading } = useCreditBalance(user?.id);
+  const creditSnap = creditBalance ?? EMPTY_CREDIT_SNAPSHOT;
 
   // ── Email ──────────────────────────────────────────────────────────────
   const [email, setEmail] = useState(user?.email ?? "");
@@ -238,7 +240,7 @@ const AccountSettings = () => {
             <p className="text-sm text-muted-foreground">
               RaceCard credits:{" "}
               <span className="font-mono font-medium text-foreground tabular-nums">
-                {creditsLoading ? "…" : creditBalance ?? 0}
+                {creditsLoading ? "…" : creditSnap.unlimited ? "Unlimited" : creditSnap.credits}
               </span>
               .{" "}
               <Link to="/buy-credits" className="text-primary hover:underline">

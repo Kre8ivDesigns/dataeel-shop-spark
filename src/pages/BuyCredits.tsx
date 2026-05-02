@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { getInvokeErrorMessage } from "@/lib/edgeFunctionErrors";
 import { useCreditBalance } from "@/lib/queries/creditBalance";
+import { EMPTY_CREDIT_SNAPSHOT } from "@/lib/creditDisplay";
 import { StripeTestModeDevBanner } from "@/components/StripeTestModeDevBanner";
 
 // Static display metadata keyed by package name (lowercase) for UI enrichment
@@ -64,6 +65,7 @@ interface CreditPackage {
   credits: number;
   price: number;
   stripe_price_id: string | null;
+  unlimited_credits: boolean;
 }
 
 const BuyCredits = () => {
@@ -77,7 +79,7 @@ const BuyCredits = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("credit_packages")
-        .select("id, name, description, credits, price, stripe_price_id")
+        .select("id, name, description, credits, price, stripe_price_id, unlimited_credits")
         .order("price", { ascending: true });
       if (error) throw error;
       return data ?? [];
@@ -85,17 +87,31 @@ const BuyCredits = () => {
   });
 
   const creditsFromUrl = searchParams.get("credits");
+  const packageIdFromUrl = searchParams.get("packageId");
+  const unlimitedFromUrl = searchParams.get("unlimited") === "1";
+
   useEffect(() => {
-    if (packagesLoading || packages.length === 0 || creditsFromUrl == null) return;
+    if (packagesLoading || packages.length === 0) return;
+    if (packageIdFromUrl) {
+      const byId = packages.find((p) => p.id === packageIdFromUrl);
+      if (byId) setSelectedPackage(byId.id);
+      return;
+    }
+    if (unlimitedFromUrl) {
+      const unl = packages.find((p) => p.unlimited_credits);
+      if (unl) setSelectedPackage(unl.id);
+      return;
+    }
+    if (creditsFromUrl == null) return;
     const n = Number.parseInt(creditsFromUrl, 10);
     if (Number.isNaN(n)) return;
-    const match = packages.find((p) => p.credits === n);
+    const match = packages.find((p) => !p.unlimited_credits && p.credits === n);
     if (match) setSelectedPackage(match.id);
-  }, [packagesLoading, packages, creditsFromUrl]);
+  }, [packagesLoading, packages, creditsFromUrl, packageIdFromUrl, unlimitedFromUrl]);
 
   const { data: creditBalance } = useCreditBalance(user?.id);
 
-  const currentCredits = creditBalance ?? 0;
+  const balanceSnap = creditBalance ?? EMPTY_CREDIT_SNAPSHOT;
   const selected = packages.find((p) => p.id === selectedPackage);
 
   const handlePurchase = async () => {
@@ -157,7 +173,10 @@ const BuyCredits = () => {
               Buy <span className="text-neon">Credits</span>
             </h1>
             <p className="text-muted-foreground mt-1">
-              Current balance: <span className="text-primary font-mono-data font-bold">{currentCredits} credits</span>
+              Current balance:{" "}
+              <span className="text-primary font-mono-data font-bold">
+                {balanceSnap.unlimited ? "Unlimited credits" : `${balanceSnap.credits} credits`}
+              </span>
             </p>
           </motion.div>
 
@@ -175,7 +194,11 @@ const BuyCredits = () => {
                 <div className="space-y-3">
                   {packages.map((pkg, i) => {
                     const meta = PACKAGE_META[pkg.name.toLowerCase()] ?? {};
-                    const pricePerCredit = meta.pricePerCredit ?? Number((pkg.price / pkg.credits).toFixed(2));
+                    const isUnlimitedPkg = pkg.unlimited_credits;
+                    const pricePerCredit =
+                      !isUnlimitedPkg && pkg.credits > 0
+                        ? meta.pricePerCredit ?? Number((pkg.price / pkg.credits).toFixed(2))
+                        : null;
                     return (
                       <motion.button
                         key={pkg.id}
@@ -214,7 +237,14 @@ const BuyCredits = () => {
                                 )}
                               </div>
                               <div className="text-xs text-muted-foreground mt-0.5">
-                                {pkg.credits} credit{pkg.credits > 1 ? "s" : ""} · ${pricePerCredit.toFixed(2)}/card · {pkg.description ?? meta.description ?? ""}
+                                {isUnlimitedPkg ? (
+                                  <>Unlimited RaceCard downloads · any track · {pkg.description ?? meta.description ?? ""}</>
+                                ) : (
+                                  <>
+                                    {pkg.credits} credit{pkg.credits > 1 ? "s" : ""} · $
+                                    {pricePerCredit!.toFixed(2)}/card · {pkg.description ?? meta.description ?? ""}
+                                  </>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -260,7 +290,11 @@ const BuyCredits = () => {
                       >
                         {(() => {
                           const meta = PACKAGE_META[selected.name.toLowerCase()] ?? {};
-                          const pricePerCredit = meta.pricePerCredit ?? Number((selected.price / selected.credits).toFixed(2));
+                          const isUnlimitedPkg = selected.unlimited_credits;
+                          const pricePerCredit =
+                            !isUnlimitedPkg && selected.credits > 0
+                              ? meta.pricePerCredit ?? Number((selected.price / selected.credits).toFixed(2))
+                              : null;
                           return (
                             <>
                               <div className="space-y-3 mb-6">
@@ -269,14 +303,18 @@ const BuyCredits = () => {
                                   <span className="text-foreground font-medium">${selected.price}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
-                                  <span className="text-foreground/70">Credits</span>
-                                  <span className="text-primary font-mono-data font-bold">{selected.credits}</span>
+                                  <span className="text-foreground/70">{isUnlimitedPkg ? "Access" : "Credits"}</span>
+                                  <span className="text-primary font-mono-data font-bold">
+                                    {isUnlimitedPkg ? "Unlimited" : selected.credits}
+                                  </span>
                                 </div>
-                                <div className="flex justify-between text-sm">
-                                  <span className="text-foreground/70">Per card</span>
-                                  <span className="text-foreground/70">${pricePerCredit.toFixed(2)}</span>
-                                </div>
-                                {meta.savings && (
+                                {!isUnlimitedPkg && pricePerCredit != null && (
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-foreground/70">Per card</span>
+                                    <span className="text-foreground/70">${pricePerCredit.toFixed(2)}</span>
+                                  </div>
+                                )}
+                                {meta.savings && !isUnlimitedPkg && (
                                   <div className="flex justify-between text-sm">
                                     <span className="text-success">You save</span>
                                     <span className="text-success font-medium">${meta.savings}</span>
@@ -292,7 +330,9 @@ const BuyCredits = () => {
                                   </span>
                                 </div>
                                 <div className="text-xs text-muted-foreground mt-1">
-                                  New balance: {currentCredits + selected.credits} credits
+                                  {isUnlimitedPkg || balanceSnap.unlimited
+                                    ? "Unlimited RaceCard access on your account after checkout."
+                                    : `New balance: ${balanceSnap.credits + selected.credits} credits`}
                                 </div>
                               </div>
                             </>

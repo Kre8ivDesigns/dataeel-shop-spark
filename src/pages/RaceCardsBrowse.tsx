@@ -21,6 +21,8 @@ import { useToast } from "@/hooks/use-toast";
 import { format, addDays } from "date-fns";
 import { metadataListingLine, parseRacecardMetadata } from "@/lib/raceMetadata";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCreditBalance } from "@/lib/queries/creditBalance";
+import { EMPTY_CREDIT_SNAPSHOT } from "@/lib/creditDisplay";
 import { useRacecardsPublicForDate } from "@/lib/queries/racecardsPublic";
 import { racecardDownloadKeys, userDashboardKeys } from "@/lib/queryKeys";
 import {
@@ -56,19 +58,8 @@ const RaceCardsBrowse = () => {
   const selectedDate = dayTabs[selectedDateIndex].date;
   const { data: racecards = [], isLoading: cardsLoading } = useRacecardsPublicForDate(selectedDate);
 
-  const { data: credits = null } = useQuery({
-    queryKey: ["credit-balance", user?.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("credit_balances")
-        .select("credits")
-        .eq("user_id", user!.id)
-        .maybeSingle();
-      return data?.credits ?? 0;
-    },
-    enabled: !!user,
-    refetchOnWindowFocus: "always",
-  });
+  const { data: balanceData, isLoading: balanceLoading } = useCreditBalance(user?.id);
+  const balanceSnap = balanceData ?? EMPTY_CREDIT_SNAPSHOT;
 
   const { data: downloadIds = [] } = useQuery({
     queryKey: user ? racecardDownloadKeys.byUser(user.id) : ["racecard-downloads", "signed-out"],
@@ -158,8 +149,12 @@ const RaceCardsBrowse = () => {
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-card border border-border">
                   <CreditCard className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-mono-data font-bold text-primary">{credits ?? "—"}</span>
-                  <span className="text-xs text-muted-foreground">credits</span>
+                  <span className="text-sm font-mono-data font-bold text-primary">
+                    {balanceLoading ? "—" : balanceSnap.unlimited ? "Unlimited" : balanceSnap.credits}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {balanceLoading || balanceSnap.unlimited ? "" : "credits"}
+                  </span>
                 </div>
                 <Link to="/buy-credits">
                   <Button size="sm" variant="outline" className="border-primary text-primary hover:bg-primary/10 text-xs">

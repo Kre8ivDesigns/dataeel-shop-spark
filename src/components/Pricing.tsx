@@ -54,6 +54,23 @@ const pricingPlans = [
     popular: false,
     cta: "Go Pro",
   },
+  {
+    name: "Unlimited",
+    credits: 0,
+    price: 999,
+    pricePerCredit: 0,
+    description: "Unlimited RaceCard PDFs",
+    features: [
+      "Unlimited downloads (fair use)",
+      "Any track, any day",
+      "Both algorithms included",
+      "PDF download format",
+      "Priority support",
+    ],
+    popular: false,
+    cta: "Get Unlimited",
+    unlimited: true,
+  },
 ];
 
 export const Pricing = () => {
@@ -84,7 +101,7 @@ export const Pricing = () => {
         </motion.div>
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto items-stretch">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto items-stretch">
           {pricingPlans.map((plan, index) => (
             <motion.div
               key={plan.name}
@@ -126,9 +143,15 @@ export const Pricing = () => {
                   </span>
                 </div>
                 <div className="text-sm mt-2 text-muted-foreground">
-                  {plan.credits} credits · ${plan.pricePerCredit.toFixed(2)} per RaceCard
+                  {"unlimited" in plan && plan.unlimited ? (
+                    <>Unlimited downloads · one-time purchase</>
+                  ) : (
+                    <>
+                      {plan.credits} credits · ${plan.pricePerCredit.toFixed(2)} per RaceCard
+                    </>
+                  )}
                 </div>
-                {plan.savings && (
+                {plan.savings && !("unlimited" in plan && plan.unlimited) && (
                   <div className="mt-2">
                     <span className="text-sm font-semibold text-success">
                       Save ${plan.savings}
@@ -157,7 +180,13 @@ export const Pricing = () => {
                       : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
                   }`}
                 >
-                  <Link to={`/buy-credits?credits=${plan.credits}`}>
+                  <Link
+                    to={
+                      "unlimited" in plan && plan.unlimited
+                        ? "/buy-credits?unlimited=1"
+                        : `/buy-credits?credits=${plan.credits}`
+                    }
+                  >
                     {plan.cta}
                     {plan.popular && <Zap className="ml-2 h-4 w-4" />}
                   </Link>

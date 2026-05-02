@@ -169,7 +169,9 @@ export function AdminUserDetailSheet({
         <div className="mt-6 space-y-6">
           <div>
             <Label className="text-foreground">Credits</Label>
-            <p className="text-2xl font-mono-data text-foreground mt-1">{customer.credits}</p>
+            <p className="text-2xl font-mono-data text-foreground mt-1">
+              {customer.unlimitedCredits ? "Unlimited" : customer.credits}
+            </p>
           </div>
 
           <div className="space-y-2">

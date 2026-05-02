@@ -49,13 +49,25 @@ Deno.serve(async (req) => {
 
     // ── CREATE ────────────────────────────────────────────────────────────
     if (action === "create") {
-      const { name, description, credits, price } = body;
-      if (!name || !credits || !price) {
-        return respond({ error: "name, credits, and price are required" }, 400);
+      const { name, description, credits, price, unlimitedCredits } = body as {
+        name?: string;
+        description?: string;
+        credits?: number;
+        price?: number;
+        unlimitedCredits?: boolean;
+      };
+      const isUnlimited = Boolean(unlimitedCredits);
+      if (!name || price === undefined || price === null || price === "") {
+        return respond({ error: "name and price are required" }, 400);
+      }
+      if (!isUnlimited && (credits === undefined || credits === null || Number(credits) <= 0)) {
+        return respond({ error: "credits must be a positive integer unless unlimitedCredits is set" }, 400);
       }
 
       const unitAmount = Math.round(Number(price) * 100);
       if (unitAmount <= 0) return respond({ error: "Price must be greater than 0" }, 400);
+
+      const creditUnits = isUnlimited ? 0 : Number(credits);
 
       // Create Stripe product
       const product = await stripe.products.create({
@@ -73,7 +85,14 @@ Deno.serve(async (req) => {
       // Insert into DB
       const { data: pkg, error: dbErr } = await supabaseAdmin
         .from("credit_packages")
-        .insert({ name, description: description || null, credits: Number(credits), price: Number(price), stripe_price_id: stripePrice.id })
+        .insert({
+          name,
+          description: description || null,
+          credits: creditUnits,
+          price: Number(price),
+          stripe_price_id: stripePrice.id,
+          unlimited_credits: isUnlimited,
+        })
         .select()
         .single();
 
@@ -89,7 +108,14 @@ Deno.serve(async (req) => {
 
     // ── UPDATE ────────────────────────────────────────────────────────────
     if (action === "update") {
-      const { packageId, name, description, credits, price } = body;
+      const { packageId, name, description, credits, price, unlimitedCredits } = body as {
+        packageId?: string;
+        name?: string;
+        description?: string;
+        credits?: number;
+        price?: number;
+        unlimitedCredits?: boolean;
+      };
       if (!packageId) return respond({ error: "packageId is required" }, 400);
 
       const { data: existing, error: fetchErr } = await supabaseAdmin
@@ -100,8 +126,22 @@ Deno.serve(async (req) => {
 
       if (fetchErr || !existing) return respond({ error: "Package not found" }, 404);
 
+      const existingRow = existing as Record<string, unknown>;
+      const isUnlimited =
+        typeof unlimitedCredits === "boolean"
+          ? unlimitedCredits
+          : Boolean(existingRow.unlimited_credits);
+
+      const resolvedCredits =
+        credits !== undefined && credits !== null ? Number(credits) : Number(existingRow.credits ?? 0);
+
+      if (!isUnlimited && resolvedCredits <= 0) {
+        return respond({ error: "credits must be a positive integer unless unlimitedCredits is set" }, 400);
+      }
+
       const unitAmount = Math.round(Number(price) * 100);
       if (unitAmount <= 0) return respond({ error: "Price must be greater than 0" }, 400);
+      const creditUnits = isUnlimited ? 0 : resolvedCredits;
       let newPriceId: string | null = existing.stripe_price_id ?? null;
 
       if (existing.stripe_price_id) {
@@ -169,9 +209,10 @@ Deno.serve(async (req) => {
         .update({
           name,
           description: description || null,
-          credits: Number(credits),
+          credits: creditUnits,
           price: Number(price),
           stripe_price_id: newPriceId,
+          unlimited_credits: isUnlimited,
           updated_at: new Date().toISOString(),
         })
         .eq("id", packageId)

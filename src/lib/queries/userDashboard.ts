@@ -29,10 +29,12 @@ export type PurchaseRow = {
   credits: number;
   amount: number;
   status: string;
+  unlimited_credits: boolean;
 };
 
 export type UserDashboardData = {
   credits: number;
+  unlimitedCredits: boolean;
   downloadsThisMonth: number;
   downloadsLastMonth: number;
   totalDownloads: number;
@@ -62,7 +64,7 @@ export async function fetchUserDashboard(userId: string): Promise<UserDashboardD
     purchasesRes,
     tracksTodayRes,
   ] = await Promise.all([
-    supabase.from("credit_balances").select("credits").eq("user_id", userId).maybeSingle(),
+    supabase.from("credit_balances").select("credits, unlimited_credits").eq("user_id", userId).maybeSingle(),
     supabase
       .from("racecard_downloads")
       .select("id", { count: "exact", head: true })
@@ -105,7 +107,7 @@ export async function fetchUserDashboard(userId: string): Promise<UserDashboardD
       .limit(12),
     supabase
       .from("transactions")
-      .select("id, created_at, package_name, credits, amount, status")
+      .select("id, created_at, package_name, credits, amount, status, unlimited_credits")
       .eq("user_id", userId)
       .eq("status", "completed")
       .order("created_at", { ascending: false })
@@ -129,6 +131,7 @@ export async function fetchUserDashboard(userId: string): Promise<UserDashboardD
 
   return {
     credits: balRes.data?.credits ?? 0,
+    unlimitedCredits: balRes.data?.unlimited_credits ?? false,
     downloadsThisMonth: thisMonthRes.count ?? 0,
     downloadsLastMonth: lastMonthRes.count ?? 0,
     totalDownloads: totalRes.count ?? 0,

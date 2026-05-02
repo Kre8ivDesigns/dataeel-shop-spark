@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { sanitizeError } from "@/lib/errorHandler";
 import { motion } from "framer-motion";
 import { Mail, HelpCircle, Clock, Send, AlertTriangle, ArrowLeft, CheckCircle } from "lucide-react";
-import heroRacing from "@/assets/hero-racing.jpg";
+import heroContact from "@/assets/hero-contact.jpg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -113,13 +113,13 @@ const ContactPage = () => {
     <div className="min-h-screen bg-background">
       <Header />
 
-      {/* Hero — same racing photo as Home Hero.tsx (bundled @/assets/hero-racing.jpg) */}
+      {/* Hero — distinct crop asset vs Home (Hero.tsx uses @/assets/hero-racing.jpg) */}
       <section className="relative min-h-[22rem] flex flex-col justify-center overflow-hidden pt-28 pb-14 md:pt-32 md:pb-16">
         <div className="absolute inset-0">
           <img
-            src={heroRacing}
-            alt="Horse racing action"
-            className="w-full h-full object-cover object-center"
+            src={heroContact}
+            alt="Horse racing at the track"
+            className="w-full h-full object-cover object-[52%_center]"
           />
           <div
             className="absolute inset-0"

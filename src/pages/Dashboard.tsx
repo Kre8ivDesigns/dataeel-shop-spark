@@ -22,6 +22,8 @@ import { sanitizeError } from "@/lib/errorHandler";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, formatDistanceToNow, isValid } from "date-fns";
 import { useUserDashboard } from "@/lib/queries/userDashboard";
+import { invoiceListKeys, userDashboardKeys } from "@/lib/queryKeys";
+import { waitForPurchaseTransaction } from "@/lib/postPaymentConfirmation";
 import { schedulePostPaymentCreditRefetch } from "@/lib/schedulePostPaymentCreditRefetch";
 import { StripeTestModeDevBanner } from "@/components/StripeTestModeDevBanner";
 import { extractCanonicalTrackCode, getRacetrackLabel } from "@/lib/racetracks";
@@ -55,6 +57,7 @@ const Dashboard = () => {
   }, [isError, error, toast]);
 
   const credits = data?.credits ?? null;
+  const unlimitedCredits = data?.unlimitedCredits ?? false;
   const downloadsThisMonth = data?.downloadsThisMonth ?? 0;
   const downloadsLastMonth = data?.downloadsLastMonth ?? 0;
   const totalDownloads = data?.totalDownloads ?? 0;
@@ -112,20 +115,84 @@ const Dashboard = () => {
     if (paymentHandled.current) return;
     if (searchParams.get("payment") !== "success") return;
     if (!user?.id) return;
+    const userId = user.id;
     paymentHandled.current = true;
+
     const added = searchParams.get("credits");
-    toast({
-      title: "Payment successful",
-      description: added
-        ? `${added} credits have been added to your account. Receipts appear on Invoices (Account menu).`
-        : "Your credits have been updated. Receipts appear on Invoices (Account menu).",
-    });
+    const sessionId = searchParams.get("session_id");
+    const expectedCredits = added ? parseInt(added, 10) : NaN;
+    const unlimitedPurchase = searchParams.get("unlimited") === "1";
+
     const next = new URLSearchParams(searchParams);
     next.delete("payment");
     next.delete("credits");
+    next.delete("session_id");
+    next.delete("unlimited");
     setSearchParams(next, { replace: true });
+
     // Webhook may lag redirect; staggered invalidates avoid caching stale balance (see schedulePostPaymentCreditRefetch).
-    schedulePostPaymentCreditRefetch(queryClient, user.id);
+    schedulePostPaymentCreditRefetch(queryClient, userId);
+
+    const abort = new AbortController();
+
+    void (async () => {
+      const pending = toast({
+        title: "Confirming your payment",
+        description: sessionId
+          ? "Waiting for your purchase to sync… This usually takes a few seconds."
+          : "Refreshing your account. If credits stay at zero, wait a moment and refresh the page.",
+      });
+
+      const refetchCommerceQueries = async () => {
+        await Promise.all([
+          queryClient.refetchQueries({ queryKey: userDashboardKeys.detail(userId) }),
+          queryClient.refetchQueries({ queryKey: ["credit-balance", userId] }),
+          queryClient.refetchQueries({ queryKey: invoiceListKeys.list(userId) }),
+        ]);
+      };
+
+      try {
+        if (sessionId) {
+          const ok = await waitForPurchaseTransaction({
+            userId,
+            sessionId,
+            signal: abort.signal,
+          });
+          await refetchCommerceQueries();
+          if (ok) {
+            pending.update({
+              id: pending.id,
+              title: "Payment confirmed",
+              description: unlimitedPurchase
+                ? "Unlimited RaceCard access is now on your account. Receipts appear under Invoices (Account menu)."
+                : Number.isFinite(expectedCredits) && expectedCredits > 0
+                  ? `${expectedCredits} credits have been added to your account. Receipts appear under Invoices (Account menu).`
+                  : "Your credits have been updated. Receipts appear under Invoices (Account menu).",
+            });
+          } else {
+            pending.update({
+              id: pending.id,
+              variant: "destructive",
+              title: "Credits not visible yet",
+              description:
+                "Stripe redirected successfully, but your purchase has not appeared in our system yet. Try refreshing — webhook delays can exceed a minute. If nothing changes, contact support with your Stripe receipt.",
+            });
+          }
+        } else {
+          await refetchCommerceQueries();
+          pending.update({
+            id: pending.id,
+            title: "Checking your account",
+            description:
+              "This checkout link did not include a session id, so we could not verify automatically. Refresh if credits or invoices still look empty.",
+          });
+        }
+      } catch {
+        /* aborted */
+      }
+    })();
+
+    return () => abort.abort();
   }, [searchParams, setSearchParams, toast, queryClient, user?.id]);
 
   const openCustomerPortal = async () => {
@@ -153,7 +220,7 @@ const Dashboard = () => {
   const stats = [
     {
       label: "Credits remaining",
-      value: loading ? "—" : String(credits ?? 0),
+      value: loading ? "—" : unlimitedCredits ? "Unlimited" : String(credits ?? 0),
       icon: CreditCard,
       trend: null as string | null,
       trendUp: null as boolean | null,
@@ -193,7 +260,8 @@ const Dashboard = () => {
     { label: "Billing portal", icon: CreditCard, onClick: openCustomerPortal, href: "#" },
   ];
 
-  const showLowCredits = credits !== null && credits <= LOW_CREDITS_THRESHOLD;
+  const showLowCredits =
+    !unlimitedCredits && credits !== null && credits <= LOW_CREDITS_THRESHOLD;
 
   return (
     <div className="min-h-screen bg-background">
@@ -472,7 +540,7 @@ const Dashboard = () => {
                         <div className="min-w-0">
                           <div className="font-medium text-foreground truncate">{p.package_name}</div>
                           <div className="text-xs text-muted-foreground">
-                            {p.credits} credits ·{" "}
+                            {p.unlimited_credits ? "Unlimited access · " : `${p.credits} credits · `}
                             {formatLocalDate(new Date(p.created_at), "MMM d, yyyy", "—")}
                           </div>
                         </div>

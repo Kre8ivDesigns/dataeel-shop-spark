@@ -70,7 +70,9 @@ export function AdminCustomersTab({
               <TableRow key={c.id}>
                 <TableCell className="font-medium text-foreground">{c.full_name || "—"}</TableCell>
                 <TableCell className="text-muted-foreground">{c.email}</TableCell>
-                <TableCell className="text-right font-mono-data text-foreground">{c.credits}</TableCell>
+                <TableCell className="text-right font-mono-data text-foreground">
+                  {c.unlimitedCredits ? "Unlimited" : c.credits}
+                </TableCell>
                 <TableCell className="text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</TableCell>
                 <TableCell className="text-right space-x-2">
                   <Button variant="ghost" size="sm" onClick={() => onViewCustomer(c)}>

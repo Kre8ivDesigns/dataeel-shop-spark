@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Loader2, Package, Plus, Pencil, Trash2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { describeFunctionInvokeError } from "@/lib/edgeFunctionErrors";
 
@@ -21,6 +22,7 @@ interface CreditPackage {
   credits: number;
   price: number;
   stripe_price_id: string | null;
+  unlimited_credits: boolean;
 }
 
 interface PackageForm {
@@ -28,9 +30,10 @@ interface PackageForm {
   description: string;
   credits: string;
   price: string;
+  unlimitedCredits: boolean;
 }
 
-const emptyForm: PackageForm = { name: "", description: "", credits: "", price: "" };
+const emptyForm: PackageForm = { name: "", description: "", credits: "", price: "", unlimitedCredits: false };
 
 const AdminCreditPackages = () => {
   const [packages, setPackages] = useState<CreditPackage[]>([]);
@@ -68,6 +71,7 @@ const AdminCreditPackages = () => {
       description: pkg.description ?? "",
       credits: String(pkg.credits),
       price: String(pkg.price),
+      unlimitedCredits: pkg.unlimited_credits ?? false,
     });
     setDialogOpen(true);
   };
@@ -82,19 +86,21 @@ const AdminCreditPackages = () => {
   };
 
   const handleSave = async () => {
-    if (!form.name.trim() || !form.credits || !form.price) {
-      toast.error("Name, credits, and price are required");
+    if (!form.name.trim() || !form.price) {
+      toast.error("Name and price are required");
       return;
     }
-    const credits = parseInt(form.credits, 10);
     const price = parseFloat(form.price);
-    if (isNaN(credits) || credits <= 0) {
-      toast.error("Credits must be a positive integer");
-      return;
-    }
     if (isNaN(price) || price <= 0) {
       toast.error("Price must be greater than 0");
       return;
+    }
+    if (!form.unlimitedCredits) {
+      const credits = parseInt(form.credits, 10);
+      if (isNaN(credits) || credits <= 0) {
+        toast.error("Credits must be a positive integer");
+        return;
+      }
     }
 
     setSaving(true);
@@ -104,7 +110,8 @@ const AdminCreditPackages = () => {
         action,
         name: form.name.trim(),
         description: form.description.trim() || undefined,
-        credits,
+        unlimitedCredits: form.unlimitedCredits,
+        credits: form.unlimitedCredits ? 0 : parseInt(form.credits, 10),
         price,
       };
       if (editingPackage) body.packageId = editingPackage.id;
@@ -183,7 +190,9 @@ const AdminCreditPackages = () => {
                             <div className="text-xs text-muted-foreground">{pkg.description}</div>
                           )}
                         </TableCell>
-                        <TableCell className="font-mono-data text-primary">{pkg.credits}</TableCell>
+                        <TableCell className="font-mono-data text-primary">
+                          {pkg.unlimited_credits ? "Unlimited" : pkg.credits}
+                        </TableCell>
                         <TableCell className="font-mono-data text-foreground">${pkg.price}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {pkg.stripe_price_id ? (
@@ -263,14 +272,28 @@ const AdminCreditPackages = () => {
               />
             </div>
 
+            <div className="flex items-center gap-2 pt-1">
+              <Checkbox
+                id="pkg-unlimited"
+                checked={form.unlimitedCredits}
+                onCheckedChange={(v) =>
+                  setForm((f) => ({ ...f, unlimitedCredits: v === true, credits: v === true ? "0" : f.credits }))
+                }
+              />
+              <Label htmlFor="pkg-unlimited" className="text-sm font-normal cursor-pointer">
+                Unlimited RaceCards (no credit balance; grants unlimited downloads)
+              </Label>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="pkg-credits">Credits *</Label>
+                <Label htmlFor="pkg-credits">{form.unlimitedCredits ? "Credits (stored as 0)" : "Credits *"}</Label>
                 <Input
                   id="pkg-credits"
                   type="number"
-                  min={1}
+                  min={form.unlimitedCredits ? 0 : 1}
                   step={1}
+                  disabled={form.unlimitedCredits}
                   value={form.credits}
                   onChange={(e) => setForm((f) => ({ ...f, credits: e.target.value }))}
                   placeholder="e.g. 5"

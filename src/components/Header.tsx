@@ -21,6 +21,7 @@ import logo from "@/assets/dataeel-logo.png";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCreditBalance } from "@/lib/queries/creditBalance";
+import { EMPTY_CREDIT_SNAPSHOT } from "@/lib/creditDisplay";
 
 const navItems = [
   { label: "Home", href: "/" },
@@ -40,6 +41,7 @@ export const Header = () => {
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
   const { data: creditBalance, isLoading: creditsLoading } = useCreditBalance(user?.id);
+  const creditSnap = creditBalance ?? EMPTY_CREDIT_SNAPSHOT;
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -115,9 +117,12 @@ export const Header = () => {
                       <Coins className="h-3.5 w-3.5 shrink-0 text-primary" />
                       <span>
                         <span className="font-semibold tabular-nums text-foreground">
-                          {creditsLoading ? "—" : creditBalance ?? 0}
-                        </span>{" "}
-                        credits
+                          {creditsLoading
+                            ? "—"
+                            : creditSnap.unlimited
+                              ? "Unlimited credits"
+                              : `${creditSnap.credits} credits`}
+                        </span>
                       </span>
                     </div>
                     <Link
@@ -264,9 +269,12 @@ export const Header = () => {
                       <Coins className="h-3.5 w-3.5 text-primary shrink-0" />
                       <span>
                         <span className="font-semibold tabular-nums text-foreground">
-                          {creditsLoading ? "—" : creditBalance ?? 0}
-                        </span>{" "}
-                        RaceCard credits
+                          {creditsLoading
+                            ? "—"
+                            : creditSnap.unlimited
+                              ? "Unlimited credits"
+                              : `${creditSnap.credits} RaceCard credits`}
+                        </span>
                       </span>
                     </p>
                     <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>

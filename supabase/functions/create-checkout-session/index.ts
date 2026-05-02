@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
     // Look up package from DB
     const { data: pkg, error: pkgError } = await supabaseAdmin
       .from("credit_packages")
-      .select("id, name, credits, stripe_price_id")
+      .select("id, name, credits, stripe_price_id, unlimited_credits")
       .eq("id", packageId)
       .single();
     if (pkgError || !pkg) {
@@ -56,6 +56,9 @@ Deno.serve(async (req) => {
     const stripe = new Stripe(stripeConfig.secretKey, {
       apiVersion: "2025-08-27.basil",
     });
+
+    const isUnlimited = Boolean(pkg.unlimited_credits);
+    const creditsMeta = isUnlimited ? 0 : pkg.credits;
 
     // HIGH-03: look up Stripe customer ID from profiles first
     const { data: profile } = await supabaseAdmin
@@ -97,18 +100,23 @@ Deno.serve(async (req) => {
           metadata: {
             user_id: user.id,
             package_id: pkg.id,
-            credits: String(pkg.credits),
+            credits: String(creditsMeta),
             package_name: pkg.name,
+            unlimited_credits: isUnlimited ? "true" : "false",
           },
         },
       },
-      success_url: `${origin}/dashboard?payment=success&credits=${pkg.credits}`,
+      // `{CHECKOUT_SESSION_ID}` is replaced by Stripe so the app can poll DB until the webhook records the purchase.
+      success_url: isUnlimited
+        ? `${origin}/dashboard?payment=success&unlimited=1&session_id={CHECKOUT_SESSION_ID}`
+        : `${origin}/dashboard?payment=success&credits=${pkg.credits}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/buy-credits?payment=cancelled`,
       metadata: {
         user_id: user.id,
         package_id: pkg.id,
-        credits: String(pkg.credits),
+        credits: String(creditsMeta),
         package_name: pkg.name,
+        unlimited_credits: isUnlimited ? "true" : "false",
       },
     });
 

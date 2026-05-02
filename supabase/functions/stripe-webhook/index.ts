@@ -96,6 +96,7 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
   if (event.type === "checkout.session.completed") {
     let session = event.data.object as Stripe.Checkout.Session;
     const userId = session.metadata?.user_id;
+    const isUnlimited = session.metadata?.unlimited_credits === "true";
     const credits = parseInt(session.metadata?.credits || "0", 10);
     const packageName = session.metadata?.package_name || "Unknown";
     const amount = (session.amount_total || 0) / 100;
@@ -108,7 +109,7 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
     }
     const paymentIntentId = paymentIntentIdFromSession(session);
 
-    if (!userId || credits <= 0) {
+    if (!userId || (!isUnlimited && credits <= 0)) {
       // Not an app checkout (no metadata) — acknowledge so Stripe does not 400-retry.
       console.error("[stripe-webhook] checkout.session.completed: missing or invalid metadata (not app purchase?), session=", session.id);
       return jsonResponse({ received: true, skipped: true }, 200);
@@ -123,9 +124,10 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
         stripe_session_id: session.id,
         stripe_payment_intent_id: paymentIntentId,
         amount,
-        credits,
+        credits: isUnlimited ? 0 : credits,
         package_name: packageName,
         status: "completed",
+        unlimited_credits: isUnlimited,
       })
       .select("id")
       .single();
@@ -149,34 +151,59 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
       return jsonResponse(jsonErrBody("Transaction recording failed", txError), 500);
     }
 
-    // Atomic credit update — no read-then-write race condition (CRIT-04)
-    const { error: creditError } = await supabaseAdmin.rpc("add_credits_atomic", {
-      p_user_id: userId,
-      p_credits: credits,
-      p_entry_type: "purchase",
-      p_ref_id: insertedTx?.id ?? null,
-      p_meta: {
-        stripe_session_id: session.id,
-        stripe_payment_intent_id: paymentIntentId,
-        package_name: packageName,
-        amount,
-      },
-    });
+    const purchaseMeta = {
+      stripe_session_id: session.id,
+      stripe_payment_intent_id: paymentIntentId,
+      package_name: packageName,
+      amount,
+    };
 
-    if (creditError) {
-      const ack = acknowledgeOnlyDbError(creditError);
-      await supabaseAdmin.from("transactions").delete().eq("stripe_session_id", session.id);
-      if (ack.acknowledge) {
-        console.error(
-          "[stripe-webhook] checkout: credits skipped (non-retryable):",
-          ack.reason,
-          creditError.code,
-          creditError.message,
-        );
-        return jsonResponse({ received: true, skipped: true, reason: ack.reason }, 200);
+    if (isUnlimited) {
+      const { error: grantError } = await supabaseAdmin.rpc("grant_unlimited_credits_atomic", {
+        p_user_id: userId,
+        p_ref_id: insertedTx?.id ?? null,
+        p_meta: { ...purchaseMeta, unlimited_credits: true },
+      });
+
+      if (grantError) {
+        const ack = acknowledgeOnlyDbError(grantError);
+        await supabaseAdmin.from("transactions").delete().eq("stripe_session_id", session.id);
+        if (ack.acknowledge) {
+          console.error(
+            "[stripe-webhook] checkout: unlimited grant skipped (non-retryable):",
+            ack.reason,
+            grantError.code,
+            grantError.message,
+          );
+          return jsonResponse({ received: true, skipped: true, reason: ack.reason }, 200);
+        }
+        console.error("[stripe-webhook] Unlimited grant failed:", grantError.code, grantError.message);
+        return jsonResponse(jsonErrBody("Unlimited grant failed", grantError), 500);
       }
-      console.error("[stripe-webhook] Credit update failed:", creditError.code, creditError.message);
-      return jsonResponse(jsonErrBody("Credit update failed", creditError), 500);
+    } else {
+      const { error: creditError } = await supabaseAdmin.rpc("add_credits_atomic", {
+        p_user_id: userId,
+        p_credits: credits,
+        p_entry_type: "purchase",
+        p_ref_id: insertedTx?.id ?? null,
+        p_meta: purchaseMeta,
+      });
+
+      if (creditError) {
+        const ack = acknowledgeOnlyDbError(creditError);
+        await supabaseAdmin.from("transactions").delete().eq("stripe_session_id", session.id);
+        if (ack.acknowledge) {
+          console.error(
+            "[stripe-webhook] checkout: credits skipped (non-retryable):",
+            ack.reason,
+            creditError.code,
+            creditError.message,
+          );
+          return jsonResponse({ received: true, skipped: true, reason: ack.reason }, 200);
+        }
+        console.error("[stripe-webhook] Credit update failed:", creditError.code, creditError.message);
+        return jsonResponse(jsonErrBody("Credit update failed", creditError), 500);
+      }
     }
 
     const { error: auditError } = await supabaseAdmin.from("audit_log").insert({
@@ -184,7 +211,13 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
       action: "stripe.checkout.completed",
       resource: "credit_balance",
       resource_id: userId,
-      detail: { stripe_session_id: session.id, credits, amount, package_name: packageName },
+      detail: {
+        stripe_session_id: session.id,
+        credits: isUnlimited ? 0 : credits,
+        amount,
+        package_name: packageName,
+        unlimited_credits: isUnlimited,
+      },
     });
     if (auditError) {
       console.error("[stripe-webhook] Audit log insert failed (non-fatal):", auditError.code, auditError.message);
@@ -216,6 +249,7 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
     let userId = inv.metadata?.user_id ?? undefined;
     let credits = parseInt(inv.metadata?.credits || "0", 10);
     let packageName = inv.metadata?.package_name || "Credit purchase";
+    let isUnlimited = inv.metadata?.unlimited_credits === "true";
 
     const customerId =
       typeof inv.customer === "string" ? inv.customer : inv.customer && typeof inv.customer === "object"
@@ -243,17 +277,22 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
       if (priceId) {
         const { data: pkg } = await supabaseAdmin
           .from("credit_packages")
-          .select("credits, name")
+          .select("credits, name, unlimited_credits")
           .eq("stripe_price_id", priceId)
           .maybeSingle();
         if (pkg) {
-          credits = pkg.credits;
           packageName = pkg.name;
+          if (pkg.unlimited_credits) {
+            isUnlimited = true;
+            credits = 0;
+          } else {
+            credits = pkg.credits;
+          }
         }
       }
     }
 
-    if (!userId || credits <= 0) {
+    if (!userId || (!isUnlimited && credits <= 0)) {
       console.log(
         "[stripe-webhook] invoice.paid skipped (no user/credits); invoice=",
         inv.id,
@@ -270,9 +309,10 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
         stripe_session_id: null,
         stripe_payment_intent_id: paymentIntentId,
         amount,
-        credits,
+        credits: isUnlimited ? 0 : credits,
         package_name: packageName,
         status: "completed",
+        unlimited_credits: isUnlimited,
       })
       .select("id")
       .single();
@@ -296,33 +336,59 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
       return jsonResponse(jsonErrBody("Transaction recording failed", txError), 500);
     }
 
-    const { error: creditError } = await supabaseAdmin.rpc("add_credits_atomic", {
-      p_user_id: userId,
-      p_credits: credits,
-      p_entry_type: "purchase",
-      p_ref_id: insertedTx?.id ?? null,
-      p_meta: {
-        stripe_invoice_id: inv.id,
-        stripe_payment_intent_id: paymentIntentId,
-        package_name: packageName,
-        amount,
-      },
-    });
+    const invoicePurchaseMeta = {
+      stripe_invoice_id: inv.id,
+      stripe_payment_intent_id: paymentIntentId,
+      package_name: packageName,
+      amount,
+    };
 
-    if (creditError) {
-      const ack = acknowledgeOnlyDbError(creditError);
-      await supabaseAdmin.from("transactions").delete().eq("stripe_payment_intent_id", paymentIntentId);
-      if (ack.acknowledge) {
-        console.error(
-          "[stripe-webhook] invoice.paid: credits skipped (non-retryable):",
-          ack.reason,
-          creditError.code,
-          creditError.message,
-        );
-        return jsonResponse({ received: true, skipped: true, reason: ack.reason }, 200);
+    if (isUnlimited) {
+      const { error: grantError } = await supabaseAdmin.rpc("grant_unlimited_credits_atomic", {
+        p_user_id: userId,
+        p_ref_id: insertedTx?.id ?? null,
+        p_meta: { ...invoicePurchaseMeta, unlimited_credits: true },
+      });
+
+      if (grantError) {
+        const ack = acknowledgeOnlyDbError(grantError);
+        await supabaseAdmin.from("transactions").delete().eq("stripe_payment_intent_id", paymentIntentId);
+        if (ack.acknowledge) {
+          console.error(
+            "[stripe-webhook] invoice.paid: unlimited grant skipped (non-retryable):",
+            ack.reason,
+            grantError.code,
+            grantError.message,
+          );
+          return jsonResponse({ received: true, skipped: true, reason: ack.reason }, 200);
+        }
+        console.error("[stripe-webhook] invoice.paid unlimited grant failed:", grantError.code, grantError.message);
+        return jsonResponse(jsonErrBody("Unlimited grant failed", grantError), 500);
       }
-      console.error("[stripe-webhook] invoice.paid credit update failed:", creditError.code, creditError.message);
-      return jsonResponse(jsonErrBody("Credit update failed", creditError), 500);
+    } else {
+      const { error: creditError } = await supabaseAdmin.rpc("add_credits_atomic", {
+        p_user_id: userId,
+        p_credits: credits,
+        p_entry_type: "purchase",
+        p_ref_id: insertedTx?.id ?? null,
+        p_meta: invoicePurchaseMeta,
+      });
+
+      if (creditError) {
+        const ack = acknowledgeOnlyDbError(creditError);
+        await supabaseAdmin.from("transactions").delete().eq("stripe_payment_intent_id", paymentIntentId);
+        if (ack.acknowledge) {
+          console.error(
+            "[stripe-webhook] invoice.paid: credits skipped (non-retryable):",
+            ack.reason,
+            creditError.code,
+            creditError.message,
+          );
+          return jsonResponse({ received: true, skipped: true, reason: ack.reason }, 200);
+        }
+        console.error("[stripe-webhook] invoice.paid credit update failed:", creditError.code, creditError.message);
+        return jsonResponse(jsonErrBody("Credit update failed", creditError), 500);
+      }
     }
 
     const { error: auditError } = await supabaseAdmin.from("audit_log").insert({
@@ -330,7 +396,13 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
       action: "stripe.invoice.paid",
       resource: "credit_balance",
       resource_id: userId,
-      detail: { stripe_invoice_id: inv.id, credits, amount, package_name: packageName },
+      detail: {
+        stripe_invoice_id: inv.id,
+        credits: isUnlimited ? 0 : credits,
+        amount,
+        package_name: packageName,
+        unlimited_credits: isUnlimited,
+      },
     });
     if (auditError) {
       console.error("[stripe-webhook] invoice.paid audit log failed (non-fatal):", auditError.code, auditError.message);

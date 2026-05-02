@@ -78,7 +78,7 @@ const AdminDashboard = () => {
     setLoading(true);
     const [custRes, balRes, txRes, rcRes] = await Promise.all([
       supabase.from("profiles").select("*").order("created_at", { ascending: false }),
-      supabase.from("credit_balances").select("user_id, credits"),
+      supabase.from("credit_balances").select("user_id, credits, unlimited_credits"),
       supabase.from("transactions").select("*").order("created_at", { ascending: false }),
       supabase.from("racecards").select("*").order("race_date", { ascending: false }),
     ]);

@@ -91,6 +91,22 @@ const creditPackages = [
     popular: false,
     cta: "Buy 100 Credits",
   },
+  {
+    name: "Unlimited",
+    credits: 0,
+    price: 999,
+    pricePerCredit: 0,
+    description: "Unlimited RaceCard PDFs",
+    features: [
+      "Unlimited downloads (fair use)",
+      "Any track, any day",
+      "Both algorithms included",
+      "Priority support",
+    ],
+    popular: false,
+    cta: "Get Unlimited",
+    unlimited: true,
+  },
 ];
 
 const benefits = [
@@ -228,10 +244,15 @@ const PricingPage = () => {
                     </span>
                   </div>
                   <div className="text-xs mt-1 text-muted-foreground">
-                    {plan.credits} credit{plan.credits > 1 ? "s" : ""} ·{" "}
-                    ${plan.pricePerCredit.toFixed(2)}/card
+                    {"unlimited" in plan && plan.unlimited ? (
+                      <>Unlimited RaceCard downloads · one-time purchase</>
+                    ) : (
+                      <>
+                        {plan.credits} credit{plan.credits > 1 ? "s" : ""} · ${plan.pricePerCredit.toFixed(2)}/card
+                      </>
+                    )}
                   </div>
-                  {plan.savings && (
+                  {plan.savings && !("unlimited" in plan && plan.unlimited) && (
                     <div className="mt-2">
                       <span className="text-xs font-semibold text-success">
                         Save ${plan.savings}
@@ -260,7 +281,13 @@ const PricingPage = () => {
                       : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
                   }`}
                 >
-                  <Link to={`/buy-credits?credits=${plan.credits}`}>
+                  <Link
+                    to={
+                      "unlimited" in plan && plan.unlimited
+                        ? "/buy-credits?unlimited=1"
+                        : `/buy-credits?credits=${plan.credits}`
+                    }
+                  >
                     {plan.cta}
                     {plan.popular && <Zap className="ml-2 h-4 w-4" />}
                   </Link>
