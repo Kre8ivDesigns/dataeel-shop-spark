@@ -38,7 +38,7 @@ export const RaceCards = () => {
 
   return (
     <section id="racecards" className="py-24 bg-background">
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -92,7 +92,7 @@ export const RaceCards = () => {
         )}
 
         {!loading && rows.length > 0 && (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {rows.map((track, index) => {
               const meta = parseRacecardMetadata(track.metadata);
               const status = resolveStatus(meta);

@@ -137,10 +137,10 @@ const RaceCardsBrowse = () => {
   const loading = cardsLoading;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pt-[var(--header-height)]">
       <Header />
 
-      <main className="pt-24 pb-16">
+      <main className="pb-16">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div>

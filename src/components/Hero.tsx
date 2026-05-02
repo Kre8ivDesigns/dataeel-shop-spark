@@ -37,7 +37,7 @@ export const Hero = () => {
       </div>
 
       {/* Breaking News Ticker */}
-      <div className="absolute top-[72px] left-0 right-0 z-20 bg-card/90 backdrop-blur-sm border-b border-border overflow-hidden">
+      <div className="absolute top-[var(--header-height)] left-0 right-0 z-20 bg-card/90 backdrop-blur-sm border-b border-border overflow-hidden">
         <div className="flex items-center">
           <div className="flex-shrink-0 px-4 py-2 bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wider">
             Breaking News
