@@ -12,11 +12,13 @@ import {
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import racecardExampleImage from "@/assets/racecard-guide/racecard-guide-page-02.webp";
 import racecardColumnsImage from "@/assets/racecard-guide/racecard-guide-page-03.webp";
 import racecardFormatImage from "@/assets/racecard-guide/racecard-guide-page-04.webp";
 import racecardAlgorithmsImage from "@/assets/racecard-guide/racecard-guide-page-05.webp";
 import racecardNoDataImage from "@/assets/racecard-guide/racecard-guide-page-07.webp";
+import { useState } from "react";
 
 /**
  * Educational content adapted from DATAEEL RaceCard instructions (Nov 2024).
@@ -124,6 +126,16 @@ const sections: {
 ];
 
 const HowToReadRacecard = () => {
+  const [expandedImage, setExpandedImage] = useState<{
+    src: string;
+    alt: string;
+    caption: string;
+  } | null>(null);
+
+  const openImage = (image: { src: string; alt: string; caption: string }) => {
+    setExpandedImage(image);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -134,7 +146,7 @@ const HowToReadRacecard = () => {
           background: "linear-gradient(135deg, hsl(232 59% 8%) 0%, hsl(214 52% 20%) 100%)",
         }}
       >
-        <div className="container mx-auto px-4 relative">
+        <div className="mx-auto w-full max-w-[1400px] px-4 relative">
           <Link
             to="/"
             className="inline-flex items-center gap-2 text-foreground/50 hover:text-foreground mb-8 text-sm transition-colors"
@@ -167,21 +179,34 @@ const HowToReadRacecard = () => {
               </div>
             </div>
 
-            <figure className="overflow-hidden rounded-xl border border-white/10 bg-background/20 shadow-2xl">
-              <img
-                src={racecardExampleImage}
-                alt="Example EEL RaceCard page with race header, Concert table, Aptitude table, and note area."
-                className="h-full max-h-[430px] w-full object-cover object-top"
-                loading="eager"
-                decoding="async"
-              />
+            <figure className="max-w-2xl overflow-hidden rounded-xl border border-white/10 bg-background/20 shadow-2xl lg:ml-auto">
+              <button
+                type="button"
+                onClick={() =>
+                  openImage({
+                    src: racecardExampleImage,
+                    alt: "Example EEL RaceCard page with race header, Concert table, Aptitude table, and note area.",
+                    caption: "Example EEL RaceCard page with race header, Concert table, Aptitude table, and note area.",
+                  })
+                }
+                className="group block w-full cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                aria-label="Open larger image: Example EEL RaceCard page with race header, Concert table, Aptitude table, and note area."
+              >
+                <img
+                  src={racecardExampleImage}
+                  alt="Example EEL RaceCard page with race header, Concert table, Aptitude table, and note area."
+                  className="h-full max-h-[340px] w-full object-cover object-top transition-transform duration-300 group-hover:scale-[1.02]"
+                  loading="eager"
+                  decoding="async"
+                />
+              </button>
             </figure>
           </motion.div>
         </div>
       </section>
 
       <section className="py-16">
-        <div className="container mx-auto px-4 space-y-14 max-w-5xl">
+        <div className="mx-auto w-full max-w-[1400px] space-y-14 px-4">
           {sections.map((s, i) => (
             <motion.article
               key={s.id}
@@ -204,14 +229,21 @@ const HowToReadRacecard = () => {
                     ))}
                   </div>
                   {s.image && (
-                    <figure className="mt-7 overflow-hidden rounded-xl border border-border bg-card shadow-xl">
-                      <img
-                        src={s.image.src}
-                        alt={s.image.alt}
-                        className="w-full bg-white"
-                        loading="lazy"
-                        decoding="async"
-                      />
+                    <figure className="mt-7 max-w-3xl overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+                      <button
+                        type="button"
+                        onClick={() => openImage(s.image)}
+                        className="group block w-full cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        aria-label={`Open larger image: ${s.image.alt}`}
+                      >
+                        <img
+                          src={s.image.src}
+                          alt={s.image.alt}
+                          className="w-full bg-white transition-transform duration-300 group-hover:scale-[1.01]"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      </button>
                       <figcaption className="border-t border-border bg-muted/40 px-4 py-3 text-xs text-muted-foreground">
                         {s.image.caption}
                       </figcaption>
@@ -238,6 +270,37 @@ const HowToReadRacecard = () => {
           </motion.div>
         </div>
       </section>
+
+      <Dialog open={Boolean(expandedImage)} onOpenChange={(open) => !open && setExpandedImage(null)}>
+        <DialogContent
+          className="max-h-[92vh] max-w-[96vw] border-border bg-card p-4 sm:max-w-5xl"
+          aria-label={expandedImage ? `Expanded image: ${expandedImage.alt}` : "Expanded image"}
+        >
+          {expandedImage && (
+            <div className="space-y-3">
+              <DialogHeader className="sr-only">
+                <DialogTitle>{expandedImage.alt}</DialogTitle>
+                <DialogDescription>{expandedImage.caption}</DialogDescription>
+              </DialogHeader>
+              <img
+                src={expandedImage.src}
+                alt={expandedImage.alt}
+                className="max-h-[78vh] w-full rounded-md object-contain"
+                loading="eager"
+                decoding="async"
+              />
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm text-muted-foreground">{expandedImage.caption}</p>
+                <DialogClose asChild>
+                  <Button type="button" variant="outline">
+                    Close
+                  </Button>
+                </DialogClose>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Footer />
     </div>
