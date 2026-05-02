@@ -96,6 +96,9 @@ export function describeFunctionInvokeError(functionName: string, error: unknown
     if (status === 403) {
       return `You don't have permission to call "${functionName}".`;
     }
+    if (status === 429) {
+      return `Too many requests for "${functionName}" — wait a bit and try again.`;
+    }
   }
 
   if (

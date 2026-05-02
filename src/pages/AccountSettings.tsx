@@ -8,8 +8,19 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { sanitizeError } from "@/lib/errorHandler";
+import { getInvokeErrorMessage } from "@/lib/edgeFunctionErrors";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, ShieldCheck, ShieldOff, Copy, CheckCircle2, Mail } from "lucide-react";
+import { Loader2, ShieldCheck, ShieldOff, Copy, CheckCircle2, Mail, FlaskConical } from "lucide-react";
 
 type MfaStep = "idle" | "enrolling" | "verifying";
 
@@ -45,6 +56,9 @@ const AccountSettings = () => {
   const [enrollData, setEnrollData] = useState<EnrollData | null>(null);
   const [totpCode, setTotpCode] = useState("");
   const [secretCopied, setSecretCopied] = useState(false);
+
+  const [purgeLoading, setPurgeLoading] = useState(false);
+  const [purgeOpen, setPurgeOpen] = useState(false);
 
   useEffect(() => {
     loadFactors();
@@ -177,6 +191,39 @@ const AccountSettings = () => {
     setTimeout(() => setSecretCopied(false), 2000);
   };
 
+  const handlePurgeTestPurchases = async () => {
+    setPurgeLoading(true);
+    try {
+      const { data, error, response } = await supabase.functions.invoke("purge-test-purchases", {
+        body: {},
+      });
+      const payload = data as {
+        ok?: boolean;
+        removed?: number;
+        credits_reversed?: number;
+        message?: string;
+        error?: string;
+        detail?: string;
+      } | null;
+      if (error) {
+        const msg = await getInvokeErrorMessage("purge-test-purchases", error, data, response);
+        toast.error(msg);
+        return;
+      }
+      if (payload?.error) {
+        toast.error(payload.detail ? `${payload.error} — ${payload.detail}` : payload.error);
+        return;
+      }
+      toast.success(
+        payload?.message ??
+          `Removed ${payload?.removed ?? 0} purchase record(s); reversed ${payload?.credits_reversed ?? 0} credits.`,
+      );
+      setPurgeOpen(false);
+    } finally {
+      setPurgeLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -270,6 +317,65 @@ const AccountSettings = () => {
                   {resetEmailLoading ? "Sending…" : "Send Reset Email"}
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* ── Stripe test data cleanup (account-scoped) ── */}
+          <Card className="bg-card border-border border-dashed">
+            <CardHeader>
+              <CardTitle className="text-foreground flex items-center gap-2">
+                <FlaskConical className="h-5 w-5 text-muted-foreground" />
+                Stripe test purchases
+              </CardTitle>
+              <CardDescription>
+                Remove Stripe Checkout purchase rows for this account only and reverse credits still on your balance.
+                Available only when the server uses Stripe{" "}
+                <span className="font-medium text-foreground">test</span> keys (
+                <code className="text-xs bg-muted px-1 rounded">sk_test_…</code>) unless your project enables an
+                explicit admin escape hatch.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AlertDialog open={purgeOpen} onOpenChange={setPurgeOpen}>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" type="button" className="border-destructive/40 text-destructive hover:bg-destructive/10">
+                    Remove my test purchases…
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Remove test purchase data?</AlertDialogTitle>
+                    <AlertDialogDescription className="space-y-2">
+                      <span className="block">
+                        This deletes your Stripe Checkout transaction records from our database for{" "}
+                        <strong>your account only</strong> and subtracts matching credits from your current balance (up
+                        to what you still have — credits you already spent are not recovered).
+                      </span>
+                      <span className="block text-destructive">
+                        Do not use this against production / live Stripe keys unless your deployment explicitly allows it.
+                      </span>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={purgeLoading}>Cancel</AlertDialogCancel>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      disabled={purgeLoading}
+                      onClick={() => void handlePurgeTestPurchases()}
+                    >
+                      {purgeLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Working…
+                        </>
+                      ) : (
+                        "Confirm removal"
+                      )}
+                    </Button>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </CardContent>
           </Card>
 

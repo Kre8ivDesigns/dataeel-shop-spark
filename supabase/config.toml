@@ -52,6 +52,9 @@ verify_jwt = true
 [functions.list-invoices]
 verify_jwt = true
 
+[functions.purge-test-purchases]
+verify_jwt = true
+
 [functions.generate-upload-url]
 verify_jwt = true
 
