@@ -276,7 +276,7 @@ const RaceCardsBrowse = () => {
                       </div>
                     )}
 
-                    <div className="flex items-start gap-3 mb-4">
+                    <div className="flex items-start gap-3 mb-6">
                       <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
                         <span className="font-mono-data font-bold text-foreground text-sm">
                           {extractCanonicalTrackCode(card.track_code)}

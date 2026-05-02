@@ -1,21 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { trackHeroImageSearchQuery } from "./trackHeroImage";
+import { getTrackHeroImage } from "./trackHeroImage";
 
-describe("trackHeroImageSearchQuery", () => {
-  it("includes city and state when location is known", () => {
-    const q = trackHeroImageSearchQuery("GP");
-    expect(q).toContain("Gulfstream");
-    expect(q.toLowerCase()).toContain("horse racing");
+describe("getTrackHeroImage", () => {
+  it("returns the matching local image for canonical track codes", () => {
+    const url = getTrackHeroImage("GP^");
+    expect(url).toContain("track-hero-gp.png");
   });
 
-  it("falls back to label racetrack for canonical code without DB location", () => {
-    const q = trackHeroImageSearchQuery("XX_UNKNOWN_CODE");
-    expect(q.length).toBeGreaterThan(3);
-    expect(q.toLowerCase()).toMatch(/racetrack|horse racing/);
+  it("normalizes caret-suffixed track codes", () => {
+    const url = getTrackHeroImage("CD^");
+    expect(url).toContain("track-hero-cd.png");
+  });
+
+  it("falls back to a generic race image for unknown codes", () => {
+    const url = getTrackHeroImage("XX_UNKNOWN_CODE");
+    expect(url).toMatch(/track-hero-generic-(dirt|turf|weather)\.png/);
   });
 
   it("handles null without throwing", () => {
-    expect(() => trackHeroImageSearchQuery(null)).not.toThrow();
-    expect(trackHeroImageSearchQuery(null).length).toBeGreaterThan(0);
+    expect(() => getTrackHeroImage(null)).not.toThrow();
+    expect(getTrackHeroImage(null)).toMatch(/track-hero-generic-(dirt|turf|weather)\.png/);
   });
 });
