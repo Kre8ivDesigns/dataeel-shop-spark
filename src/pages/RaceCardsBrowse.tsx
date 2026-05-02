@@ -11,6 +11,7 @@ import {
   Cloud,
   Sparkles,
   ArrowRight,
+  MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -27,6 +28,7 @@ import {
   getRacecardDownloadUiBlock,
 } from "@/lib/racecardDownloadDeadline";
 import { getInvokeErrorMessage } from "@/lib/edgeFunctionErrors";
+import { getRacetrackLabel, getRacetrackLocation } from "@/lib/racetracks";
 
 const RACECARD_DOWNLOAD_TZ =
   import.meta.env.VITE_RACECARD_DOWNLOAD_TZ ?? DEFAULT_RACECARD_DOWNLOAD_TZ;
@@ -119,11 +121,15 @@ const RaceCardsBrowse = () => {
     }
   };
 
-  const filtered = racecards.filter(
-    (card) =>
-      card.track_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      card.track_code.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const q = searchQuery.toLowerCase();
+  const filtered = racecards.filter((card) => {
+    const label = getRacetrackLabel(card.track_code).toLowerCase();
+    return (
+      label.includes(q) ||
+      card.track_name.toLowerCase().includes(q) ||
+      card.track_code.toLowerCase().includes(q)
+    );
+  });
 
   const isOwned = (id: string) => downloads.has(id);
   const loading = cardsLoading;
@@ -250,6 +256,7 @@ const RaceCardsBrowse = () => {
                   Date.now(),
                 );
                 const downloadDisabled = dlBlock.blocked;
+                const location = getRacetrackLocation(card.track_code);
 
                 return (
                   <motion.div
@@ -272,8 +279,18 @@ const RaceCardsBrowse = () => {
                       <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
                         <span className="font-mono-data font-bold text-foreground text-sm">{card.track_code}</span>
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-foreground text-sm">{card.track_name}</h3>
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-foreground text-sm">
+                          {getRacetrackLabel(card.track_code)}
+                        </h3>
+                        {location && (
+                          <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                            <MapPin className="h-3 w-3 shrink-0 text-muted-foreground/80" aria-hidden />
+                            <span>
+                              {location.city}, {location.state}
+                            </span>
+                          </div>
+                        )}
                         <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                           {card.num_races != null && card.num_races > 0 && <span>{card.num_races} races</span>}
                         </div>

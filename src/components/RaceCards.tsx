@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Calendar, Download, MapPin, Clock, Loader2, Cloud } from "lucide-react";
+import { Calendar, Download, MapPin, Clock, Loader2, Cloud, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { format, addDays } from "date-fns";
@@ -11,6 +11,7 @@ import {
   type RacecardDisplayMetadata,
 } from "@/lib/raceMetadata";
 import { useRacecardsPublicForDate } from "@/lib/queries/racecardsPublic";
+import { getRacetrackLabel, getRacetrackLocation } from "@/lib/racetracks";
 
 export const RaceCards = () => {
   const { user } = useAuth();
@@ -96,6 +97,7 @@ export const RaceCards = () => {
               const meta = parseRacecardMetadata(track.metadata);
               const status = resolveStatus(meta);
               const subline = metadataListingLine(meta);
+              const location = getRacetrackLocation(track.track_code);
               return (
                 <motion.div
                   key={track.id}
@@ -112,10 +114,18 @@ export const RaceCards = () => {
                   </div>
 
                   <div className="mb-6">
-                    <h3 className="font-bold text-lg text-foreground mb-2 font-heading pr-12">{track.track_name}</h3>
+                    <h3 className="font-bold text-lg text-foreground mb-2 font-heading pr-12">
+                      {getRacetrackLabel(track.track_code)}
+                    </h3>
                     <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+                      {location && (
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3.5 w-3.5 shrink-0" />
+                          {location.city}, {location.state}
+                        </span>
+                      )}
                       <span className="flex items-center gap-1">
-                        <MapPin className="h-3.5 w-3.5 shrink-0" />
+                        <Layers className="h-3.5 w-3.5 shrink-0" />
                         {track.num_races != null ? `${track.num_races} races` : "Races TBD"}
                       </span>
                       <span className="flex items-center gap-1">

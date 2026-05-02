@@ -12,7 +12,7 @@ export const RACETRACK_BY_CODE: Record<string, string> = {
   CMR: "Charles Town",
   CNL: "Colonial Downs",
   CRC: "Gulfstream Park West",
-  CT: "Churchill Downs",
+  CT: "Charles Town",
   DED: "Delta Downs",
   DEL: "Delaware Park",
   DM: "Del Mar",

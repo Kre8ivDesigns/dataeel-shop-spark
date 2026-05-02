@@ -85,6 +85,9 @@ async function handleRequest(req: Request): Promise<Response> {
   }
 
   try {
+    // Deploy verification: if logs never show this line on invoke, an old bundle or wrong project is deployed.
+    console.info("[sync-s3-racecards] handler row-loop+actingUserId (no user in row map)");
+
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {

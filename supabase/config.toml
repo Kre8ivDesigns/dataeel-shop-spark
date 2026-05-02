@@ -6,9 +6,10 @@ project_id = "uhalsigyxvshlnlagtwt"
 #   Authentication → Email Templates → Confirm signup
 #   See supabase/templates/README.md for step-by-step instructions.
 
+# Template paths are resolved from the repository root (Supabase CLI `link` / `start`).
 [auth.email.template.confirmation]
-subject = "Confirm your DATAEEL® account"
-content_path = "./supabase/templates/confirmation.html"
+subject = "Confirm your Dataeel account"
+content_path = "./supabase/templates/confirm-signup.html"
 
 # ── CORS + Stripe return URLs ────────────────────────────────────────────────
 # Set Edge Function secret ALLOWED_ORIGINS when you have a real domain.
@@ -16,20 +17,13 @@ content_path = "./supabase/templates/confirmation.html"
 # Example: ALLOWED_ORIGINS=https://www.example.com,https://example.com,https://app.vercel.app
 # (scheme required, no trailing slash, comma-separated). See supabase/functions/_shared/cors.ts.
 
-# Custom branded auth emails (Supabase dashboard will pick these up on `supabase db push`
-# for local dev; for hosted projects, paste the HTML into Authentication → Email Templates
-# or wire the same file via the Management API).
-[auth.email.template.confirmation]
-subject = "Confirm your Dataeel account"
-content_path = "./templates/confirm-signup.html"
-
 [auth.email.template.recovery]
 subject = "Reset your Dataeel password"
-content_path = "./templates/reset-password.html"
+content_path = "./supabase/templates/reset-password.html"
 
 [auth.email.template.magic_link]
 subject = "Your Dataeel sign-in link"
-content_path = "./templates/magic-link.html"
+content_path = "./supabase/templates/magic-link.html"
 
 # stripe-webhook is called server-to-server by Stripe — no JWT
 [functions.stripe-webhook]
