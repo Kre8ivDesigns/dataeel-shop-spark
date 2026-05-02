@@ -20,7 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { getInvokeErrorMessage } from "@/lib/edgeFunctionErrors";
 import { useCreditBalance } from "@/lib/queries/creditBalance";
-import { useCreditPackages, type CreditPackageRow } from "@/lib/queries/creditPackages";
+import { useCreditPackages } from "@/lib/queries/creditPackages";
 import { EMPTY_CREDIT_SNAPSHOT } from "@/lib/creditDisplay";
 import { StripeTestModeDevBanner } from "@/components/StripeTestModeDevBanner";
 
