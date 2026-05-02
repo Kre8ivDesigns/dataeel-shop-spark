@@ -43,6 +43,9 @@ verify_jwt = false
 [functions.create-checkout-session]
 verify_jwt = true
 
+[functions.reconcile-checkout-session]
+verify_jwt = true
+
 [functions.download-racecard]
 verify_jwt = true
 
