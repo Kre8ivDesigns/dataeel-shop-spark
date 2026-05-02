@@ -66,7 +66,8 @@ const AdminDashboard = () => {
     let cancelled = false;
     supabase.rpc("is_admin", { _user_id: user.id }).then(({ data, error }) => {
       if (cancelled) return;
-      if (error || !data) navigate("/", { replace: true });
+      if (error) return;
+      if (!data) navigate("/", { replace: true });
     });
     return () => {
       cancelled = true;

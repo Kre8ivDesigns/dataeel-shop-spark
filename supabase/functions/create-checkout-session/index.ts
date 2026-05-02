@@ -89,6 +89,8 @@ Deno.serve(async (req) => {
       customer: customerId,
       line_items: [{ price: pkg.stripe_price_id, quantity: 1 }],
       mode: "payment",
+      // Generates a Stripe Invoice + hosted invoice / PDF for one-time payments
+      invoice_creation: { enabled: true },
       success_url: `${origin}/dashboard?payment=success&credits=${pkg.credits}`,
       cancel_url: `${origin}/buy-credits?payment=cancelled`,
       metadata: {

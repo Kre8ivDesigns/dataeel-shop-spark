@@ -31,13 +31,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { data, error } = await supabase.rpc("is_admin", { _user_id: userId });
       if (error) {
         console.error("is_admin RPC failed:", error.message);
-        setIsAdmin(false);
+        // Keep last known isAdmin; transient failures (e.g. after tab refocus) must not clear admin.
         return;
       }
       setIsAdmin(!!data);
     } catch (e) {
       console.error("is_admin RPC error:", e);
-      setIsAdmin(false);
     }
   };
 
@@ -63,9 +62,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-        setIsAdmin(false);
-        if (session?.user) {
-          checkAdmin(session.user.id); // intentionally not awaited
+        if (!session?.user) {
+          setIsAdmin(false);
+        } else {
+          void checkAdmin(session.user.id);
         }
       }
     );

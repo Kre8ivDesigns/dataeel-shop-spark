@@ -22,7 +22,7 @@ import { sanitizeError } from "@/lib/errorHandler";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, formatDistanceToNow } from "date-fns";
 import { useUserDashboard } from "@/lib/queries/userDashboard";
-import { userDashboardKeys } from "@/lib/queryKeys";
+import { schedulePostPaymentCreditRefetch } from "@/lib/schedulePostPaymentCreditRefetch";
 
 const LOW_CREDITS_THRESHOLD = 3;
 
@@ -80,15 +80,15 @@ const Dashboard = () => {
     toast({
       title: "Payment successful",
       description: added
-        ? `${added} credits have been added to your account.`
-        : "Your credits have been updated.",
+        ? `${added} credits have been added to your account. Receipts appear on Invoices (Account menu).`
+        : "Your credits have been updated. Receipts appear on Invoices (Account menu).",
     });
     const next = new URLSearchParams(searchParams);
     next.delete("payment");
     next.delete("credits");
     setSearchParams(next, { replace: true });
-    void queryClient.invalidateQueries({ queryKey: userDashboardKeys.detail(user.id) });
-    void queryClient.invalidateQueries({ queryKey: ["credit-balance", user.id] });
+    // Webhook may lag redirect; staggered invalidates avoid caching stale balance (see schedulePostPaymentCreditRefetch).
+    schedulePostPaymentCreditRefetch(queryClient, user.id);
   }, [searchParams, setSearchParams, toast, queryClient, user?.id]);
 
   const openCustomerPortal = async () => {

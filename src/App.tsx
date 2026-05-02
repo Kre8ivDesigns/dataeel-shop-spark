@@ -1,4 +1,5 @@
-import { Component, lazy, ReactNode, Suspense } from "react";
+import { Component, lazy, ReactNode, Suspense, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -85,6 +86,23 @@ const queryClient = new QueryClient({
   },
 });
 
+/** SPA navigation does not reset scroll; restore top on route changes. Hash-only changes on `/` stay on pathname `/` so Index hash scroll is unaffected. */
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+  }, []);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
+
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
@@ -92,6 +110,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <ScrollToTop />
           <AuthProvider>
             <HomeSectionHashRedirect />
             <Routes>

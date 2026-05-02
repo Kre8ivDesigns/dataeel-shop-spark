@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -21,7 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Download, Loader2, TrendingUp, CreditCard, Receipt } from "lucide-react";
+import { AlertCircle, ArrowLeft, Download, Loader2, TrendingUp, CreditCard, Receipt } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Area,
   AreaChart,
@@ -59,8 +59,8 @@ const PERIODS = [
 ] as const;
 
 const AdminFinancials = () => {
-  const { isAdmin } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [queryError, setQueryError] = useState<string | null>(null);
   const [period, setPeriod] = useState<string>("30");
   const [transactions, setTransactions] = useState<Tx[]>([]);
   const [creditsOutstanding, setCreditsOutstanding] = useState<number | null>(null);
@@ -69,19 +69,40 @@ const AdminFinancials = () => {
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
-    const [txRes, balRes] = await Promise.all([
-      supabase.from("transactions").select("*").order("created_at", { ascending: false }),
-      supabase.from("credit_balances").select("credits"),
-    ]);
-    setTransactions((txRes.data as Tx[]) ?? []);
-    const rows = balRes.data ?? [];
-    setCreditsOutstanding(rows.reduce((s, r) => s + (r.credits ?? 0), 0));
-    setLoading(false);
+    setQueryError(null);
+    try {
+      const [txRes, balRes] = await Promise.all([
+        supabase.from("transactions").select("*").order("created_at", { ascending: false }),
+        supabase.from("credit_balances").select("credits"),
+      ]);
+      const txErr = txRes.error;
+      const balErr = balRes.error;
+      if (txErr || balErr) {
+        setQueryError(txErr?.message ?? balErr?.message ?? "Failed to load financial data");
+        setTransactions([]);
+        setCreditsOutstanding(null);
+      } else {
+        setTransactions((txRes.data as Tx[]) ?? []);
+        const rows = balRes.data ?? [];
+        setCreditsOutstanding(rows.reduce((s, r) => s + (r.credits ?? 0), 0));
+      }
+      if (import.meta.env.DEV) {
+        console.debug(
+          "[AdminFinancials] transactions:",
+          txRes.data?.length ?? 0,
+          "balances rows:",
+          balRes.data?.length ?? 0,
+          txRes.error ?? balRes.error ?? "",
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    if (isAdmin) fetchAll();
-  }, [isAdmin, fetchAll]);
+    void fetchAll();
+  }, [fetchAll]);
 
   const filtered = useMemo(() => filterSince(transactions, days), [transactions, days]);
 
@@ -111,8 +132,6 @@ const AdminFinancials = () => {
     a.click();
     URL.revokeObjectURL(url);
   };
-
-  if (!isAdmin) return null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -158,6 +177,24 @@ const AdminFinancials = () => {
               </Button>
             </div>
           </div>
+
+          {queryError && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Could not load data</AlertTitle>
+              <AlertDescription>
+                {queryError}. Check that you are signed in as an admin and that Row Level Security allows admin access to
+                transactions and credit balances.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {!loading && !queryError && transactions.length === 0 && (
+            <p className="text-sm text-muted-foreground mb-6">
+              No transaction rows in the database yet. Completed checkouts will appear here; open devtools (development
+              builds log query counts to the console).
+            </p>
+          )}
 
           {loading ? (
             <div className="flex justify-center py-24">
