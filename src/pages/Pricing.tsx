@@ -34,7 +34,7 @@ const benefits = [
 
 function PricingPageSkeleton() {
   return (
-    <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 max-w-7xl mx-auto items-stretch">
+    <div className="grid gap-6 max-w-7xl mx-auto items-stretch justify-center [grid-template-columns:repeat(auto-fill,minmax(220px,280px))]">
       {[0, 1, 2, 3, 4].map((i) => (
         <div
           key={i}
@@ -144,7 +144,7 @@ const PricingPage = () => {
             </p>
           ) : (
             <>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 max-w-7xl mx-auto items-stretch">
+              <div className="grid gap-6 max-w-7xl mx-auto items-stretch justify-center [grid-template-columns:repeat(auto-fill,minmax(220px,280px))]">
                 {packages.map((plan, index) => {
                   const popular = index === popularIdx;
                   const bullets = packageFeatureBullets(plan);

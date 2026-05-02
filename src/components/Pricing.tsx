@@ -59,7 +59,7 @@ export const Pricing = () => {
             </Link>
           </p>
         ) : (
-          <div className="grid gap-8 max-w-6xl mx-auto items-stretch [grid-template-columns:repeat(auto-fill,minmax(220px,1fr))]">
+          <div className="grid gap-8 max-w-6xl mx-auto items-stretch justify-center [grid-template-columns:repeat(auto-fill,minmax(220px,320px))]">
             {packages.map((pkg, index) => {
               const isUnlimited = pkg.unlimited_credits;
               const pricePerCredit =
