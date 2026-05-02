@@ -23,7 +23,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { format, formatDistanceToNow, isValid } from "date-fns";
 import { useUserDashboard } from "@/lib/queries/userDashboard";
 import { invoiceListKeys, userDashboardKeys } from "@/lib/queryKeys";
-import { waitForPurchaseTransaction } from "@/lib/postPaymentConfirmation";
+import {
+  invokeReconcileCheckoutSession,
+  purchaseTransactionExists,
+  waitForPurchaseTransaction,
+} from "@/lib/postPaymentConfirmation";
 import { schedulePostPaymentCreditRefetch } from "@/lib/schedulePostPaymentCreditRefetch";
 import { StripeTestModeDevBanner } from "@/components/StripeTestModeDevBanner";
 import { extractCanonicalTrackCode, getRacetrackLabel } from "@/lib/racetracks";
@@ -153,12 +157,21 @@ const Dashboard = () => {
 
       try {
         if (sessionId) {
-          const ok = await waitForPurchaseTransaction({
+          let ok = await waitForPurchaseTransaction({
             userId,
             sessionId,
             signal: abort.signal,
           });
           await refetchCommerceQueries();
+
+          let reconcileAttempted = false;
+          if (!ok) {
+            reconcileAttempted = true;
+            await invokeReconcileCheckoutSession(sessionId);
+            await refetchCommerceQueries();
+            ok = await purchaseTransactionExists(userId, sessionId);
+          }
+
           if (ok) {
             pending.update({
               id: pending.id,
@@ -174,8 +187,9 @@ const Dashboard = () => {
               id: pending.id,
               variant: "destructive",
               title: "Credits not visible yet",
-              description:
-                "Stripe redirected successfully, but your purchase has not appeared in our system yet. Try refreshing — webhook delays can exceed a minute. If nothing changes, contact support with your Stripe receipt.",
+              description: reconcileAttempted
+                ? "We synced with Stripe directly, but your purchase still is not on file. Try refreshing the page. If it persists, contact support with your Stripe receipt or session id."
+                : "Stripe redirected successfully, but your purchase has not appeared in our system yet. Try refreshing — webhook delays can exceed a minute. If nothing changes, contact support with your Stripe receipt.",
             });
           }
         } else {

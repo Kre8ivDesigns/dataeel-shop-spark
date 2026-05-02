@@ -1,89 +1,29 @@
 import { motion } from "framer-motion";
-import { Check, Zap, Crown, ArrowRight } from "lucide-react";
+import { Check, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import {
+  useCreditPackages,
+  savingsVsSmallestCreditBundle,
+  PRICING_STANDARD_FEATURES,
+  PRICING_UNLIMITED_FEATURES,
+} from "@/lib/queries/creditPackages";
 
-const pricingPlans = [
-  {
-    name: "Starter",
-    credits: 5,
-    price: 20,
-    pricePerCredit: 4,
-    description: "Perfect for casual race days",
-    features: [
-      "5 RaceCard downloads",
-      "Any track, any day",
-      "Both algorithms included",
-      "PDF download format",
-    ],
-    popular: false,
-    cta: "Get Started",
-  },
-  {
-    name: "Best Value",
-    credits: 15,
-    price: 50,
-    pricePerCredit: 3.33,
-    savings: 25,
-    description: "Most popular choice for regular bettors",
-    features: [
-      "15 RaceCard downloads",
-      "Any track, any day",
-      "Both algorithms included",
-      "PDF download format",
-      "Priority support",
-    ],
-    popular: true,
-    cta: "Get Best Value",
-  },
-  {
-    name: "Pro",
-    credits: 40,
-    price: 100,
-    pricePerCredit: 2.50,
-    savings: 100,
-    description: "For serious handicappers",
-    features: [
-      "40 RaceCard downloads",
-      "Any track, any day",
-      "Both algorithms included",
-      "PDF download format",
-      "Priority support",
-      "Early access to new features",
-    ],
-    popular: false,
-    cta: "Go Pro",
-  },
-  {
-    name: "Unlimited",
-    credits: 0,
-    price: 999,
-    pricePerCredit: 0,
-    description: "Unlimited RaceCard PDFs",
-    features: [
-      "Unlimited downloads (fair use)",
-      "Any track, any day",
-      "Both algorithms included",
-      "PDF download format",
-      "Priority support",
-    ],
-    popular: false,
-    cta: "Get Unlimited",
-    unlimited: true,
-  },
-];
-
+/**
+ * Homepage pricing strip: same data as /pricing (public.credit_packages, purchasable rows only).
+ * No "Most popular" until a DB column exists; see Pricing page comment.
+ */
 export const Pricing = () => {
+  const { data: packages = [], isLoading, isError } = useCreditPackages({ purchasableOnly: true });
+
   return (
     <section id="pricing" className="py-24 bg-background relative overflow-hidden">
-      {/* Decorative */}
       <div
         className="absolute bottom-0 left-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -translate-x-1/2 translate-y-1/2 pointer-events-none"
         aria-hidden
       />
 
       <div className="container mx-auto px-4 relative">
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -100,103 +40,108 @@ export const Pricing = () => {
           </p>
         </motion.div>
 
-        {/* Pricing Cards */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto items-stretch">
-          {pricingPlans.map((plan, index) => (
-            <motion.div
-              key={plan.name}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1 * index }}
-              className={`relative flex flex-col h-full rounded-xl p-8 transition-all duration-200 ${
-                plan.popular
-                  ? "bg-secondary border-2 border-primary shadow-neon scale-105 z-10"
-                  : "card-dark"
-              }`}
-            >
-              {/* Popular Badge */}
-              {plan.popular && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                  <div className="badge-neon flex items-center gap-1.5">
-                    <Crown className="h-4 w-4" />
-                    Most Popular
-                  </div>
-                </div>
-              )}
+        {isLoading ? (
+          <div className="flex justify-center py-16">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : isError ? (
+          <p className="text-center text-muted-foreground">
+            Pricing unavailable.{" "}
+            <Link to="/pricing" className="text-primary underline">
+              View pricing page
+            </Link>
+          </p>
+        ) : packages.length === 0 ? (
+          <p className="text-center text-muted-foreground">
+            Packages coming soon.{" "}
+            <Link to="/pricing" className="text-primary underline">
+              Pricing
+            </Link>
+          </p>
+        ) : (
+          <div className="grid gap-8 max-w-6xl mx-auto items-stretch [grid-template-columns:repeat(auto-fill,minmax(220px,1fr))]">
+            {packages.map((pkg, index) => {
+              const isUnlimited = pkg.unlimited_credits;
+              const pricePerCredit =
+                !isUnlimited && pkg.credits > 0 ? pkg.price / pkg.credits : null;
+              const savings = savingsVsSmallestCreditBundle(pkg, packages);
+              const featureLines = isUnlimited
+                ? [...PRICING_UNLIMITED_FEATURES].slice(0, 4)
+                : [
+                    `${pkg.credits} RaceCard download${pkg.credits === 1 ? "" : "s"}`,
+                    ...PRICING_STANDARD_FEATURES.slice(0, 3),
+                  ];
 
-              {/* Plan Header */}
-              <div className="text-center mb-6">
-                <h3 className="text-xl font-bold mb-2 text-foreground font-heading">
-                  {plan.name}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {plan.description}
-                </p>
-              </div>
-
-              {/* Price */}
-              <div className="text-center mb-6">
-                <div className="flex items-baseline justify-center gap-1">
-                  <span className="text-5xl font-bold text-foreground font-mono">
-                    ${plan.price}
-                  </span>
-                </div>
-                <div className="text-sm mt-2 text-muted-foreground">
-                  {"unlimited" in plan && plan.unlimited ? (
-                    <>Unlimited downloads · one-time purchase</>
-                  ) : (
-                    <>
-                      {plan.credits} credits · ${plan.pricePerCredit.toFixed(2)} per RaceCard
-                    </>
-                  )}
-                </div>
-                {plan.savings && !("unlimited" in plan && plan.unlimited) && (
-                  <div className="mt-2">
-                    <span className="text-sm font-semibold text-success">
-                      Save ${plan.savings}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Features */}
-              <ul className="space-y-3">
-                {plan.features.map((feature, i) => (
-                  <li key={i} className="flex items-center gap-3">
-                    <Check className="h-5 w-5 flex-shrink-0 text-primary" />
-                    <span className="text-sm text-foreground/80">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-
-              {/* CTA */}
-              <div className="mt-auto w-full pt-8">
-                <Button
-                  asChild
-                  className={`w-full py-6 font-semibold text-base ${
-                    plan.popular
-                      ? "bg-primary text-primary-foreground hover:brightness-110 shadow-neon"
-                      : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                  }`}
+              return (
+                <motion.div
+                  key={pkg.id}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.1 * index }}
+                  className="relative flex flex-col h-full rounded-xl p-8 transition-all duration-200 card-dark"
                 >
-                  <Link
-                    to={
-                      "unlimited" in plan && plan.unlimited
-                        ? "/buy-credits?unlimited=1"
-                        : `/buy-credits?credits=${plan.credits}`
-                    }
-                  >
-                    {plan.cta}
-                    {plan.popular && <Zap className="ml-2 h-4 w-4" />}
-                  </Link>
-                </Button>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+                  <div className="text-center mb-6">
+                    <h3 className="text-xl font-bold mb-2 text-foreground font-heading">
+                      {pkg.name}
+                    </h3>
+                    <p className="text-sm text-muted-foreground min-h-[2.5rem]">
+                      {pkg.description?.trim() || (isUnlimited ? "Unlimited access" : "Credit package")}
+                    </p>
+                  </div>
 
-        {/* Bottom Note */}
+                  <div className="text-center mb-6">
+                    <div className="flex items-baseline justify-center gap-1">
+                      <span className="text-5xl font-bold text-foreground font-mono">
+                        ${pkg.price}
+                      </span>
+                    </div>
+                    <div className="text-sm mt-2 text-muted-foreground">
+                      {isUnlimited ? (
+                        <>Unlimited downloads · one-time purchase</>
+                      ) : (
+                        <>
+                          {pkg.credits} credits
+                          {pricePerCredit != null && (
+                            <> · ${pricePerCredit.toFixed(2)} per RaceCard</>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    {savings != null && (
+                      <div className="mt-2">
+                        <span className="text-sm font-semibold text-success">
+                          Save ${savings.toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <ul className="space-y-3 flex-1">
+                    {featureLines.map((feature, i) => (
+                      <li key={i} className="flex items-center gap-3">
+                        <Check className="h-5 w-5 flex-shrink-0 text-primary" />
+                        <span className="text-sm text-foreground/80">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <div className="mt-auto w-full pt-8">
+                    <Button
+                      asChild
+                      className="w-full py-6 font-semibold text-base bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                    >
+                      <Link to={`/buy-credits?packageId=${encodeURIComponent(pkg.id)}`}>
+                        {isUnlimited ? "Get unlimited" : `Choose ${pkg.name}`}
+                      </Link>
+                    </Button>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}

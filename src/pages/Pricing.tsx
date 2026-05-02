@@ -4,110 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-
-const creditPackages = [
-  {
-    name: "Single",
-    credits: 1,
-    price: 5,
-    pricePerCredit: 5,
-    description: "Try us out",
-    features: [
-      "1 RaceCard download",
-      "Any track, any day",
-      "Both algorithms included",
-      "PDF download format",
-    ],
-    popular: false,
-    cta: "Buy 1 Credit",
-  },
-  {
-    name: "Starter",
-    credits: 5,
-    price: 20,
-    pricePerCredit: 4,
-    savings: 5,
-    description: "Perfect for casual race days",
-    features: [
-      "5 RaceCard downloads",
-      "Any track, any day",
-      "Both algorithms included",
-      "PDF download format",
-    ],
-    popular: false,
-    cta: "Buy 5 Credits",
-  },
-  {
-    name: "Best Value",
-    credits: 15,
-    price: 50,
-    pricePerCredit: 3.33,
-    savings: 25,
-    description: "Most popular choice",
-    features: [
-      "15 RaceCard downloads",
-      "Any track, any day",
-      "Both algorithms included",
-      "PDF download format",
-      "Priority support",
-    ],
-    popular: true,
-    cta: "Buy 15 Credits",
-  },
-  {
-    name: "Pro",
-    credits: 40,
-    price: 100,
-    pricePerCredit: 2.50,
-    savings: 100,
-    description: "For serious handicappers",
-    features: [
-      "40 RaceCard downloads",
-      "Any track, any day",
-      "Both algorithms included",
-      "PDF download format",
-      "Priority support",
-      "Early access to new features",
-    ],
-    popular: false,
-    cta: "Buy 40 Credits",
-  },
-  {
-    name: "Season Pass",
-    credits: 100,
-    price: 200,
-    pricePerCredit: 2.00,
-    savings: 300,
-    description: "Ultimate value for regulars",
-    features: [
-      "100 RaceCard downloads",
-      "Any track, any day",
-      "Both algorithms included",
-      "PDF download format",
-      "VIP priority support",
-      "Early access to new features",
-      "Exclusive betting guides",
-    ],
-    popular: false,
-    cta: "Buy 100 Credits",
-  },
-  {
-    name: "Unlimited",
-    credits: 0,
-    price: 999,
-    pricePerCredit: 0,
-    description: "Unlimited RaceCard PDFs",
-    features: [
-      "Unlimited downloads (fair use)",
-      "Any track, any day",
-      "Both algorithms included",
-      "Priority support",
-    ],
-    popular: false,
-    cta: "Get Unlimited",
-    unlimited: true,
-  },
-];
+import {
+  useCreditPackages,
+  packageFeatureBullets,
+  packagePriceTagline,
+  popularPackageIndex,
+  packageCtaLabel,
+  savingsVsSmallestCreditBundle,
+  formatPackageUsd,
+} from "@/lib/queries/creditPackages";
 
 const benefits = [
   {
@@ -127,12 +32,38 @@ const benefits = [
   },
 ];
 
+function PricingPageSkeleton() {
+  return (
+    <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 max-w-7xl mx-auto items-stretch">
+      {[0, 1, 2, 3, 4].map((i) => (
+        <div
+          key={i}
+          className="rounded-xl p-6 card-dark animate-pulse flex flex-col min-h-[280px]"
+          aria-hidden
+        >
+          <div className="h-5 bg-muted rounded w-24 mx-auto mb-3" />
+          <div className="h-3 bg-muted rounded w-full mb-4" />
+          <div className="h-10 bg-muted rounded w-20 mx-auto mb-4" />
+          <div className="space-y-2 flex-1">
+            {[1, 2, 3, 4].map((j) => (
+              <div key={j} className="h-3 bg-muted rounded w-full" />
+            ))}
+          </div>
+          <div className="h-10 bg-muted rounded w-full mt-6" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const PricingPage = () => {
+  const { data: packages = [], isLoading, isError, error, refetch } = useCreditPackages();
+  const popularIdx = popularPackageIndex(packages.length);
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
 
-      {/* Hero Section */}
       <section
         className="pt-32 pb-16 relative overflow-hidden"
         style={{
@@ -160,18 +91,16 @@ const PricingPage = () => {
           >
             <span className="badge-neon mb-4 inline-block">Simple Pricing</span>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6 font-heading tracking-tight">
-              Credit Packages for{" "}
-              <span className="text-neon">Every Bettor</span>
+              Credit Packages for <span className="text-neon">Every Bettor</span>
             </h1>
             <p className="text-lg text-foreground/60 max-w-2xl mx-auto">
-              Buy credits, use them anytime. One credit = one full day of predictions
-              for any track. No subscriptions, no hidden fees.
+              Buy credits, use them anytime. One credit = one full day of predictions for any track. No
+              subscriptions, no hidden fees.
             </p>
           </motion.div>
         </div>
       </section>
 
-      {/* Benefits Strip */}
       <section className="py-8 bg-card border-b border-border">
         <div className="container mx-auto px-4">
           <div className="flex flex-wrap justify-center gap-8 md:gap-16">
@@ -187,12 +116,8 @@ const PricingPage = () => {
                   <benefit.icon className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <div className="font-semibold text-foreground text-sm">
-                    {benefit.title}
-                  </div>
-                  <div className="text-xs text-muted-foreground hidden md:block">
-                    {benefit.description}
-                  </div>
+                  <div className="font-semibold text-foreground text-sm">{benefit.title}</div>
+                  <div className="text-xs text-muted-foreground hidden md:block">{benefit.description}</div>
                 </div>
               </motion.div>
             ))}
@@ -200,130 +125,129 @@ const PricingPage = () => {
         </div>
       </section>
 
-      {/* Pricing Cards */}
       <section className="py-20">
         <div className="container mx-auto px-4">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 max-w-7xl mx-auto items-stretch">
-            {creditPackages.map((plan, index) => (
-              <motion.div
-                key={plan.name}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 * index }}
-                className={`relative rounded-xl p-6 flex flex-col h-full transition-all duration-200 ${
-                  plan.popular
-                    ? "bg-secondary border-2 border-primary shadow-neon lg:scale-110 z-10"
-                    : "card-dark"
-                }`}
-              >
-                {/* Popular Badge */}
-                {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <div className="badge-neon flex items-center gap-1.5">
-                      <Crown className="h-4 w-4" />
-                      Most Popular
-                    </div>
-                  </div>
-                )}
+          {isLoading ? (
+            <PricingPageSkeleton />
+          ) : isError ? (
+            <div className="max-w-lg mx-auto text-center rounded-xl border border-border bg-card p-8">
+              <p className="text-sm text-muted-foreground mb-4">
+                {error instanceof Error ? error.message : "Could not load pricing."}
+              </p>
+              <Button type="button" variant="secondary" onClick={() => refetch()}>
+                Try again
+              </Button>
+            </div>
+          ) : packages.length === 0 ? (
+            <p className="text-center text-muted-foreground max-w-md mx-auto">
+              No packages are configured yet. Please check back later.
+            </p>
+          ) : (
+            <>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 max-w-7xl mx-auto items-stretch">
+                {packages.map((plan, index) => {
+                  const popular = index === popularIdx;
+                  const bullets = packageFeatureBullets(plan);
+                  const savings = savingsVsSmallestCreditBundle(plan, packages);
+                  const subtitle =
+                    plan.description?.trim() ||
+                    (plan.unlimited_credits ? "Unlimited RaceCard PDFs" : "Credit bundle");
 
-                {/* Plan Header */}
-                <div className="text-center mb-4">
-                  <h3 className="text-lg font-bold mb-1 text-foreground font-heading">
-                    {plan.name}
+                  return (
+                    <motion.div
+                      key={plan.id}
+                      initial={{ opacity: 0, y: 30 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 * index }}
+                      className={`relative rounded-xl p-6 flex flex-col h-full transition-all duration-200 ${
+                        popular
+                          ? "bg-secondary border-2 border-primary shadow-neon lg:scale-110 z-10"
+                          : "card-dark"
+                      }`}
+                    >
+                      {popular && (
+                        <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                          <div className="badge-neon flex items-center gap-1.5">
+                            <Crown className="h-4 w-4" />
+                            Best value
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="text-center mb-4">
+                        <h3 className="text-lg font-bold mb-1 text-foreground font-heading">{plan.name}</h3>
+                        <p className="text-xs text-muted-foreground">{subtitle}</p>
+                      </div>
+
+                      <div className="text-center mb-4">
+                        <div className="flex items-baseline justify-center gap-1">
+                          <span className="text-4xl font-bold text-foreground font-mono">
+                            {formatPackageUsd(plan.price)}
+                          </span>
+                        </div>
+                        <div className="text-xs mt-1 text-muted-foreground">{packagePriceTagline(plan)}</div>
+                        {savings != null && (
+                          <div className="mt-2">
+                            <span className="text-xs font-semibold text-success">
+                              Save {formatPackageUsd(savings)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <ul className="space-y-2 flex-1">
+                        {bullets.map((feature, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <Check className="h-4 w-4 flex-shrink-0 mt-0.5 text-primary" />
+                            <span className="text-xs text-foreground/80">{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+
+                      <div className="mt-auto w-full pt-6">
+                        <Button
+                          asChild
+                          className={`w-full font-semibold ${
+                            popular
+                              ? "bg-primary text-primary-foreground hover:brightness-110 shadow-neon"
+                              : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                          }`}
+                        >
+                          <Link to={`/buy-credits?packageId=${plan.id}`}>
+                            {packageCtaLabel(plan)}
+                            {popular && <Zap className="ml-2 h-4 w-4" />}
+                          </Link>
+                        </Button>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8 }}
+                className="text-center mt-16 max-w-2xl mx-auto"
+              >
+                <div className="p-6 rounded-xl bg-card border border-border">
+                  <h3 className="font-semibold text-foreground mb-2 font-heading">
+                    How does this compare to traditional handicapping?
                   </h3>
-                  <p className="text-xs text-muted-foreground">
-                    {plan.description}
+                  <p className="text-sm text-muted-foreground">
+                    A single day at the track often costs much more in forms, tip sheets, and programs than
+                    our algorithmic RaceCards, with package prices set to the amounts you see above.
                   </p>
                 </div>
-
-                {/* Price */}
-                <div className="text-center mb-4">
-                  <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-4xl font-bold text-foreground font-mono">
-                      ${plan.price}
-                    </span>
-                  </div>
-                  <div className="text-xs mt-1 text-muted-foreground">
-                    {"unlimited" in plan && plan.unlimited ? (
-                      <>Unlimited RaceCard downloads · one-time purchase</>
-                    ) : (
-                      <>
-                        {plan.credits} credit{plan.credits > 1 ? "s" : ""} · ${plan.pricePerCredit.toFixed(2)}/card
-                      </>
-                    )}
-                  </div>
-                  {plan.savings && !("unlimited" in plan && plan.unlimited) && (
-                    <div className="mt-2">
-                      <span className="text-xs font-semibold text-success">
-                        Save ${plan.savings}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Features */}
-                <ul className="space-y-2 flex-1">
-                  {plan.features.map((feature, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <Check className="h-4 w-4 flex-shrink-0 mt-0.5 text-primary" />
-                      <span className="text-xs text-foreground/80">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                {/* CTA */}
-                <div className="mt-auto w-full pt-6">
-                <Button
-                  asChild
-                  className={`w-full font-semibold ${
-                    plan.popular
-                      ? "bg-primary text-primary-foreground hover:brightness-110 shadow-neon"
-                      : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                  }`}
-                >
-                  <Link
-                    to={
-                      "unlimited" in plan && plan.unlimited
-                        ? "/buy-credits?unlimited=1"
-                        : `/buy-credits?credits=${plan.credits}`
-                    }
-                  >
-                    {plan.cta}
-                    {plan.popular && <Zap className="ml-2 h-4 w-4" />}
-                  </Link>
-                </Button>
-                </div>
               </motion.div>
-            ))}
-          </div>
-
-          {/* Compare Note */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8 }}
-            className="text-center mt-16 max-w-2xl mx-auto"
-          >
-            <div className="p-6 rounded-xl bg-card border border-border">
-              <h3 className="font-semibold text-foreground mb-2 font-heading">
-                💡 How does this compare to traditional handicapping?
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                A single day at the track can cost $50+ for Racing Forms, tip sheets,
-                and programs. DATAEEL gives you algorithmic predictions for just $5 per
-                track—that's 90% less than traditional methods.
-              </p>
-            </div>
-          </motion.div>
+            </>
+          )}
         </div>
       </section>
 
-      {/* FAQ Section */}
       <section className="py-16 bg-card">
         <div className="container mx-auto px-4">
-          <h2 className="text-2xl font-bold text-foreground text-center mb-8 font-heading">
-            Pricing FAQs
-          </h2>
+          <h2 className="text-2xl font-bold text-foreground text-center mb-8 font-heading">Pricing FAQs</h2>
           <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {[
               {
