@@ -18,9 +18,9 @@ import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
 import { getInvokeErrorMessage } from "@/lib/edgeFunctionErrors";
 import { useCreditBalance } from "@/lib/queries/creditBalance";
+import { useCreditPackages, type CreditPackageRow } from "@/lib/queries/creditPackages";
 import { EMPTY_CREDIT_SNAPSHOT } from "@/lib/creditDisplay";
 import { StripeTestModeDevBanner } from "@/components/StripeTestModeDevBanner";
 
@@ -58,33 +58,13 @@ const PACKAGE_META: Record<string, { pricePerCredit?: number; savings?: number; 
   },
 };
 
-interface CreditPackage {
-  id: string;
-  name: string;
-  description: string | null;
-  credits: number;
-  price: number;
-  stripe_price_id: string | null;
-  unlimited_credits: boolean;
-}
-
 const BuyCredits = () => {
   const [searchParams] = useSearchParams();
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
   const [purchasing, setPurchasing] = useState(false);
   const { user } = useAuth();
 
-  const { data: packages = [], isLoading: packagesLoading } = useQuery<CreditPackage[]>({
-    queryKey: ["credit-packages"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("credit_packages")
-        .select("id, name, description, credits, price, stripe_price_id, unlimited_credits")
-        .order("price", { ascending: true });
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
+  const { data: packages = [], isLoading: packagesLoading } = useCreditPackages();
 
   const creditsFromUrl = searchParams.get("credits");
   const packageIdFromUrl = searchParams.get("packageId");

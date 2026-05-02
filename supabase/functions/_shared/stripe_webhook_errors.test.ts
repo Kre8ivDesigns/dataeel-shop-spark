@@ -1,5 +1,9 @@
-import { describe, expect, it } from "vitest";
-import { acknowledgeOnlyDbError } from "./stripe_webhook_errors.ts";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  acknowledgeOnlyDbError,
+  formatWebhookErrDetail,
+  jsonErrBody,
+} from "./stripe_webhook_errors.ts";
 
 describe("acknowledgeOnlyDbError", () => {
   it("acknowledges Postgres FK violation code", () => {
@@ -56,5 +60,50 @@ describe("acknowledgeOnlyDbError", () => {
     });
     expect(r.acknowledge).toBe(true);
     expect(r.reason).toBe("function_missing");
+  });
+
+  it("acknowledges grant_unlimited_credits_atomic missing from message", () => {
+    const r = acknowledgeOnlyDbError({
+      code: "42883",
+      message: "function public.grant_unlimited_credits_atomic(uuid,uuid,jsonb) does not exist",
+    });
+    expect(r.acknowledge).toBe(true);
+    expect(r.reason).toBe("function_missing");
+  });
+});
+
+describe("formatWebhookErrDetail / jsonErrBody", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("formats PostgREST-style objects with code and details", () => {
+    const detail = formatWebhookErrDetail({
+      message: 'column "unlimited_credits" does not exist',
+      code: "42703",
+      details: "Failing row contains (...).",
+      hint: null,
+    });
+    expect(detail).toContain("42703");
+    expect(detail).toContain("unlimited_credits");
+    expect(detail).toContain("Failing row");
+  });
+
+  it("jsonErrBody includes postgres fields when WEBHOOK_EXPOSE_ERRORS=true", () => {
+    vi.stubGlobal("Deno", {
+      env: {
+        get: (k: string) => (k === "WEBHOOK_EXPOSE_ERRORS" ? "true" : undefined),
+      },
+    });
+    const body = jsonErrBody("Credit update failed", {
+      message: "duplicate key",
+      code: "23505",
+      details: "Key already exists.",
+    });
+    expect(body.error).toBe("Credit update failed");
+    expect(body.message).toBeDefined();
+    expect(String(body.message)).toContain("23505");
+    expect(body.postgres_code).toBe("23505");
+    expect(body.postgres_detail).toBe("Key already exists.");
   });
 });

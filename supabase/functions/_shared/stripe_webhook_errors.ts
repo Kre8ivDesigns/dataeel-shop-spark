@@ -40,7 +40,12 @@ export function acknowledgeOnlyDbError(error: {
   ) {
     return { acknowledge: true, reason: "schema_mismatch" };
   }
-  if (msg.includes("does not exist") && (msg.includes("function") || msg.includes("add_credits_atomic"))) {
+  if (
+    msg.includes("does not exist") &&
+    (msg.includes("function") ||
+      msg.includes("add_credits_atomic") ||
+      msg.includes("grant_unlimited_credits_atomic"))
+  ) {
     return { acknowledge: true, reason: "function_missing" };
   }
   if (msg.includes("permission denied") && msg.includes("function")) {
@@ -55,7 +60,7 @@ function envGet(key: string): string | undefined {
   return deno?.env?.get?.(key);
 }
 
-/** When true, error JSON may include a `message` field (set WEBHOOK_EXPOSE_ERRORS or run locally). */
+/** When true, error JSON may include `message` / Postgres fields (set WEBHOOK_EXPOSE_ERRORS=true on the Edge Function). */
 export function exposeWebhookErrorDetail(): boolean {
   const explicit = envGet("WEBHOOK_EXPOSE_ERRORS");
   if (explicit === "true") return true;
@@ -63,10 +68,42 @@ export function exposeWebhookErrorDetail(): boolean {
   return envGet("SUPABASE_INTERNAL_FUNCTIONS_RUNTIME") === "local";
 }
 
+function isPostgresLike(
+  err: unknown,
+): err is { message: string; code?: string; details?: string | null; hint?: string | null } {
+  return typeof err === "object" && err !== null && typeof (err as { message?: unknown }).message === "string";
+}
+
+/**
+ * Human-readable + Postgres fields from Supabase/PostgREST errors (plain objects, not Error subclasses).
+ */
+export function formatWebhookErrDetail(err: unknown): string {
+  if (err instanceof Error) {
+    return err.stack ?? err.message;
+  }
+  if (isPostgresLike(err)) {
+    const bits = [err.message];
+    if (err.code) bits.push(`code=${err.code}`);
+    if (err.details) bits.push(`details=${String(err.details)}`);
+    if (err.hint) bits.push(`hint=${String(err.hint)}`);
+    return bits.join(" | ");
+  }
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return String(err);
+  }
+}
+
 export function jsonErrBody(publicMsg: string, err: unknown): Record<string, unknown> {
   const body: Record<string, unknown> = { error: publicMsg };
   if (exposeWebhookErrorDetail()) {
-    body.message = err instanceof Error ? err.message : String(err);
+    body.message = formatWebhookErrDetail(err);
+    if (isPostgresLike(err)) {
+      if (err.code) body.postgres_code = err.code;
+      if (err.details) body.postgres_detail = err.details;
+      if (err.hint) body.postgres_hint = err.hint;
+    }
   }
   return body;
 }

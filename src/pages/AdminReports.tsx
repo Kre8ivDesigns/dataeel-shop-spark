@@ -18,9 +18,12 @@ import {
 import { ArrowLeft, Download, Loader2 } from "lucide-react";
 import { sanitizeError } from "@/lib/errorHandler";
 import {
+  creditLedgerDetailFromMeta,
   creditLedgerEntryTypeLabel,
   creditLedgerUserDisplay,
   emailByUserIdFromProfiles,
+  formatLedgerBalance,
+  formatLedgerDelta,
 } from "@/lib/adminCreditLedger";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
@@ -120,7 +123,16 @@ const AdminReports = () => {
   }, [downloads]);
 
   const exportLedgerCsv = () => {
-    const headers = ["created_at", "user_id", "email", "delta", "balance_after", "entry_type", "ref_id"];
+    const headers = [
+      "created_at",
+      "user_id",
+      "email",
+      "delta",
+      "balance_after",
+      "entry_type",
+      "ref_id",
+      "meta",
+    ];
     const lines = [
       headers.join(","),
       ...ledger.map((r) =>
@@ -132,6 +144,7 @@ const AdminReports = () => {
           r.balance_after,
           r.entry_type,
           r.ref_id ?? "",
+          JSON.stringify(r.meta ?? {}),
         ]
           .map((c) => `"${String(c).replace(/"/g, '""')}"`)
           .join(","),
@@ -260,7 +273,10 @@ const AdminReports = () => {
                 <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
                     <CardTitle className="text-foreground">Credit ledger</CardTitle>
-                    <CardDescription>Purchases, admin grants, and download deductions (latest 500).</CardDescription>
+                    <CardDescription>
+                      Purchases, admin grants, and download deductions (latest 500). Unlimited packages and free
+                      downloads show markers in Δ / Balance / Details.
+                    </CardDescription>
                   </div>
                   <Button
                     variant="outline"
@@ -292,6 +308,7 @@ const AdminReports = () => {
                           <TableHead className="text-right">Δ</TableHead>
                           <TableHead className="text-right">Balance</TableHead>
                           <TableHead>Type</TableHead>
+                          <TableHead>Details</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -303,17 +320,24 @@ const AdminReports = () => {
                             <TableCell className="text-xs">
                               {creditLedgerUserDisplay(r.user_id, emailByUser)}
                             </TableCell>
-                            <TableCell className="text-right font-mono-data">{r.delta}</TableCell>
-                            <TableCell className="text-right font-mono-data">{r.balance_after}</TableCell>
-                            <TableCell className="text-xs capitalize text-muted-foreground">
+                            <TableCell className="text-right font-mono-data">
+                              {formatLedgerDelta(r.delta, r.meta)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono-data">
+                              {formatLedgerBalance(r.balance_after, r.meta)}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
                               {creditLedgerEntryTypeLabel(r.entry_type)}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground max-w-[220px]">
+                              {creditLedgerDetailFromMeta(r.meta) || "—"}
                             </TableCell>
                           </TableRow>
                         ))}
                         {ledger.length === 0 && (
                           <TableRow>
-                            <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                              No ledger rows yet (starts after migration + new activity).
+                            <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                              No ledger rows yet.
                             </TableCell>
                           </TableRow>
                         )}

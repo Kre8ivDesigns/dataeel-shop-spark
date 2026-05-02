@@ -3,10 +3,12 @@
  *
  * Required secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
  *   STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET (or app_settings + APP_SETTINGS_ENCRYPTION_KEY).
- * Optional: WEBHOOK_EXPOSE_ERRORS=true — include `message` on 5xx JSON for debugging.
+ * Optional env on this function: WEBHOOK_EXPOSE_ERRORS=true — 5xx JSON includes `message`,
+ *   `postgres_code`, `postgres_detail`, `postgres_hint` (PostgREST/Postgres errors).
  */
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { fulfillCheckoutSessionCompleted } from "../_shared/fulfill_checkout_session.ts";
 import { acknowledgeOnlyDbError, jsonErrBody } from "../_shared/stripe_webhook_errors.ts";
 import { resolveStripeConfig } from "../_shared/stripe_config.ts";
 
@@ -14,13 +16,6 @@ const JSON_HEADERS = { "Content-Type": "application/json" };
 
 function jsonResponse(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });
-}
-
-function paymentIntentIdFromSession(session: Stripe.Checkout.Session): string | null {
-  const pi = session.payment_intent;
-  if (typeof pi === "string") return pi;
-  if (pi && typeof pi === "object" && "id" in pi) return pi.id;
-  return null;
 }
 
 function paymentIntentIdFromInvoice(invoice: Stripe.Invoice): string | null {
@@ -94,133 +89,25 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
   }
 
   if (event.type === "checkout.session.completed") {
-    let session = event.data.object as Stripe.Checkout.Session;
-    const userId = session.metadata?.user_id;
-    const isUnlimited = session.metadata?.unlimited_credits === "true";
-    const credits = parseInt(session.metadata?.credits || "0", 10);
-    const packageName = session.metadata?.package_name || "Unknown";
-    const amount = (session.amount_total || 0) / 100;
-    if (!paymentIntentIdFromSession(session)) {
-      try {
-        session = await stripe.checkout.sessions.retrieve(session.id, { expand: ["payment_intent"] });
-      } catch (e) {
-        console.error("[stripe-webhook] session retrieve failed:", e instanceof Error ? e.message : e);
-      }
-    }
-    const paymentIntentId = paymentIntentIdFromSession(session);
-
-    if (!userId || (!isUnlimited && credits <= 0)) {
-      // Not an app checkout (no metadata) — acknowledge so Stripe does not 400-retry.
-      console.error("[stripe-webhook] checkout.session.completed: missing or invalid metadata (not app purchase?), session=", session.id);
-      return jsonResponse({ received: true, skipped: true }, 200);
-    }
-
-    // IDEMPOTENCY: unique stripe_session_id and optionally stripe_payment_intent_id
-    // (same PI may also appear on invoice.paid).
-    const { data: insertedTx, error: txError } = await supabaseAdmin
-      .from("transactions")
-      .insert({
-        user_id: userId,
-        stripe_session_id: session.id,
-        stripe_payment_intent_id: paymentIntentId,
-        amount,
-        credits: isUnlimited ? 0 : credits,
-        package_name: packageName,
-        status: "completed",
-        unlimited_credits: isUnlimited,
-      })
-      .select("id")
-      .single();
-
-    if (txError) {
-      if (txError.code === "23505") {
-        console.log("[stripe-webhook] Duplicate checkout ignored:", session.id, paymentIntentId ?? "");
+    const sessionObj = event.data.object as Stripe.Checkout.Session;
+    const isUnlimitedMeta = sessionObj.metadata?.unlimited_credits === "true";
+    const result = await fulfillCheckoutSessionCompleted(supabaseAdmin, stripe, sessionObj);
+    switch (result.outcome) {
+      case "fulfilled":
+        break;
+      case "duplicate":
         return jsonResponse({ received: true, duplicate: true }, 200);
-      }
-      const ack = acknowledgeOnlyDbError(txError);
-      if (ack.acknowledge) {
-        console.error(
-          "[stripe-webhook] checkout: transaction insert skipped (non-retryable):",
-          ack.reason,
-          txError.code,
-          txError.message,
+      case "skipped_metadata":
+        return jsonResponse({ received: true, skipped: true }, 200);
+      case "skipped_acknowledged":
+        return jsonResponse({ received: true, skipped: true, reason: result.reason }, 200);
+      case "transaction_error":
+        return jsonResponse(jsonErrBody("Transaction recording failed", result.error), 500);
+      case "fulfillment_error":
+        return jsonResponse(
+          jsonErrBody(isUnlimitedMeta ? "Unlimited grant failed" : "Credit update failed", result.error),
+          500,
         );
-        return jsonResponse({ received: true, skipped: true, reason: ack.reason }, 200);
-      }
-      console.error("[stripe-webhook] Transaction insert failed:", txError.code, txError.message);
-      return jsonResponse(jsonErrBody("Transaction recording failed", txError), 500);
-    }
-
-    const purchaseMeta = {
-      stripe_session_id: session.id,
-      stripe_payment_intent_id: paymentIntentId,
-      package_name: packageName,
-      amount,
-    };
-
-    if (isUnlimited) {
-      const { error: grantError } = await supabaseAdmin.rpc("grant_unlimited_credits_atomic", {
-        p_user_id: userId,
-        p_ref_id: insertedTx?.id ?? null,
-        p_meta: { ...purchaseMeta, unlimited_credits: true },
-      });
-
-      if (grantError) {
-        const ack = acknowledgeOnlyDbError(grantError);
-        await supabaseAdmin.from("transactions").delete().eq("stripe_session_id", session.id);
-        if (ack.acknowledge) {
-          console.error(
-            "[stripe-webhook] checkout: unlimited grant skipped (non-retryable):",
-            ack.reason,
-            grantError.code,
-            grantError.message,
-          );
-          return jsonResponse({ received: true, skipped: true, reason: ack.reason }, 200);
-        }
-        console.error("[stripe-webhook] Unlimited grant failed:", grantError.code, grantError.message);
-        return jsonResponse(jsonErrBody("Unlimited grant failed", grantError), 500);
-      }
-    } else {
-      const { error: creditError } = await supabaseAdmin.rpc("add_credits_atomic", {
-        p_user_id: userId,
-        p_credits: credits,
-        p_entry_type: "purchase",
-        p_ref_id: insertedTx?.id ?? null,
-        p_meta: purchaseMeta,
-      });
-
-      if (creditError) {
-        const ack = acknowledgeOnlyDbError(creditError);
-        await supabaseAdmin.from("transactions").delete().eq("stripe_session_id", session.id);
-        if (ack.acknowledge) {
-          console.error(
-            "[stripe-webhook] checkout: credits skipped (non-retryable):",
-            ack.reason,
-            creditError.code,
-            creditError.message,
-          );
-          return jsonResponse({ received: true, skipped: true, reason: ack.reason }, 200);
-        }
-        console.error("[stripe-webhook] Credit update failed:", creditError.code, creditError.message);
-        return jsonResponse(jsonErrBody("Credit update failed", creditError), 500);
-      }
-    }
-
-    const { error: auditError } = await supabaseAdmin.from("audit_log").insert({
-      actor_id: null,
-      action: "stripe.checkout.completed",
-      resource: "credit_balance",
-      resource_id: userId,
-      detail: {
-        stripe_session_id: session.id,
-        credits: isUnlimited ? 0 : credits,
-        amount,
-        package_name: packageName,
-        unlimited_credits: isUnlimited,
-      },
-    });
-    if (auditError) {
-      console.error("[stripe-webhook] Audit log insert failed (non-fatal):", auditError.code, auditError.message);
     }
   }
 
