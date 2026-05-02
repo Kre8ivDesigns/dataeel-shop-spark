@@ -6,7 +6,8 @@ import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { acknowledgeOnlyDbError } from "./stripe_webhook_errors.ts";
 
-export function paymentIntentIdFromSession(session: Stripe.Checkout.Session): string | null {
+export function paymentIntentIdFromSession(session: Stripe.Checkout.Session | null | undefined): string | null {
+  if (!session || typeof session !== "object") return null;
   const pi = session.payment_intent;
   if (typeof pi === "string") return pi;
   if (pi && typeof pi === "object" && "id" in pi) return pi.id;
@@ -14,7 +15,8 @@ export function paymentIntentIdFromSession(session: Stripe.Checkout.Session): st
 }
 
 /** Expanded PaymentIntent status when `payment_intent` is expanded on the Session. */
-export function paymentIntentStatusFromSession(session: Stripe.Checkout.Session): string | null {
+export function paymentIntentStatusFromSession(session: Stripe.Checkout.Session | null | undefined): string | null {
+  if (!session || typeof session !== "object") return null;
   const pi = session.payment_intent;
   if (typeof pi === "object" && pi !== null && "status" in pi) {
     const st = (pi as Stripe.PaymentIntent).status;
@@ -33,7 +35,8 @@ export function paymentIntentStatusFromSession(session: Stripe.Checkout.Session)
  * `payment_status` can briefly lag (webhook ordering). Do not use `session.status === "complete"`
  * alone; complete + unpaid is valid for async/deferred methods until paid or PI succeeds.
  */
-export function isCheckoutSessionPaidForFulfillment(session: Stripe.Checkout.Session): boolean {
+export function isCheckoutSessionPaidForFulfillment(session: Stripe.Checkout.Session | null | undefined): boolean {
+  if (!session || typeof session !== "object") return false;
   const ps = session.payment_status;
   if (ps === "paid" || ps === "no_payment_required") return true;
   if (paymentIntentStatusFromSession(session) === "succeeded") return true;
@@ -64,6 +67,27 @@ export async function fulfillCheckoutSessionCompleted(
   stripe: Stripe,
   sessionIn: Stripe.Checkout.Session,
 ): Promise<FulfillCheckoutCompletedOutcome> {
+  try {
+    return await fulfillCheckoutSessionCompletedInner(supabaseAdmin, stripe, sessionIn);
+  } catch (err) {
+    console.error(
+      "[fulfillCheckoutSessionCompleted] unexpected throw:",
+      err instanceof Error ? err.stack ?? err.message : String(err),
+    );
+    return { outcome: "fulfillment_error", error: err };
+  }
+}
+
+async function fulfillCheckoutSessionCompletedInner(
+  supabaseAdmin: SupabaseClient,
+  stripe: Stripe,
+  sessionIn: Stripe.Checkout.Session,
+): Promise<FulfillCheckoutCompletedOutcome> {
+  if (!sessionIn || typeof sessionIn !== "object" || typeof sessionIn.id !== "string" || !sessionIn.id) {
+    console.error("[fulfillCheckoutSessionCompleted] invalid or missing Checkout Session object");
+    return { outcome: "skipped_metadata" };
+  }
+
   let session = sessionIn;
 
   if (!isCheckoutSessionPaidForFulfillment(session)) {
@@ -258,3 +282,4 @@ export async function fulfillCheckoutSessionCompleted(
 
   return { outcome: "fulfilled" };
 }
+

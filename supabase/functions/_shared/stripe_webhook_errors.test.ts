@@ -53,6 +53,15 @@ describe("acknowledgeOnlyDbError", () => {
     expect(r.reason).toBe("function_missing");
   });
 
+  it("acknowledges PostgREST PGRST202 missing RPC overload", () => {
+    const r = acknowledgeOnlyDbError({
+      code: "PGRST202",
+      message: "Could not find the function public.add_credits_atomic(p_credits, p_entry_type, p_meta, p_ref_id, p_user_id) in the schema cache",
+    });
+    expect(r.acknowledge).toBe(true);
+    expect(r.reason).toBe("function_missing");
+  });
+
   it("acknowledges add_credits_atomic missing from message", () => {
     const r = acknowledgeOnlyDbError({
       code: "P0001",

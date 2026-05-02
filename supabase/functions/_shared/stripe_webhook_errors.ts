@@ -31,6 +31,10 @@ export function acknowledgeOnlyDbError(error: {
   if (code === "42883") {
     return { acknowledge: true, reason: "function_missing" };
   }
+  /** PostgREST: wrong overload / schema cache — same ops fix as missing RPC migration */
+  if (code === "PGRST202" || code === "PGRST301") {
+    return { acknowledge: true, reason: "function_missing" };
+  }
   if (msg.includes("foreign key") || msg.includes("violates foreign key constraint")) {
     return { acknowledge: true, reason: "foreign_key_violation" };
   }
@@ -41,7 +45,7 @@ export function acknowledgeOnlyDbError(error: {
     return { acknowledge: true, reason: "schema_mismatch" };
   }
   if (
-    msg.includes("does not exist") &&
+    (msg.includes("does not exist") || msg.includes("could not find the function")) &&
     (msg.includes("function") ||
       msg.includes("add_credits_atomic") ||
       msg.includes("grant_unlimited_credits_atomic"))

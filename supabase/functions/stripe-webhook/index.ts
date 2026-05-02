@@ -15,7 +15,20 @@ import { resolveStripeConfig } from "../_shared/stripe_config.ts";
 const JSON_HEADERS = { "Content-Type": "application/json" };
 
 function jsonResponse(body: unknown, status: number): Response {
-  return new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });
+  try {
+    return new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });
+  } catch (serializeErr) {
+    console.error(
+      "[stripe-webhook] JSON.stringify failed:",
+      serializeErr instanceof Error ? serializeErr.message : serializeErr,
+    );
+    try {
+      const fallback = jsonErrBody("Response serialization failed", serializeErr);
+      return new Response(JSON.stringify(fallback), { status, headers: JSON_HEADERS });
+    } catch {
+      return new Response(`{"error":"Internal error"}`, { status, headers: JSON_HEADERS });
+    }
+  }
 }
 
 function paymentIntentIdFromInvoice(invoice: Stripe.Invoice): string | null {
@@ -95,9 +108,34 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
   ]);
 
   if (checkoutSessionEvents.has(event.type)) {
-    const sessionObj = event.data.object as Stripe.Checkout.Session;
-    const isUnlimitedMeta = sessionObj.metadata?.unlimited_credits === "true";
-    const result = await fulfillCheckoutSessionCompleted(supabaseAdmin, stripe, sessionObj);
+    const sessionObj = event.data.object as Stripe.Checkout.Session | null | undefined;
+    const checkoutSessionId =
+      sessionObj && typeof sessionObj === "object" && typeof sessionObj.id === "string" ? sessionObj.id : null;
+    if (!checkoutSessionId) {
+      console.error("[stripe-webhook] checkout event missing session id; type=", event.type);
+      return jsonResponse(
+        {
+          received: true,
+          fulfilled: false,
+          skipped: true,
+          duplicate: false,
+          reason: "invalid_checkout_session_payload",
+        },
+        200,
+      );
+    }
+    const isUnlimitedMeta = sessionObj?.metadata?.unlimited_credits === "true";
+    const sessionForFulfill = sessionObj as Stripe.Checkout.Session;
+    let result: Awaited<ReturnType<typeof fulfillCheckoutSessionCompleted>>;
+    try {
+      result = await fulfillCheckoutSessionCompleted(supabaseAdmin, stripe, sessionForFulfill);
+    } catch (err) {
+      console.error(
+        "[stripe-webhook] fulfillCheckoutSessionCompleted threw:",
+        err instanceof Error ? err.stack ?? err.message : String(err),
+      );
+      return jsonResponse(jsonErrBody("Fulfillment handler crashed", err), 500);
+    }
     switch (result.outcome) {
       case "fulfilled":
         return jsonResponse(
@@ -106,14 +144,14 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
             fulfilled: true,
             skipped: false,
             duplicate: false,
-            checkout_session_id: sessionObj.id,
+            checkout_session_id: checkoutSessionId,
           },
           200,
         );
       case "duplicate":
         console.log(
           "[stripe-webhook] checkout duplicate (no new credits); session=",
-          sessionObj.id,
+          checkoutSessionId,
         );
         return jsonResponse(
           {
@@ -122,14 +160,14 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
             skipped: false,
             duplicate: true,
             reason: "already_recorded",
-            checkout_session_id: sessionObj.id,
+            checkout_session_id: checkoutSessionId,
           },
           200,
         );
       case "skipped_metadata":
         console.error(
           "[stripe-webhook] checkout skipped metadata; session=",
-          sessionObj.id,
+          checkoutSessionId,
           "reason=missing_or_invalid_metadata",
         );
         return jsonResponse(
@@ -139,14 +177,14 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
             skipped: true,
             duplicate: false,
             reason: "missing_or_invalid_metadata",
-            checkout_session_id: sessionObj.id,
+            checkout_session_id: checkoutSessionId,
           },
           200,
         );
       case "skipped_unpaid":
         console.log(
           "[stripe-webhook] checkout skipped unpaid; session=",
-          sessionObj.id,
+          checkoutSessionId,
           "reason=payment_not_final",
         );
         return jsonResponse(
@@ -160,14 +198,14 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
             payment_status: result.payment_status,
             payment_intent_status: result.payment_intent_status,
             session_status: result.session_status,
-            checkout_session_id: sessionObj.id,
+            checkout_session_id: checkoutSessionId,
           },
           200,
         );
       case "skipped_acknowledged":
         console.error(
           "[stripe-webhook] checkout skipped (acknowledged DB); session=",
-          sessionObj.id,
+          checkoutSessionId,
           "reason=",
           result.reason,
         );
@@ -178,7 +216,7 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
             skipped: true,
             duplicate: false,
             reason: result.reason,
-            checkout_session_id: sessionObj.id,
+            checkout_session_id: checkoutSessionId,
           },
           200,
         );
@@ -189,6 +227,11 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
           jsonErrBody(isUnlimitedMeta ? "Unlimited grant failed" : "Credit update failed", result.error),
           500,
         );
+      default: {
+        const unknown = result as { outcome?: string };
+        console.error("[stripe-webhook] unknown fulfill outcome:", unknown?.outcome, JSON.stringify(unknown));
+        return jsonResponse(jsonErrBody("Unexpected fulfillment outcome", unknown), 500);
+      }
     }
   }
 
