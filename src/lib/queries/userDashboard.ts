@@ -16,6 +16,7 @@ export type RecentDownloadRow = {
 
 export type UpcomingCard = {
   id: string;
+  track_code: string | null;
   track_name: string;
   race_date: string;
   num_races: number | null;
@@ -96,7 +97,7 @@ export async function fetchUserDashboard(userId: string): Promise<UserDashboardD
       .limit(8),
     supabase
       .from("racecards")
-      .select("id, track_name, race_date, num_races")
+      .select("id, track_code, track_name, race_date, num_races")
       .gte("race_date", todayStr)
       .lte("race_date", endWindow)
       .order("race_date", { ascending: true })

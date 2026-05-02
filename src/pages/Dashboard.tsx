@@ -24,6 +24,7 @@ import { format, formatDistanceToNow, isValid } from "date-fns";
 import { useUserDashboard } from "@/lib/queries/userDashboard";
 import { schedulePostPaymentCreditRefetch } from "@/lib/schedulePostPaymentCreditRefetch";
 import { StripeTestModeDevBanner } from "@/components/StripeTestModeDevBanner";
+import { extractCanonicalTrackCode, getRacetrackLabel } from "@/lib/racetracks";
 
 const LOW_CREDITS_THRESHOLD = 3;
 
@@ -61,6 +62,37 @@ const Dashboard = () => {
   const recentDownloads = data?.recentDownloads ?? [];
   const upcomingCards = data?.upcomingCards ?? [];
   const recentPurchases = data?.recentPurchases ?? [];
+
+  /** Dedupe: unique id, then one row per `(canonical_track_code, race_date)`; merged duplicates note count in subtitle. */
+  const upcomingForDisplay = useMemo(() => {
+    const seenId = new Set<string>();
+    const unique = upcomingCards.filter((c) => {
+      if (seenId.has(c.id)) return false;
+      seenId.add(c.id);
+      return true;
+    });
+    const groups = new Map<string, typeof unique>();
+    for (const c of unique) {
+      const canon = extractCanonicalTrackCode(c.track_code ?? c.track_name);
+      const key = canon ? `${canon}|${c.race_date}` : `${c.id}|${c.race_date}`;
+      const g = groups.get(key) ?? [];
+      g.push(c);
+      groups.set(key, g);
+    }
+    const rows: { primary: (typeof unique)[0]; mergedCount: number }[] = [];
+    for (const arr of groups.values()) {
+      arr.sort((a, b) => a.id.localeCompare(b.id));
+      rows.push({ primary: arr[0], mergedCount: arr.length });
+    }
+    rows.sort((a, b) => {
+      const d = a.primary.race_date.localeCompare(b.primary.race_date);
+      if (d !== 0) return d;
+      return getRacetrackLabel(a.primary.track_code ?? a.primary.track_name).localeCompare(
+        getRacetrackLabel(b.primary.track_code ?? b.primary.track_name),
+      );
+    });
+    return rows;
+  }, [upcomingCards]);
 
   const displayName = useMemo(() => {
     if (!user) return "there";
@@ -366,37 +398,54 @@ const Dashboard = () => {
                       <Loader2 className="h-5 w-5 animate-spin" />
                     </div>
                   )}
-                  {!loading && upcomingCards.length === 0 && (
+                  {!loading && upcomingForDisplay.length === 0 && (
                     <div className="card-dark py-6 px-4 text-sm text-muted-foreground text-center">
                       No published cards in the next few days. Check back soon.
                     </div>
                   )}
                   {!loading &&
-                    upcomingCards.map((race) => (
-                      <div key={race.id} className="card-dark flex items-center justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="font-medium text-foreground text-sm truncate">{race.track_name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {(() => {
-                              const rd = new Date(`${race.race_date}T12:00:00`);
-                              return isValid(rd)
-                                ? `${formatLocalDate(rd, "EEE, MMM d", race.race_date)}${
-                                    race.num_races != null ? ` · ${race.num_races} races` : ""
-                                  }`
-                                : race.race_date ?? "—";
-                            })()}
+                    upcomingForDisplay.map(({ primary: race, mergedCount }) => {
+                      const codeRaw = race.track_code ?? race.track_name;
+                      const title = getRacetrackLabel(codeRaw);
+                      const codeBadge = extractCanonicalTrackCode(codeRaw);
+                      const rd = new Date(`${race.race_date}T12:00:00`);
+                      const datePart = isValid(rd)
+                        ? `${formatLocalDate(rd, "EEE, MMM d", race.race_date)}${
+                            race.num_races != null ? ` · ${race.num_races} races` : ""
+                          }`
+                        : (race.race_date ?? "—");
+                      const mergedNote =
+                        mergedCount > 1 ? ` · ${mergedCount} racecards` : "";
+                      return (
+                        <div
+                          key={`${codeBadge}|${race.race_date}|${race.id}`}
+                          className="card-dark flex items-center justify-between gap-2 sm:gap-3"
+                        >
+                          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-secondary flex items-center justify-center shrink-0">
+                              <span className="font-mono-data font-bold text-foreground text-[11px] sm:text-sm">
+                                {codeBadge || "—"}
+                              </span>
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-medium text-foreground text-sm truncate">{title}</div>
+                              <div className="text-xs text-muted-foreground truncate">
+                                {datePart}
+                                {mergedNote}
+                              </div>
+                            </div>
                           </div>
+                          <Link to="/racecards" className="shrink-0">
+                            <Button
+                              size="sm"
+                              className="bg-primary text-primary-foreground hover:brightness-110 text-xs"
+                            >
+                              Open
+                            </Button>
+                          </Link>
                         </div>
-                        <Link to="/racecards">
-                          <Button
-                            size="sm"
-                            className="bg-primary text-primary-foreground hover:brightness-110 text-xs shrink-0"
-                          >
-                            Open
-                          </Button>
-                        </Link>
-                      </div>
-                    ))}
+                      );
+                    })}
                 </div>
               </div>
 
