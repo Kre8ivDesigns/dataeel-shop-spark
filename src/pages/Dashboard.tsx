@@ -403,7 +403,7 @@ const Dashboard = () => {
             Race results: reintroduce via Edge `otb-results-rss` (and optional `hrn-headlines-rss` fallback)
             when we have a reliable display model — see former `DashboardRacingResultsSection` in git history.
           */}
-          <div className="grid grid-cols-1 md:grid-cols-[3fr_1fr] gap-6 lg:gap-8 mb-8 max-w-5xl mx-auto w-full">
+          <div className="grid grid-cols-1 md:grid-cols-[3fr_1fr] gap-6 lg:gap-8 mb-8 w-full">
             <DashboardRecentDownloadsColumn loading={loading} recentDownloads={recentDownloads} />
             <DashboardUpcomingRacecardsColumn loading={loading} upcomingForDisplay={upcomingForDisplay} />
           </div>
