@@ -28,6 +28,7 @@ export const RaceCards = () => {
 
   const selectedDate = dayTabs[dayIndex].date;
   const { data: rows = [], isLoading: loading } = useRacecardsPublicForDate(selectedDate);
+  const previewRows = rows.slice(0, 4);
 
   const ctaHref = user ? "/racecards" : `/auth?redirect=${encodeURIComponent("/racecards")}`;
 
@@ -93,7 +94,7 @@ export const RaceCards = () => {
 
         {!loading && rows.length > 0 && (
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {rows.map((track, index) => {
+            {previewRows.map((track, index) => {
               const meta = parseRacecardMetadata(track.metadata);
               const status = resolveStatus(meta);
               const subline = metadataListingLine(meta);
@@ -189,8 +190,8 @@ export const RaceCards = () => {
           transition={{ delay: 0.5 }}
           className="text-center mt-10"
         >
-          <Button asChild variant="link" className="text-primary hover:text-primary/80">
-            <Link to={ctaHref}>Open full RaceCards catalog →</Link>
+          <Button asChild className="bg-primary text-primary-foreground hover:brightness-110 shadow-neon">
+            <Link to="/racecards">Browse All RaceCards</Link>
           </Button>
         </motion.div>
       </div>
