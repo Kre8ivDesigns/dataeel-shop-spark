@@ -3,7 +3,25 @@ import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveStripeConfig } from "../_shared/stripe_config.ts";
 
+const JSON_HEADERS = { "Content-Type": "application/json" };
+
+function jsonResponse(body: unknown, status: number): Response {
+  return new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });
+}
+
 Deno.serve(async (req) => {
+  try {
+    return await handleStripeWebhook(req);
+  } catch (err) {
+    console.error(
+      "[stripe-webhook] Unhandled error:",
+      err instanceof Error ? err.stack ?? err.message : String(err),
+    );
+    return jsonResponse({ error: "Internal error" }, 500);
+  }
+});
+
+async function handleStripeWebhook(req: Request): Promise<Response> {
   const supabaseAdmin = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
@@ -11,19 +29,26 @@ Deno.serve(async (req) => {
   );
 
   const stripeConfig = await resolveStripeConfig(supabaseAdmin);
-  const stripe = new Stripe(stripeConfig.secretKey, {
+
+  const secretKey = stripeConfig.secretKey.trim();
+  if (!secretKey) {
+    console.error("[stripe-webhook] STRIPE_SECRET_KEY (or app_settings key) not configured");
+    return jsonResponse({ error: "Stripe API key not configured" }, 503);
+  }
+
+  const webhookSecret = stripeConfig.webhookSecret.trim();
+  if (!webhookSecret) {
+    console.error("[stripe-webhook] Webhook signing secret not configured");
+    return jsonResponse({ error: "Webhook signing secret not configured" }, 503);
+  }
+
+  const stripe = new Stripe(secretKey, {
     apiVersion: "2025-08-27.basil",
   });
 
-  const webhookSecret = stripeConfig.webhookSecret;
-  if (!webhookSecret) {
-    console.error("[stripe-webhook] Webhook signing secret not configured");
-    return new Response(JSON.stringify({ error: "Webhook not configured" }), { status: 500 });
-  }
-
   const signature = req.headers.get("stripe-signature");
   if (!signature) {
-    return new Response(JSON.stringify({ error: "No signature" }), { status: 400 });
+    return jsonResponse({ error: "No signature" }, 400);
   }
 
   const body = await req.text();
@@ -33,7 +58,7 @@ Deno.serve(async (req) => {
     event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret);
   } catch (err) {
     console.error("[stripe-webhook] Signature verification failed:", err instanceof Error ? err.message : "unknown");
-    return new Response(JSON.stringify({ error: "Invalid signature" }), { status: 400 });
+    return jsonResponse({ error: "Invalid signature" }, 400);
   }
 
   if (event.type === "checkout.session.completed") {
@@ -45,7 +70,7 @@ Deno.serve(async (req) => {
 
     if (!userId || credits <= 0) {
       console.error("[stripe-webhook] Missing or invalid metadata");
-      return new Response(JSON.stringify({ error: "Invalid metadata" }), { status: 400 });
+      return jsonResponse({ error: "Invalid metadata" }, 400);
     }
 
     // IDEMPOTENCY: insert transaction first with unique stripe_session_id.
@@ -67,10 +92,10 @@ Deno.serve(async (req) => {
       if (txError.code === "23505") {
         // Duplicate — already processed. Return 200 to stop Stripe retries.
         console.log("[stripe-webhook] Duplicate event ignored:", session.id);
-        return new Response(JSON.stringify({ received: true, duplicate: true }), { status: 200 });
+        return jsonResponse({ received: true, duplicate: true }, 200);
       }
-      console.error("[stripe-webhook] Transaction insert failed:", txError.code);
-      return new Response(JSON.stringify({ error: "Transaction recording failed" }), { status: 500 });
+      console.error("[stripe-webhook] Transaction insert failed:", txError.code, txError.message);
+      return jsonResponse({ error: "Transaction recording failed" }, 500);
     }
 
     // Atomic credit update — no read-then-write race condition (CRIT-04)
@@ -87,24 +112,23 @@ Deno.serve(async (req) => {
     });
 
     if (creditError) {
-      console.error("[stripe-webhook] Credit update failed:", creditError.code);
+      console.error("[stripe-webhook] Credit update failed:", creditError.code, creditError.message);
       // Rollback the transaction record to allow a retry
       await supabaseAdmin.from("transactions").delete().eq("stripe_session_id", session.id);
-      return new Response(JSON.stringify({ error: "Credit update failed" }), { status: 500 });
+      return jsonResponse({ error: "Credit update failed" }, 500);
     }
 
-    // Audit log
-    await supabaseAdmin.from("audit_log").insert({
+    const { error: auditError } = await supabaseAdmin.from("audit_log").insert({
       actor_id: null,
       action: "stripe.checkout.completed",
       resource: "credit_balance",
       resource_id: userId,
       detail: { stripe_session_id: session.id, credits, amount, package_name: packageName },
     });
+    if (auditError) {
+      console.error("[stripe-webhook] Audit log insert failed (non-fatal):", auditError.code, auditError.message);
+    }
   }
 
-  return new Response(JSON.stringify({ received: true }), {
-    headers: { "Content-Type": "application/json" },
-    status: 200,
-  });
-});
+  return jsonResponse({ received: true }, 200);
+}
