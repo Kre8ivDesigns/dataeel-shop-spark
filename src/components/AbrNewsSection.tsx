@@ -76,7 +76,7 @@ export function AbrNewsSection() {
         <Card className="bg-card border-border shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg text-foreground">
-              {data?.source === "tdn" ? "Thoroughbred Daily News" : "America's Best Racing — The Sport"}
+              {data?.source === "tdn" ? "Thoroughbred Daily News" : "America&apos;s Best Racing — The Sport"}
             </CardTitle>
             <CardDescription>
               {data?.source === "tdn" ? (
