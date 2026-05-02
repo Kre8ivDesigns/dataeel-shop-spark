@@ -4,7 +4,8 @@
  */
 import { getCorsHeaders } from "../_shared/cors.ts";
 
-const ABR_THE_SPORT_RSS = "https://www.americasbestracing.net/the-sport/rss";
+/** Drupal serves HTML at /the-sport/rss; the real feed is /rss/the-sport (see page &lt;link rel="alternate" type="application/rss+xml"&gt;). */
+const ABR_THE_SPORT_RSS = "https://www.americasbestracing.net/rss/the-sport";
 
 Deno.serve(async (req) => {
   const cors = getCorsHeaders(req);

@@ -1,20 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, Newspaper, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { parseRss2Items } from "@/lib/parseRss2Xml";
+import { parseRss2Items, type Rss2Item } from "@/lib/parseRss2Xml";
 
 const ABR_HOME = "https://www.americasbestracing.net/";
-const ABR_RSS_SOURCE = "https://www.americasbestracing.net/the-sport/rss";
-const QUERY_KEY = ["abr-rss-the-sport"] as const;
+const ABR_RSS_SOURCE = "https://www.americasbestracing.net/rss/the-sport";
+const TDN_HOME = "https://www.thoroughbreddailynews.com/";
+const TDN_RSS_SOURCE = "https://www.thoroughbreddailynews.com/feed/";
+const QUERY_KEY = ["us-racing-news-rss"] as const;
 const MAX_ITEMS = 8;
 
-async function fetchAbrSportFeed(): Promise<ReturnType<typeof parseRss2Items>> {
-  const base = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "");
-  const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-  if (!base || !key) {
-    throw new Error("Missing Supabase env");
-  }
-  const res = await fetch(`${base}/functions/v1/abr-rss`, {
+type UsRacingFeed = { items: Rss2Item[]; source: "abr" | "tdn" };
+
+async function fetchFunctionXml(functionName: string, base: string, key: string): Promise<string> {
+  const res = await fetch(`${base}/functions/v1/${functionName}`, {
     method: "GET",
     headers: {
       apikey: key,
@@ -24,8 +23,22 @@ async function fetchAbrSportFeed(): Promise<ReturnType<typeof parseRss2Items>> {
   if (!res.ok) {
     throw new Error(`Feed request failed: ${res.status}`);
   }
-  const xml = await res.text();
-  return parseRss2Items(xml, MAX_ITEMS);
+  return res.text();
+}
+
+async function fetchUsRacingNews(): Promise<UsRacingFeed> {
+  const base = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "");
+  const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  if (!base || !key) {
+    throw new Error("Missing Supabase env");
+  }
+  const abrXml = await fetchFunctionXml("abr-rss", base, key);
+  const abrItems = parseRss2Items(abrXml, MAX_ITEMS);
+  if (abrItems.length > 0) {
+    return { items: abrItems, source: "abr" };
+  }
+  const tdnXml = await fetchFunctionXml("tdn-rss", base, key);
+  return { items: parseRss2Items(tdnXml, MAX_ITEMS), source: "tdn" };
 }
 
 function formatPubDate(pubDate?: string): string | null {
@@ -38,7 +51,7 @@ function formatPubDate(pubDate?: string): string | null {
 export function AbrNewsSection() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: QUERY_KEY,
-    queryFn: fetchAbrSportFeed,
+    queryFn: fetchUsRacingNews,
     staleTime: 15 * 60_000,
     gcTime: 60 * 60_000,
     retry: 1,
@@ -54,24 +67,43 @@ export function AbrNewsSection() {
               US racing news
             </h2>
             <p className="text-muted-foreground mt-2 text-sm md:text-base max-w-xl">
-              US-focused stories from America&apos;s Best Racing (&quot;The Sport&quot; RSS). Links open in a new tab.
+              US racing headlines (America&apos;s Best Racing &quot;The Sport&quot;; if that feed is empty, Thoroughbred Daily
+              News). Links open in a new tab.
             </p>
           </div>
         </div>
 
         <Card className="bg-card border-border shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg text-foreground">America&apos;s Best Racing — The Sport</CardTitle>
+            <CardTitle className="text-lg text-foreground">
+              {data?.source === "tdn" ? "Thoroughbred Daily News" : "America's Best Racing — The Sport"}
+            </CardTitle>
             <CardDescription>
-              Syndicated via RSS for convenience. Dataeel is not affiliated with ABR.{" "}
-              <a
-                href={ABR_RSS_SOURCE}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline inline-flex items-center gap-0.5"
-              >
-                RSS source <ExternalLink className="h-3 w-3" aria-hidden />
-              </a>
+              {data?.source === "tdn" ? (
+                <>
+                  Syndicated via RSS (fallback). Dataeel is not affiliated with TDN.{" "}
+                  <a
+                    href={TDN_RSS_SOURCE}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline inline-flex items-center gap-0.5"
+                  >
+                    RSS source <ExternalLink className="h-3 w-3" aria-hidden />
+                  </a>
+                </>
+              ) : (
+                <>
+                  Syndicated via RSS for convenience. Dataeel is not affiliated with ABR.{" "}
+                  <a
+                    href={ABR_RSS_SOURCE}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline inline-flex items-center gap-0.5"
+                  >
+                    RSS source <ExternalLink className="h-3 w-3" aria-hidden />
+                  </a>
+                </>
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -94,14 +126,18 @@ export function AbrNewsSection() {
                   <a href={ABR_HOME} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                     americasbestracing.net
                   </a>{" "}
-                  directly.
+                  or{" "}
+                  <a href={TDN_HOME} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    thoroughbreddailynews.com
+                  </a>
+                  .
                 </p>
               </div>
-            ) : !data?.length ? (
+            ) : !data?.items?.length ? (
               <p className="text-sm text-muted-foreground text-center py-10">No stories in the feed at the moment.</p>
             ) : (
               <ul className="divide-y divide-border">
-                {data.map((item) => (
+                {data.items.map((item) => (
                   <li key={item.link} className="py-3 first:pt-0 last:pb-0">
                     <a
                       href={item.link}
