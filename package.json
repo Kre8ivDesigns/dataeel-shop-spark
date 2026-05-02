@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "prepare:racecards": "node scripts/prepare-racecards-for-s3.mjs",
+    "backfill:race-results": "node scripts/backfill-race-results.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },

@@ -5,6 +5,7 @@ Use this when standing up or auditing an environment so **database, S3 files, Ed
 ## 1. Database (Supabase Postgres)
 
 - [ ] Apply all migrations from `supabase/migrations/` (local: `supabase db push`; hosted: CI or Dashboard SQL).
+- [ ] Confirm `public.race_results` exists with indexes + RLS (`20260503113000_create_race_results_pipeline.sql`).
 - [ ] If the API logs **404** / **PGRST205** on `GET /rest/v1/audit_log`, the `audit_log` table was never created on that project. Apply at least `20260310000000_security_hardening.sql` (creates `public.audit_log` + admin-read RLS), or run a full `supabase db push` so schema matches the app.
 - [ ] Confirm extensions/policies match expectations: `racecards`, `racecards_public`, `metadata` columns, `site_content`, RLS on sensitive tables.
 - [ ] **Auth**
@@ -31,6 +32,7 @@ Use this when standing up or auditing an environment so **database, S3 files, Ed
   - `ALLOWED_ORIGINS` — comma-separated origins with scheme, no trailing slash (see `supabase/functions/_shared/cors.ts`).
   - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` — fallback when Admin > Settings > Stripe is empty. Admins can now save both test and live key sets in the UI and flip modes via `stripe_mode`; the `resolveStripeConfig` helper prefers those values over the env secrets.
   - `APP_SETTINGS_ENCRYPTION_KEY` — **64+ hex chars** for `manage-app-settings` / AI key encryption / Stripe mode resolution.
+  - `CRON_SECRET` — required for scheduled/manual invocation of `ingest-race-results` (and existing cron-protected jobs).
 - [ ] Optional: `SITE_PUBLIC_URL` for OpenRouter referrer header.
 - [ ] Auth → Email Templates: paste templates listed in `supabase/config.toml` (`confirm-signup.html`, `reset-password.html`, `magic-link.html`). Confirm signup must use **`confirm-signup.html`**, not the legacy `confirmation.html`, unless you change both Dashboard and `config.toml`. Local `supabase start` uses `config.toml`; hosted projects use Dashboard copies.
 
@@ -47,6 +49,8 @@ Use this when standing up or auditing an environment so **database, S3 files, Ed
 | `equibase-late-changes-rss` | Proxies [Equibase static late-changes RSS](https://www.equibase.com/static/latechanges/rss/KD-USA.rss); `verify_jwt = false`. Optional secret **`EQUIBASE_LATE_CHANGES_BRN`** (default **`KD-USA`**, Keeneland) — e.g. `GP-USA`, `SA-USA`. Pattern: `{TRACK}-{COUNTRY}` |
 | `otb-results-rss` | Proxies [OffTrackBetting results RSS 2.0](https://www.offtrackbetting.com/rss-results-2.0.xml) for the dashboard; `verify_jwt = false` |
 | `hrn-headlines-rss` | Proxies [Horse-Races.net](http://www.horse-races.net/HRN-rssfeed.xml) as dashboard fallback; `verify_jwt = false` |
+| `ingest-race-results` | Fetches broad source results feed, normalizes/matches target tracks, and upserts into `public.race_results`; protected by `CRON_SECRET` or admin JWT |
+| `track-results-rss` | Public per-track RSS generated from normalized `public.race_results`; `verify_jwt = false` |
 | `track-image-search` | Wikimedia Commons image search for racetrack hero photos on `/racecards`; `verify_jwt = false`, no API key |
 | `create-checkout-session`, `stripe-webhook`, `customer-portal`, `list-invoices` | Stripe |
 
@@ -83,6 +87,13 @@ Use this when standing up or auditing an environment so **database, S3 files, Ed
 3. **`sync-s3-racecards`** or admin insert keeps DB ↔ S3 in sync.
 4. Users see listings from **`racecards_public`** (cached in the browser via React Query).
 5. Download uses **`download-racecard`** → presigned GET from **S3**.
+6. Race results flow: `ingest-race-results` upserts to **`race_results`**; public clients read per-track RSS from **`track-results-rss?track=<CODE>`**.
+
+## 7. Optional cron setup for race-results ingestion
+
+- [ ] Apply `supabase/migrations/20260503113100_cron_ingest_race_results.sql` after replacing placeholders (`<PROJECT_REF>`, `<CRON_SECRET_VALUE>`), mirroring existing cron migration style.
+- [ ] Manual backfill trigger (repeat-safe via `source_id` upsert):
+  - `SUPABASE_URL=https://<project-ref>.supabase.co CRON_SECRET=<secret> npm run backfill:race-results`
 
 ## 6. Optional content overrides
 

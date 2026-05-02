@@ -46,6 +46,10 @@ verify_jwt = false
 [functions.hrn-headlines-rss]
 verify_jwt = false
 
+# Public per-track race-results RSS generated from normalized DB rows
+[functions.track-results-rss]
+verify_jwt = false
+
 # Racetrack card hero images (Wikimedia Commons search); browse page is anon
 [functions.track-image-search]
 verify_jwt = false
@@ -74,6 +78,10 @@ verify_jwt = true
 
 [functions.sync-s3-racecards]
 verify_jwt = true
+
+# Cron/admin-triggered race results ingestion (requires CRON_SECRET or admin JWT)
+[functions.ingest-race-results]
+verify_jwt = false
 
 [functions.manage-credit-package]
 verify_jwt = true

@@ -33,6 +33,7 @@ import { StripeTestModeDevBanner } from "@/components/StripeTestModeDevBanner";
 import { DashboardRecentDownloadsColumn } from "@/components/dashboard/DashboardRecentDownloadsColumn";
 import { DashboardUpcomingRacecardsColumn } from "@/components/dashboard/DashboardUpcomingRacecardsColumn";
 import { DashboardPurchasesAndCredits } from "@/components/dashboard/DashboardPurchasesAndCredits";
+import { DashboardRacingResultsSection } from "@/components/dashboard/DashboardRacingResultsSection";
 import { extractCanonicalTrackCode, getRacetrackLabel } from "@/lib/racetracks";
 
 const LOW_CREDITS_THRESHOLD = 3;
@@ -399,10 +400,7 @@ const Dashboard = () => {
             </div>
           </motion.div>
 
-          {/*
-            Race results: reintroduce via Edge `otb-results-rss` (and optional `hrn-headlines-rss` fallback)
-            when we have a reliable display model — see former `DashboardRacingResultsSection` in git history.
-          */}
+          <DashboardRacingResultsSection />
           <div className="grid grid-cols-1 md:grid-cols-[3fr_1fr] gap-6 lg:gap-8 mb-8 w-full">
             <DashboardRecentDownloadsColumn loading={loading} recentDownloads={recentDownloads} />
             <DashboardUpcomingRacecardsColumn loading={loading} upcomingForDisplay={upcomingForDisplay} />
