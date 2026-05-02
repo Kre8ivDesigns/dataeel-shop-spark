@@ -145,9 +145,12 @@ const Invoices = () => {
               className="text-center py-20"
             >
               <FileText className="h-12 w-12 text-foreground/20 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">No invoices yet</h3>
-              <p className="text-muted-foreground text-sm mb-6">
-                Your invoices will appear here after your first purchase.
+              <h3 className="text-lg font-semibold text-foreground mb-2">No purchases on record yet</h3>
+              <p className="text-muted-foreground text-sm mb-4 max-w-md mx-auto">
+                This page lists credit purchases made through this site. Stripe Customer Portal may show invoices that were paid outside that flow (for example portal-only card charges); those are not in this list until a matching purchase is recorded.
+              </p>
+              <p className="text-muted-foreground text-sm mb-6 max-w-md mx-auto">
+                If you already paid in checkout but do not see a row here, the payment webhook may not have reached the app (see deployment docs: webhook URL, test vs live mode, and required events).
               </p>
               <Link to="/buy-credits">
                 <Button className="bg-primary text-primary-foreground font-semibold">

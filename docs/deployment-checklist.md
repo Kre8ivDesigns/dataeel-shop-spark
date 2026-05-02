@@ -43,6 +43,12 @@ Use this when standing up or auditing an environment so **database, S3 files, Ed
 | `tdn-rss` | Proxies [Thoroughbred Daily News](https://www.thoroughbreddailynews.com/feed/) main WordPress RSS; `verify_jwt = false`, fixed URL only |
 | `equibase-late-changes-rss` | Proxies [Equibase static late-changes RSS](https://www.equibase.com/static/latechanges/rss/KD-USA.rss); `verify_jwt = false`. Optional secret **`EQUIBASE_LATE_CHANGES_BRN`** (default **`KD-USA`**, Keeneland) — e.g. `GP-USA`, `SA-USA`. Pattern: `{TRACK}-{COUNTRY}` |
 | `create-checkout-session`, `stripe-webhook`, `customer-portal`, `list-invoices` | Stripe |
+
+**Stripe webhooks (Dashboard → Developers → Webhooks, same mode as your keys: test `whsec_...` for test, live for production):**
+
+- **Endpoint URL:** `https://<project-ref>.supabase.co/functions/v1/stripe-webhook` (must match the project in `VITE_SUPABASE_URL`).
+- **Required events (minimum):** `checkout.session.completed` and `invoice.paid` (one-time credit purchases; `invoice.paid` also backfills when the same payment is only visible on an invoice, and dedupes with `payment_intent` + `checkout.session.completed`).
+- **Not required for this app:** `payment_intent.succeeded` (logic uses checkout + invoice events). If the endpoint was never called, check **Recent deliveries** in the Stripe dashboard, **test vs live** key alignment with Admin → Settings `stripe_mode`, and Supabase **Edge Functions → stripe-webhook** logs.
 | `manage-credit-package` | Admin packages |
 | `admin-create-user`, `admin-manage-user` | Admin user ops |
 

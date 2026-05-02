@@ -87,10 +87,21 @@ Deno.serve(async (req) => {
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
+      client_reference_id: user.id,
       line_items: [{ price: pkg.stripe_price_id, quantity: 1 }],
       mode: "payment",
       // Generates a Stripe Invoice + hosted invoice / PDF for one-time payments
-      invoice_creation: { enabled: true },
+      invoice_creation: {
+        enabled: true,
+        invoice_data: {
+          metadata: {
+            user_id: user.id,
+            package_id: pkg.id,
+            credits: String(pkg.credits),
+            package_name: pkg.name,
+          },
+        },
+      },
       success_url: `${origin}/dashboard?payment=success&credits=${pkg.credits}`,
       cancel_url: `${origin}/buy-credits?payment=cancelled`,
       metadata: {
