@@ -31,8 +31,34 @@ type Submission = Tables<"contact_submissions">;
 const TICKET_STATUSES = ["open", "in_progress", "closed"] as const;
 type TicketStatus = (typeof TICKET_STATUSES)[number];
 
-function normalizeTicketStatus(raw: string | null | undefined): TicketStatus {
-  return TICKET_STATUSES.includes(raw as TicketStatus) ? (raw as TicketStatus) : "open";
+/** Accept DB quirks (whitespace, legacy labels) so Radix Select `value` always matches a SelectItem. */
+function normalizeTicketStatus(raw: unknown): TicketStatus {
+  const s = String(raw ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, "_")
+    .replace(/\s+/g, "_");
+  if (s === "in_progress" || s === "inprogress") return "in_progress";
+  if (TICKET_STATUSES.includes(s as TicketStatus)) return s as TicketStatus;
+  return "open";
+}
+
+function formatSubmissionTimestamp(iso: string | null | undefined): string {
+  if (iso == null || iso === "") return "—";
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString();
+}
+
+function sanitizeSubmissionRows(data: unknown): Submission[] {
+  if (!Array.isArray(data)) return [];
+  return data.filter((row): row is Submission => {
+    return (
+      row != null &&
+      typeof row === "object" &&
+      typeof (row as Submission).id === "string" &&
+      (row as Submission).id.length > 0
+    );
+  });
 }
 
 const AdminSupport = () => {
@@ -58,7 +84,7 @@ const AdminSupport = () => {
         setRows([]);
         return;
       }
-      setRows(data ?? []);
+      setRows(sanitizeSubmissionRows(data));
     } catch (e: unknown) {
       const msg = sanitizeError(e);
       setLoadError(msg);
@@ -74,18 +100,24 @@ const AdminSupport = () => {
   }, [isAdmin, load]);
 
   const saveRow = async (row: Submission, patch: Partial<Submission>) => {
-    setSavingId(row.id);
-    const { error } = await supabase
-      .from("contact_submissions")
-      .update({ ...patch, updated_at: new Date().toISOString() })
-      .eq("id", row.id);
-    setSavingId(null);
-    if (error) {
-      toast.error(sanitizeError(error));
-      return;
+    if (!row?.id) return;
+    try {
+      setSavingId(row.id);
+      const { error } = await supabase
+        .from("contact_submissions")
+        .update({ ...patch, updated_at: new Date().toISOString() })
+        .eq("id", row.id);
+      if (error) {
+        toast.error(sanitizeError(error));
+        return;
+      }
+      toast.success("Saved");
+      await load();
+    } catch (e: unknown) {
+      toast.error(sanitizeError(e));
+    } finally {
+      setSavingId(null);
     }
-    toast.success("Saved");
-    load();
   };
 
   if (!isAdmin) return null;
@@ -141,25 +173,29 @@ const AdminSupport = () => {
                     {rows.map((r) => (
                       <TableRow key={r.id}>
                         <TableCell className="text-xs text-muted-foreground whitespace-nowrap align-top">
-                          {new Date(r.created_at).toLocaleString()}
+                          {formatSubmissionTimestamp(r.created_at)}
                         </TableCell>
                         <TableCell className="text-sm align-top">
-                          <div className="text-foreground font-medium">{r.name}</div>
-                          <div className="text-muted-foreground text-xs">{r.email}</div>
+                          <div className="text-foreground font-medium">{r.name ?? "—"}</div>
+                          <div className="text-muted-foreground text-xs">{r.email ?? "—"}</div>
                           {r.user_id != null && String(r.user_id).length > 0 && (
                             <div className="text-[10px] font-mono text-muted-foreground mt-1">
                               {String(r.user_id).slice(0, 8)}…
                             </div>
                           )}
                         </TableCell>
-                        <TableCell className="text-sm align-top text-foreground capitalize">{r.category}</TableCell>
+                        <TableCell className="text-sm align-top text-foreground capitalize">
+                          {r.category ?? "—"}
+                        </TableCell>
                         <TableCell className="text-xs text-muted-foreground max-w-[240px] align-top">
-                          <p className="line-clamp-4 whitespace-pre-wrap">{r.message}</p>
+                          <p className="line-clamp-4 whitespace-pre-wrap">{r.message ?? ""}</p>
                         </TableCell>
                         <TableCell className="align-top">
                           <Select
                             value={normalizeTicketStatus(r.status)}
-                            onValueChange={(status) => saveRow(r, { status: status as TicketStatus })}
+                            onValueChange={(status) =>
+                              void saveRow(r, { status: normalizeTicketStatus(status) })
+                            }
                             disabled={savingId === r.id}
                           >
                             <SelectTrigger className="w-[140px] bg-muted border-border h-9">
@@ -174,13 +210,14 @@ const AdminSupport = () => {
                         </TableCell>
                         <TableCell className="align-top">
                           <Textarea
+                            key={`${r.id}-notes-${r.updated_at ?? ""}`}
                             defaultValue={r.admin_notes ?? ""}
                             placeholder="Internal notes…"
                             className="min-h-[72px] text-xs bg-muted border-border"
                             onBlur={(e) => {
                               const v = e.target.value.trim();
                               if (v !== (r.admin_notes ?? "").trim()) {
-                                saveRow(r, { admin_notes: v || null });
+                                void saveRow(r, { admin_notes: v || null });
                               }
                             }}
                           />

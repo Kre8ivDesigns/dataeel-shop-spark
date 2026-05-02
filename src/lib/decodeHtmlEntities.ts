@@ -20,7 +20,24 @@ const NAMED_ENTITIES: Record<string, string> = {
 
 const MAX_PASSES = 32;
 
+/** Unicode scalar value — excludes surrogates; matches String.fromCodePoint rules. */
+function isAllowedCodePoint(cp: number): boolean {
+  return (
+    Number.isInteger(cp) &&
+    cp >= 0 &&
+    cp <= 0x10ffff &&
+    (cp < 0xd800 || cp > 0xdfff)
+  );
+}
+
+function codeUnitFromNumericEntity(cp: number, fallbackFullMatch: string): string {
+  return isAllowedCodePoint(cp) ? String.fromCodePoint(cp) : fallbackFullMatch;
+}
+
 export function decodeHtmlEntities(input: string): string {
+  if (input == null || typeof input !== "string") {
+    return "";
+  }
   let s = input;
   for (let i = 0; i < MAX_PASSES; i++) {
     const next = decodeHtmlEntitiesOnce(s);
@@ -32,13 +49,13 @@ export function decodeHtmlEntities(input: string): string {
 
 function decodeHtmlEntitiesOnce(s: string): string {
   return s
-    .replace(/&#x([0-9a-f]+);/gi, (_, h) => {
+    .replace(/&#x([0-9a-f]+);/gi, (full, h) => {
       const cp = parseInt(h, 16);
-      return Number.isFinite(cp) && cp >= 0 ? String.fromCodePoint(cp) : _;
+      return Number.isFinite(cp) ? codeUnitFromNumericEntity(cp, full) : full;
     })
-    .replace(/&#(\d+);/g, (_, n) => {
+    .replace(/&#(\d+);/g, (full, n) => {
       const cp = parseInt(n, 10);
-      return Number.isFinite(cp) && cp >= 0 ? String.fromCodePoint(cp) : _;
+      return Number.isFinite(cp) ? codeUnitFromNumericEntity(cp, full) : full;
     })
     .replace(/&([a-z]+);/gi, (full, name: string) => {
       const key = name.toLowerCase();

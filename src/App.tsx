@@ -53,6 +53,9 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
 
   componentDidCatch(error: Error, info: { componentStack: string }) {
     console.error("App render error:", error, info);
+    if (import.meta.env.DEV && error?.message) {
+      console.error("App render error.message:", error.message);
+    }
   }
 
   render() {

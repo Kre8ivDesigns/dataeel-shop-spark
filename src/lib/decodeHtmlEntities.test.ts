@@ -24,4 +24,17 @@ describe("decodeHtmlEntities", () => {
   it("leaves unknown entity names unchanged", () => {
     expect(decodeHtmlEntities("&notanentity;")).toBe("&notanentity;");
   });
+
+  it("does not throw on surrogate or out-of-range numeric references (leaves entity)", () => {
+    expect(() => decodeHtmlEntities("&#55357;")).not.toThrow();
+    expect(decodeHtmlEntities("&#55357;")).toBe("&#55357;");
+    expect(() => decodeHtmlEntities("&#1114112;")).not.toThrow();
+    expect(decodeHtmlEntities("&#1114112;")).toBe("&#1114112;");
+    expect(() => decodeHtmlEntities("&#x110000;")).not.toThrow();
+    expect(decodeHtmlEntities("&#x110000;")).toBe("&#x110000;");
+  });
+
+  it("treats non-string input as empty", () => {
+    expect(decodeHtmlEntities(undefined as unknown as string)).toBe("");
+  });
 });

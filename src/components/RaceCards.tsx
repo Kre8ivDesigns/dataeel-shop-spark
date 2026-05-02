@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Calendar, Download, MapPin, Clock, Loader2, Cloud, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { format, addDays } from "date-fns";
+import { format, addDays, isValid } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   metadataListingLine,
@@ -98,6 +98,10 @@ export const RaceCards = () => {
               const status = resolveStatus(meta);
               const subline = metadataListingLine(meta);
               const location = getRacetrackLocation(track.track_code);
+              const raceDay = new Date(`${track.race_date}T12:00:00`);
+              const raceDayLabel = isValid(raceDay)
+                ? format(raceDay, "EEE, MMM d")
+                : track.race_date ?? "—";
               return (
                 <motion.div
                   key={track.id}
@@ -130,7 +134,7 @@ export const RaceCards = () => {
                       </span>
                       <span className="flex items-center gap-1">
                         <Clock className="h-3.5 w-3.5 shrink-0" />
-                        {format(new Date(track.race_date + "T12:00:00"), "EEE, MMM d")}
+                        {raceDayLabel}
                       </span>
                       {subline && (
                         <span className="flex items-start gap-1 text-xs">
