@@ -45,6 +45,9 @@ Use this when standing up or auditing an environment so **database, S3 files, Ed
 | `abr-rss` | Proxies [ABR “The Sport” RSS](https://www.americasbestracing.net/rss/the-sport) for the homepage (CORS-safe); `verify_jwt = false`, fixed URL only |
 | `tdn-rss` | Proxies [Thoroughbred Daily News](https://www.thoroughbreddailynews.com/feed/) main WordPress RSS; `verify_jwt = false`, fixed URL only |
 | `equibase-late-changes-rss` | Proxies [Equibase static late-changes RSS](https://www.equibase.com/static/latechanges/rss/KD-USA.rss); `verify_jwt = false`. Optional secret **`EQUIBASE_LATE_CHANGES_BRN`** (default **`KD-USA`**, Keeneland) — e.g. `GP-USA`, `SA-USA`. Pattern: `{TRACK}-{COUNTRY}` |
+| `otb-results-rss` | Proxies [OffTrackBetting results RSS 2.0](https://www.offtrackbetting.com/rss-results-2.0.xml) for the dashboard; `verify_jwt = false` |
+| `hrn-headlines-rss` | Proxies [Horse-Races.net](http://www.horse-races.net/HRN-rssfeed.xml) as dashboard fallback; `verify_jwt = false` |
+| `track-image-search` | Wikimedia Commons image search for racetrack hero photos on `/racecards`; `verify_jwt = false`, no API key |
 | `create-checkout-session`, `stripe-webhook`, `customer-portal`, `list-invoices` | Stripe |
 
 **Stripe webhooks (Dashboard → Developers → Webhooks, same mode as your keys: test `whsec_...` for test, live for production):**

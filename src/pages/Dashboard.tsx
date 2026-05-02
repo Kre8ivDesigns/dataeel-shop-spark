@@ -31,6 +31,7 @@ import {
 } from "@/lib/postPaymentConfirmation";
 import { schedulePostPaymentCreditRefetch } from "@/lib/schedulePostPaymentCreditRefetch";
 import { StripeTestModeDevBanner } from "@/components/StripeTestModeDevBanner";
+import { DashboardRacingResultsSection } from "@/components/DashboardRacingResultsSection";
 import { extractCanonicalTrackCode, getRacetrackLabel } from "@/lib/racetracks";
 
 const LOW_CREDITS_THRESHOLD = 3;
@@ -400,6 +401,8 @@ const Dashboard = () => {
               })}
             </div>
           </motion.div>
+
+          <DashboardRacingResultsSection />
 
           <div className="grid lg:grid-cols-3 gap-8">
             <motion.div

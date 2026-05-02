@@ -30,6 +30,7 @@ import {
   getRacecardDownloadUiBlock,
 } from "@/lib/racecardDownloadDeadline";
 import { getInvokeErrorMessage } from "@/lib/edgeFunctionErrors";
+import { TrackCardHeroImage } from "@/components/TrackCardHeroImage";
 import { extractCanonicalTrackCode, getRacetrackLabel, getRacetrackLocation } from "@/lib/racetracks";
 
 const RACECARD_DOWNLOAD_TZ =
@@ -263,10 +264,11 @@ const RaceCardsBrowse = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.05 }}
-                    className="card-dark group relative"
+                    className="card-dark group relative overflow-hidden rounded-xl"
                   >
+                    <TrackCardHeroImage trackCode={card.track_code} />
                     {owned && (
-                      <div className="absolute top-4 right-4">
+                      <div className="absolute top-4 right-4 z-10">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/10 border border-green-500/30">
                           <CheckCircle className="h-3 w-3 text-green-500" />
                           <span className="text-[10px] font-bold text-green-500 uppercase">Owned</span>

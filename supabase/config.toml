@@ -39,6 +39,17 @@ verify_jwt = false
 [functions.equibase-late-changes-rss]
 verify_jwt = false
 
+# Dashboard racing results (fixed upstream URLs)
+[functions.otb-results-rss]
+verify_jwt = false
+
+[functions.hrn-headlines-rss]
+verify_jwt = false
+
+# Racetrack card hero images (Wikimedia Commons search); browse page is anon
+[functions.track-image-search]
+verify_jwt = false
+
 # All other functions validate JWT themselves AND via gateway
 [functions.create-checkout-session]
 verify_jwt = true

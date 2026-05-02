@@ -34,4 +34,6 @@ race cards/
 
 # Local AI/dev tooling state — not project source
 .ijfw/
+.agents/
+.codex/
 .claude-context.md
