@@ -146,7 +146,7 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
         return jsonResponse({ received: true, skipped: true, reason: ack.reason }, 200);
       }
       console.error("[stripe-webhook] Transaction insert failed:", txError.code, txError.message);
-      return jsonResponse({ error: "Transaction recording failed" }, 500);
+      return jsonResponse(jsonErrBody("Transaction recording failed", txError), 500);
     }
 
     // Atomic credit update — no read-then-write race condition (CRIT-04)
@@ -176,7 +176,7 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
         return jsonResponse({ received: true, skipped: true, reason: ack.reason }, 200);
       }
       console.error("[stripe-webhook] Credit update failed:", creditError.code, creditError.message);
-      return jsonResponse({ error: "Credit update failed" }, 500);
+      return jsonResponse(jsonErrBody("Credit update failed", creditError), 500);
     }
 
     const { error: auditError } = await supabaseAdmin.from("audit_log").insert({
@@ -293,7 +293,7 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
         return jsonResponse({ received: true, skipped: true, reason: ack.reason }, 200);
       }
       console.error("[stripe-webhook] invoice.paid transaction insert failed:", txError.code, txError.message);
-      return jsonResponse({ error: "Transaction recording failed" }, 500);
+      return jsonResponse(jsonErrBody("Transaction recording failed", txError), 500);
     }
 
     const { error: creditError } = await supabaseAdmin.rpc("add_credits_atomic", {
@@ -322,7 +322,7 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
         return jsonResponse({ received: true, skipped: true, reason: ack.reason }, 200);
       }
       console.error("[stripe-webhook] invoice.paid credit update failed:", creditError.code, creditError.message);
-      return jsonResponse({ error: "Credit update failed" }, 500);
+      return jsonResponse(jsonErrBody("Credit update failed", creditError), 500);
     }
 
     const { error: auditError } = await supabaseAdmin.from("audit_log").insert({

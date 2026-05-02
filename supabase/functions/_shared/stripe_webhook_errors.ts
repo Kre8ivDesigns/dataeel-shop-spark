@@ -3,7 +3,12 @@
  * (bad metadata user_id, missing migrations, etc.).
  */
 
-export type DbAckReason = "foreign_key_violation" | "schema_mismatch" | "unknown";
+export type DbAckReason =
+  | "foreign_key_violation"
+  | "schema_mismatch"
+  | "function_missing"
+  | "not_null_violation"
+  | "unknown";
 
 export function acknowledgeOnlyDbError(error: {
   code?: string;
@@ -18,6 +23,14 @@ export function acknowledgeOnlyDbError(error: {
   if (code === "42703") {
     return { acknowledge: true, reason: "schema_mismatch" };
   }
+  /** NOT NULL — migrations / drift; retries won't fix until DB is repaired */
+  if (code === "23502") {
+    return { acknowledge: true, reason: "not_null_violation" };
+  }
+  /** undefined_function — e.g. old DB missing add_credits_atomic(uuid,int,text,uuid,jsonb) */
+  if (code === "42883") {
+    return { acknowledge: true, reason: "function_missing" };
+  }
   if (msg.includes("foreign key") || msg.includes("violates foreign key constraint")) {
     return { acknowledge: true, reason: "foreign_key_violation" };
   }
@@ -25,6 +38,12 @@ export function acknowledgeOnlyDbError(error: {
     (msg.includes("column") && msg.includes("does not exist")) ||
     (msg.includes("relation") && msg.includes("does not exist"))
   ) {
+    return { acknowledge: true, reason: "schema_mismatch" };
+  }
+  if (msg.includes("does not exist") && (msg.includes("function") || msg.includes("add_credits_atomic"))) {
+    return { acknowledge: true, reason: "function_missing" };
+  }
+  if (msg.includes("permission denied") && msg.includes("function")) {
     return { acknowledge: true, reason: "schema_mismatch" };
   }
 

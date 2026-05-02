@@ -36,4 +36,25 @@ describe("acknowledgeOnlyDbError", () => {
     const r = acknowledgeOnlyDbError({ code: "23514", message: "check constraint" });
     expect(r.acknowledge).toBe(false);
   });
+
+  it("acknowledges NOT NULL violation", () => {
+    const r = acknowledgeOnlyDbError({ code: "23502", message: "null value" });
+    expect(r.acknowledge).toBe(true);
+    expect(r.reason).toBe("not_null_violation");
+  });
+
+  it("acknowledges undefined function", () => {
+    const r = acknowledgeOnlyDbError({ code: "42883", message: "function" });
+    expect(r.acknowledge).toBe(true);
+    expect(r.reason).toBe("function_missing");
+  });
+
+  it("acknowledges add_credits_atomic missing from message", () => {
+    const r = acknowledgeOnlyDbError({
+      code: "P0001",
+      message: "function public.add_credits_atomic(uuid,integer,text,uuid,jsonb) does not exist",
+    });
+    expect(r.acknowledge).toBe(true);
+    expect(r.reason).toBe("function_missing");
+  });
 });
