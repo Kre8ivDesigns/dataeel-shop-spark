@@ -17,9 +17,38 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [awaitingEmailConfirm, setAwaitingEmailConfirm] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+
+  const resendConfirmationEmail = async (emailToResend: string) => {
+    const trimmed = emailToResend.trim();
+    if (!trimmed) {
+      toast({
+        title: "Email required",
+        description: "Enter the address you used to sign up.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setResendLoading(true);
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: trimmed,
+      options: { emailRedirectTo: window.location.origin },
+    });
+    setResendLoading(false);
+    if (error) {
+      toast({ title: "Could not resend", description: sanitizeError(error), variant: "destructive" });
+    } else {
+      toast({
+        title: "Confirmation sent",
+        description: "Check your inbox and spam folder for the link.",
+      });
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +68,8 @@ const Auth = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    setAwaitingEmailConfirm(false);
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -50,9 +80,20 @@ const Auth = () => {
     setLoading(false);
     if (error) {
       toast({ title: "Signup failed", description: sanitizeError(error), variant: "destructive" });
-    } else {
-      toast({ title: "Check your email", description: "We sent you a confirmation link." });
+      return;
     }
+    if (data.session) {
+      toast({ title: "Welcome!", description: "Your account is ready." });
+      const next = searchParams.get("redirect");
+      const safe = next && next.startsWith("/") && !next.startsWith("//");
+      navigate(safe ? next : "/dashboard");
+      return;
+    }
+    setAwaitingEmailConfirm(true);
+    toast({
+      title: "Check your email",
+      description: "We sent a confirmation link. Check spam if you do not see it.",
+    });
   };
 
   return (
@@ -84,6 +125,17 @@ const Auth = () => {
                   <Button type="submit" disabled={loading} className="w-full bg-primary text-primary-foreground font-semibold">
                     {loading ? "Signing in..." : "Sign In"}
                   </Button>
+                  <p className="text-center text-sm text-muted-foreground pt-2">
+                    Didn&apos;t get the confirmation email?{" "}
+                    <button
+                      type="button"
+                      className="text-primary underline underline-offset-4 hover:text-primary/90 disabled:opacity-50"
+                      disabled={resendLoading || loading}
+                      onClick={() => void resendConfirmationEmail(email)}
+                    >
+                      {resendLoading ? "Sending…" : "Resend link"}
+                    </button>
+                  </p>
                 </form>
               </TabsContent>
               <TabsContent value="signup">
@@ -103,6 +155,21 @@ const Auth = () => {
                   <Button type="submit" disabled={loading} className="w-full bg-primary text-primary-foreground font-semibold">
                     {loading ? "Creating account..." : "Create Account"}
                   </Button>
+                  {awaitingEmailConfirm ? (
+                    <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                      <p className="mb-2">Still waiting for the email? Check spam, or resend the confirmation link.</p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        disabled={resendLoading || loading}
+                        onClick={() => void resendConfirmationEmail(email)}
+                      >
+                        {resendLoading ? "Sending…" : "Resend confirmation email"}
+                      </Button>
+                    </div>
+                  ) : null}
                 </form>
               </TabsContent>
             </Tabs>

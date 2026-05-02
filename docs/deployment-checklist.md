@@ -7,7 +7,10 @@ Use this when standing up or auditing an environment so **database, S3 files, Ed
 - [ ] Apply all migrations from `supabase/migrations/` (local: `supabase db push`; hosted: CI or Dashboard SQL).
 - [ ] If the API logs **404** / **PGRST205** on `GET /rest/v1/audit_log`, the `audit_log` table was never created on that project. Apply at least `20260310000000_security_hardening.sql` (creates `public.audit_log` + admin-read RLS), or run a full `supabase db push` so schema matches the app.
 - [ ] Confirm extensions/policies match expectations: `racecards`, `racecards_public`, `metadata` columns, `site_content`, RLS on sensitive tables.
-- [ ] **Auth**: email provider or SSO configured; site URL / redirect URLs set.
+- [ ] **Auth**
+  - [ ] **Authentication → URL Configuration**: **Site URL** = canonical app URL (e.g. `https://www.thedataeel.com`). **Redirect URLs** includes that origin, bare domain if used, `http://localhost:8080` for local Vite, and preview origins if you test auth there.
+  - [ ] **Authentication → SMTP**: custom SMTP here sends **all Auth emails** (confirm signup, reset password). **Admin → Settings → SMTP** in the web app is separate (Edge/test mail only).
+  - [ ] **Authentication → Email Templates**: paste HTML from `supabase/templates/` — **Confirm signup** = **`confirm-signup.html`** (matches `[auth.email.template.confirmation]` in `supabase/config.toml`). See `supabase/templates/README.md`.
 
 ## 2. Primary file bucket (AWS S3)
 
@@ -29,7 +32,7 @@ Use this when standing up or auditing an environment so **database, S3 files, Ed
   - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` — fallback when Admin > Settings > Stripe is empty. Admins can now save both test and live key sets in the UI and flip modes via `stripe_mode`; the `resolveStripeConfig` helper prefers those values over the env secrets.
   - `APP_SETTINGS_ENCRYPTION_KEY` — **64+ hex chars** for `manage-app-settings` / AI key encryption / Stripe mode resolution.
 - [ ] Optional: `SITE_PUBLIC_URL` for OpenRouter referrer header.
-- [ ] Auth → Email Templates: paste `supabase/templates/*.html` into Supabase Dashboard → Authentication → Email Templates (Confirm signup, Reset password, Magic link). Supabase CLI picks them up automatically on `supabase db push` via the `[auth.email.template.*]` entries in `supabase/config.toml`.
+- [ ] Auth → Email Templates: paste templates listed in `supabase/config.toml` (`confirm-signup.html`, `reset-password.html`, `magic-link.html`). Confirm signup must use **`confirm-signup.html`**, not the legacy `confirmation.html`, unless you change both Dashboard and `config.toml`. Local `supabase start` uses `config.toml`; hosted projects use Dashboard copies.
 
 | Function | Role |
 |----------|------|

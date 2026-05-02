@@ -8,7 +8,7 @@ The HTML template references the logo at `{{ .SiteURL }}/dataeel-logo.png`.
 
 `{{ .SiteURL }}` is the **Site URL** set in the Supabase Dashboard under
 **Project Settings → Authentication → URL Configuration → Site URL**
-(e.g. `https://www.dataeel.com`).
+(e.g. `https://www.thedataeel.com`).
 
 The `dataeel-logo.png` image must be publicly accessible at that URL.
 In this project, `public/dataeel-logo.png` is served at the root path
@@ -22,8 +22,9 @@ absolute URL (e.g. from a CDN).
 
 | File | Purpose |
 |---|---|
-| `confirmation.html` | HTML email sent when a new user confirms their signup |
-| `confirmation.txt` | Plain-text fallback for the same email |
+| **`confirm-signup.html`** | **Canonical** HTML for **Confirm signup** — this path is wired in `supabase/config.toml` for local `supabase start` (`[auth.email.template.confirmation]`). **Paste this file** into the Dashboard for production. |
+| `confirmation.html` | Older alternate layout; do **not** use for Dashboard unless you intentionally prefer it over `confirm-signup.html` (then keep local `config.toml` in sync). |
+| `confirmation.txt` | Reference plain-text body if your provider or workflow needs a non-HTML variant |
 
 ## Template Variables
 
@@ -39,8 +40,7 @@ Supabase replaces the following Go-template placeholders at send time:
 
 ## Local Development
 
-The `supabase/config.toml` file already wires `confirmation.html` for the
-local Supabase stack (`supabase start`). No additional steps needed.
+`supabase/config.toml` wires **`confirm-signup.html`** for the confirmation template (`[auth.email.template.confirmation]`). Run `supabase start` — no extra steps for local email HTML.
 
 ---
 
@@ -56,23 +56,19 @@ Follow these steps to apply the custom template:
    ```
    Confirm your DATAEEL® account
    ```
-5. Paste the entire contents of `confirmation.html` into the **HTML Body** editor.
+5. Paste the entire contents of **`confirm-signup.html`** into the **HTML Body** editor (must match `config.toml` so local and hosted templates stay aligned).
 6. Click **Save**.
 
-> **Tip — Sender address:** To send from `support@dataeel.com` (or any custom
-> domain), configure a custom SMTP provider in the Supabase Dashboard under
-> **Project Settings → Authentication → SMTP Settings** before applying the
-> template. This controls the sender address for all Supabase Auth emails
-> (signup, password reset, etc.).
-> The in-app **Admin Settings → SMTP** panel stores SMTP credentials for
-> Edge Functions (e.g. future transactional mailers) and is separate from
-> Supabase Auth's own SMTP.
+> **Critical — Two SMTP surfaces:**  
+> **Authentication → SMTP** in the Supabase Dashboard sends **signup, confirmation, reset password, and magic links**.  
+> The in-app **Admin → Settings → SMTP** panel is **only** for Edge Functions (e.g. admin test emails via `manage-app-settings`). **Configuring Admin SMTP does not send Auth emails.**  
+> To send Auth mail from your domain, set **Authentication → SMTP** (and verify DKIM/SPF at your provider).
 
 ---
 
 ## Adding More Templates
 
-Copy the pattern for `confirmation.html` and add a new section to
+Copy the pattern for `confirm-signup.html` and add a new section to
 `supabase/config.toml`:
 
 ```toml
