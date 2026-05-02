@@ -9,6 +9,8 @@ import {
   Loader2,
   CheckCircle,
   Cloud,
+  Sparkles,
+  ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -28,6 +30,9 @@ import { getInvokeErrorMessage } from "@/lib/edgeFunctionErrors";
 
 const RACECARD_DOWNLOAD_TZ =
   import.meta.env.VITE_RACECARD_DOWNLOAD_TZ ?? DEFAULT_RACECARD_DOWNLOAD_TZ;
+
+const RACE_AUTH_REDIRECT = `/auth?redirect=${encodeURIComponent("/racecards")}`;
+const RACE_JOIN_REDIRECT = `/auth?mode=signup&redirect=${encodeURIComponent("/racecards")}`;
 
 const RaceCardsBrowse = () => {
   const { user } = useAuth();
@@ -135,8 +140,8 @@ const RaceCardsBrowse = () => {
                 Race<span className="text-neon">Cards</span>
               </h1>
               <p className="text-muted-foreground text-sm mt-1">
-                Listings are read from the database (with browser caching). PDFs are served from **Amazon S3** via a
-                presigned URL when you download.
+                Browse what&apos;s available by track and date. Signed-in members download PDFs with credits (presigned
+                links from secure storage).
               </p>
             </div>
             {user && (
@@ -154,6 +159,47 @@ const RaceCardsBrowse = () => {
               </div>
             )}
           </div>
+
+          {!user && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="relative overflow-hidden rounded-xl border border-primary/40 bg-gradient-to-br from-primary/10 via-card to-card p-5 md:p-6 mb-8 shadow-[0_0_40px_-12px_hsl(var(--primary)/0.45)]"
+            >
+              <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-primary/15 blur-3xl pointer-events-none" />
+              <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+                <div className="flex gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/20 border border-primary/30">
+                    <Sparkles className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-primary mb-1">Members only downloads</p>
+                    <h2 className="text-lg md:text-xl font-heading font-bold text-foreground leading-snug">
+                      Join DATAEEL® to purchase credits and download racecards
+                    </h2>
+                    <p className="text-sm text-muted-foreground mt-2 max-w-xl">
+                      Create a free account, buy credits, and unlock full PDF racecards for the tracks listed below—each
+                      download uses one credit during the active window for that race day.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row lg:flex-col xl:flex-row gap-2 shrink-0 lg:items-end">
+                  <Button asChild className="bg-primary text-primary-foreground hover:brightness-110 shadow-neon font-semibold gap-2">
+                    <Link to={RACE_JOIN_REDIRECT}>
+                      Join now
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" className="border-border">
+                    <Link to={RACE_AUTH_REDIRECT}>Sign in</Link>
+                  </Button>
+                  <Button asChild variant="ghost" className="text-muted-foreground hover:text-primary">
+                    <Link to="/pricing">View pricing</Link>
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          )}
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-8">
             <div className="flex bg-card rounded-lg border border-border p-1">
@@ -246,29 +292,43 @@ const RaceCardsBrowse = () => {
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                      <Button
-                        className="flex-1 bg-primary text-primary-foreground hover:brightness-110 font-semibold text-sm h-10 shadow-neon"
-                        onClick={() => void handleDownload(card.id)}
-                        disabled={isDownloading || downloadDisabled}
-                        title={
-                          downloadDisabled
-                            ? "Downloads closed after the race day in the configured timezone."
-                            : undefined
-                        }
-                      >
-                        {isDownloading ? (
-                          <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Download className="mr-1.5 h-4 w-4" />
-                        )}
-                        {owned ? "Re-download" : "Download · 1 Credit"}
-                      </Button>
-                      {downloadDisabled && (
-                        <p className="text-[11px] text-muted-foreground leading-snug px-0.5">
-                          {dlBlock.reason === "past_race_day"
-                            ? "This race day has passed; downloads are no longer available."
-                            : "Download window closed (end of race day)."}
-                        </p>
+                      {!user ? (
+                        <Button
+                          asChild
+                          className="flex-1 bg-primary text-primary-foreground hover:brightness-110 font-semibold text-sm h-10 shadow-neon"
+                        >
+                          <Link to={RACE_JOIN_REDIRECT}>
+                            <CreditCard className="mr-1.5 h-4 w-4" />
+                            Join to purchase &amp; download
+                          </Link>
+                        </Button>
+                      ) : (
+                        <>
+                          <Button
+                            className="flex-1 bg-primary text-primary-foreground hover:brightness-110 font-semibold text-sm h-10 shadow-neon"
+                            onClick={() => void handleDownload(card.id)}
+                            disabled={isDownloading || downloadDisabled}
+                            title={
+                              downloadDisabled
+                                ? "Downloads closed after the race day in the configured timezone."
+                                : undefined
+                            }
+                          >
+                            {isDownloading ? (
+                              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Download className="mr-1.5 h-4 w-4" />
+                            )}
+                            {owned ? "Re-download" : "Download · 1 Credit"}
+                          </Button>
+                          {downloadDisabled && (
+                            <p className="text-[11px] text-muted-foreground leading-snug px-0.5">
+                              {dlBlock.reason === "past_race_day"
+                                ? "This race day has passed; downloads are no longer available."
+                                : "Download window closed (end of race day)."}
+                            </p>
+                          )}
+                        </>
                       )}
                     </div>
                   </motion.div>

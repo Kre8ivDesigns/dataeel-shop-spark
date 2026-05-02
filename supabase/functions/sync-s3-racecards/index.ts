@@ -218,6 +218,7 @@ async function handleRequest(req: Request): Promise<Response> {
       uploaded_by: string | null;
     }>;
 
+    // Cron uses actingUserId === null; do not reference user here.
     for (const s3Key of newKeys) {
       const { trackCode, raceDate, fileName } = parseS3Key(s3Key);
       if (!isValidPostgresDate(raceDate)) {

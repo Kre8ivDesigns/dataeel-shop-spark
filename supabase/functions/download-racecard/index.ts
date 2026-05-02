@@ -5,6 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { S3Client, GetObjectCommand } from "https://esm.sh/@aws-sdk/client-s3@3";
 import { getSignedUrl } from "https://esm.sh/@aws-sdk/s3-request-presigner@3";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { getAwsS3Env, missingAwsS3EnvKeys } from "../_shared/awsS3Env.ts";
 import {
   DEFAULT_RACECARD_DOWNLOAD_TZ,
   isRacecardDownloadAvailableAt,
@@ -134,17 +135,29 @@ Deno.serve(async (req) => {
       );
     }
 
+    const aws = getAwsS3Env();
+    if (!aws) {
+      console.error("download-racecard: missing AWS S3 env:", missingAwsS3EnvKeys().join(", "));
+      return new Response(
+        JSON.stringify({
+          error: "Download temporarily unavailable",
+          detail: "S3 is not configured for this environment.",
+        }),
+        { status: 503, headers: { ...cors, "Content-Type": "application/json" } },
+      );
+    }
+
     // Generate S3 pre-signed GET URL (5 minutes)
     const s3 = new S3Client({
-      region: Deno.env.get("AWS_REGION")!,
+      region: aws.region,
       credentials: {
-        accessKeyId: Deno.env.get("AWS_ACCESS_KEY_ID")!,
-        secretAccessKey: Deno.env.get("AWS_SECRET_ACCESS_KEY")!,
+        accessKeyId: aws.accessKeyId,
+        secretAccessKey: aws.secretAccessKey,
       },
     });
 
     const command = new GetObjectCommand({
-      Bucket: Deno.env.get("AWS_S3_BUCKET")!,
+      Bucket: aws.bucket,
       Key: racecard.file_url,
       ResponseContentDisposition: `attachment; filename="${racecard.file_name}"`,
       ResponseCacheControl: "private, no-store, max-age=0",
