@@ -12,6 +12,11 @@ import {
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
+import racecardExampleImage from "@/assets/racecard-guide/racecard-guide-page-02.webp";
+import racecardColumnsImage from "@/assets/racecard-guide/racecard-guide-page-03.webp";
+import racecardFormatImage from "@/assets/racecard-guide/racecard-guide-page-04.webp";
+import racecardAlgorithmsImage from "@/assets/racecard-guide/racecard-guide-page-05.webp";
+import racecardNoDataImage from "@/assets/racecard-guide/racecard-guide-page-07.webp";
 
 /**
  * Educational content adapted from DATAEEL RaceCard instructions (Nov 2024).
@@ -23,6 +28,11 @@ const sections: {
   icon: typeof BookOpen;
   title: string;
   paragraphs: string[];
+  image?: {
+    src: string;
+    alt: string;
+    caption: string;
+  };
 }[] = [
   {
     id: "why-dataeel",
@@ -52,6 +62,11 @@ const sections: {
       "Down the middle of the sheet, opening odds appear for each horse. Those are initial morning-line–style figures set ahead of time; if a horse attracts more money, its odds often shorten (smaller payout if it wins); if it is ignored, odds may lengthen (larger payout).",
       "Each horse has a program number (sometimes with a letter) and a name so you can match the card to the tote, program, and results.",
     ],
+    image: {
+      src: racecardFormatImage,
+      alt: "Annotated RaceCard format showing race number, post time, surface, race type, distance, horse names, numbers, and odds.",
+      caption: "Race header, conditions, horse identifiers, and opening odds.",
+    },
   },
   {
     id: "two-columns",
@@ -60,6 +75,11 @@ const sections: {
     paragraphs: [
       "On a typical page, the left-hand ranked list is Concert™, and the right-hand list is Aptitude™. Same horses, two different orderings — see the next sections for what each measures.",
     ],
+    image: {
+      src: racecardColumnsImage,
+      alt: "Annotated EEL RaceCard showing Concert on the left table and Aptitude on the right table.",
+      caption: "Concert is shown on the left; Aptitude is shown on the right.",
+    },
   },
   {
     id: "lesson-2",
@@ -71,6 +91,11 @@ const sections: {
       "The two numbers are not two versions of the same thing. Concert and Aptitude are separate models with separate inputs; they often disagree on order, and that is expected.",
       "Each algorithm ranks horses from top toward bottom: higher on the list means relatively more likely to be in the money under that model; lower means relatively less likely — for that algorithm only.",
     ],
+    image: {
+      src: racecardAlgorithmsImage,
+      alt: "RaceCard lesson page explaining Concert and Aptitude algorithms and top-to-bottom ranking.",
+      caption: "Concert and Aptitude are separate ranked opinions on the same race.",
+    },
   },
   {
     id: "lesson-3",
@@ -90,6 +115,11 @@ const sections: {
       "If you see that marker, treat it as “no usable prediction from this algorithm for this horse,” not as proof the horse is bad. Those runners may still be grouped toward the bottom of the list for layout only; order among marked horses is not meaningful.",
       "A horse that wins despite missing data is sometimes called a “sleeper” — the sheet did not have enough history to spotlight it, but the race itself told the story.",
     ],
+    image: {
+      src: racecardNoDataImage,
+      alt: "RaceCard lesson page showing x values where there is not enough data to calculate a prediction.",
+      caption: "An x means the algorithm does not have enough data to calculate a prediction.",
+    },
   },
 ];
 
@@ -113,29 +143,45 @@ const HowToReadRacecard = () => {
             Back to Home
           </Link>
 
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-            <p className="text-primary font-medium text-sm uppercase tracking-wide mb-3">Guide</p>
-            <h1 className="text-4xl md:text-5xl font-bold text-foreground font-heading tracking-tight mb-4">
-              How to read the RaceCard
-            </h1>
-            <p className="text-lg text-foreground/75 leading-relaxed mb-6 max-w-3xl">
-              A plain-language walkthrough of the EEL RaceCard layout, what Concert™ and Aptitude™ mean, and how to
-              interpret rankings — adapted from DATAEEL instructional materials.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Button asChild className="bg-primary text-primary-foreground hover:brightness-110">
-                <Link to="/racecards">Browse RaceCards</Link>
-              </Button>
-              <Button asChild variant="outline" className="border-border text-foreground hover:bg-muted">
-                <Link to="/betting-basics">Betting basics</Link>
-              </Button>
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.72fr)] lg:items-center"
+          >
+            <div>
+              <p className="text-primary font-medium text-sm uppercase tracking-wide mb-3">Guide</p>
+              <h1 className="text-4xl md:text-5xl font-bold text-foreground font-heading tracking-tight mb-4">
+                How to read the RaceCard
+              </h1>
+              <p className="text-lg text-foreground/75 leading-relaxed mb-6 max-w-3xl">
+                A plain-language walkthrough of the EEL RaceCard layout, what Concert™ and Aptitude™ mean, and how to
+                interpret rankings — adapted from DATAEEL instructional materials.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Button asChild className="bg-primary text-primary-foreground hover:brightness-110">
+                  <Link to="/racecards">Browse RaceCards</Link>
+                </Button>
+                <Button asChild variant="outline" className="border-border text-foreground hover:bg-muted">
+                  <Link to="/betting-basics">Betting basics</Link>
+                </Button>
+              </div>
             </div>
+
+            <figure className="overflow-hidden rounded-xl border border-white/10 bg-background/20 shadow-2xl">
+              <img
+                src={racecardExampleImage}
+                alt="Example EEL RaceCard page with race header, Concert table, Aptitude table, and note area."
+                className="h-full max-h-[430px] w-full object-cover object-top"
+                loading="eager"
+                decoding="async"
+              />
+            </figure>
           </motion.div>
         </div>
       </section>
 
       <section className="py-16">
-        <div className="container mx-auto px-4 space-y-14 max-w-4xl">
+        <div className="container mx-auto px-4 space-y-14 max-w-5xl">
           {sections.map((s, i) => (
             <motion.article
               key={s.id}
@@ -157,6 +203,20 @@ const HowToReadRacecard = () => {
                       <p key={`${s.id}-${j}`}>{p}</p>
                     ))}
                   </div>
+                  {s.image && (
+                    <figure className="mt-7 overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+                      <img
+                        src={s.image.src}
+                        alt={s.image.alt}
+                        className="w-full bg-white"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                      <figcaption className="border-t border-border bg-muted/40 px-4 py-3 text-xs text-muted-foreground">
+                        {s.image.caption}
+                      </figcaption>
+                    </figure>
+                  )}
                 </div>
               </div>
             </motion.article>
