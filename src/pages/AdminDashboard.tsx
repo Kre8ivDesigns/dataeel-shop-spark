@@ -33,8 +33,10 @@ import {
 import { motion } from "framer-motion";
 import type { AdminCustomer, AdminRacecard, AdminTransaction } from "@/lib/adminDashboardTypes";
 import { mergeProfilesWithCredits } from "@/lib/adminDashboardTypes";
+import { parseRacecardFilename } from "@/lib/parseRacecardFilename";
 import { AdminDashboardMainTabs } from "@/components/admin/AdminDashboardTables";
 import { AdminUserDetailSheet } from "@/components/admin/AdminUserDetailSheet";
+import { getRacetrackLabel } from "@/lib/racetracks";
 
 const AdminDashboard = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
@@ -144,20 +146,13 @@ const AdminDashboard = () => {
         continue;
       }
 
-      const nameWithoutExt = file.name.replace(".pdf", "");
-      const parts = nameWithoutExt.split("_");
-      const rawTrackCode = (parts[0] || "").replace(/[^A-Z0-9]/gi, "").toUpperCase();
-      const trackCode = rawTrackCode.length > 0 && rawTrackCode.length <= 10 ? rawTrackCode : "UNK";
-      const rawDate = parts[1] || "";
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      const isValidDate = dateRegex.test(rawDate) && !isNaN(new Date(rawDate).getTime());
-      const raceDate = isValidDate ? rawDate : new Date().toISOString().split("T")[0];
+      const { trackCode, raceDate } = parseRacecardFilename(file.name);
 
       const { error: dbError } = await supabase.from("racecards").insert({
         file_name: file.name,
         file_url: urlData.s3Key,
         track_code: trackCode,
-        track_name: trackCode,
+        track_name: getRacetrackLabel(trackCode),
         race_date: raceDate,
         uploaded_by: user.id,
       });

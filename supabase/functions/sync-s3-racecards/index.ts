@@ -6,6 +6,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { S3Client, ListObjectsV2Command } from "https://esm.sh/@aws-sdk/client-s3@3";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { getAwsS3Env, missingAwsS3EnvKeys } from "../_shared/awsS3Env.ts";
+import { parseRacecardFilename, stripRacecardUuidPrefix } from "../_shared/parseRacecardFilename.ts";
+import { getRacetrackLabel } from "../_shared/racetracks.ts";
 
 const MAX_ERROR_DETAIL_CHARS = 2000;
 
@@ -57,35 +59,12 @@ function formatPostgrestInsertDetail(err: { message: string; details?: string | 
 }
 
 /**
- * Parse a track code and race date from an S3 key.
- * Supported basename patterns (after optional `uuid-` prefix):
- * - `TRACKCODE_YYYY-MM-DD.pdf` (admin upload)
- * - `TRACKCODE_YYYY-MM-DD__2.pdf` (same track/day second card; from prepare-racecards-for-s3.mjs)
+ * Parse a track code and race date from an S3 key (basename rules in `../_shared/parseRacecardFilename.ts`).
  */
 function parseS3Key(s3Key: string): { trackCode: string; raceDate: string; fileName: string } {
-  const fileName = s3Key.split("/").pop() ?? s3Key;
-  // Strip the UUID prefix added by generate-upload-url (uuid-filename.pdf)
-  const uuidPrefixRe = /^[0-9a-f-]{36}-(.+)$/i;
-  const baseName = uuidPrefixRe.exec(fileName)?.[1] ?? fileName;
-
-  const nameWithoutExt = baseName.replace(/\.pdf$/i, "");
-  const strict = /^([A-Z0-9]+)_(20\d{2}-\d{2}-\d{2})(?:__\d+)?$/i.exec(nameWithoutExt);
-  if (strict) {
-    const trackCode = strict[1].toUpperCase();
-    const raceDate = strict[2];
-    return { trackCode, raceDate, fileName: baseName };
-  }
-
-  const parts = nameWithoutExt.split("_");
-  const rawTrackCode = (parts[0] ?? "").replace(/[^A-Z0-9]/gi, "").toUpperCase();
-  const trackCode =
-    rawTrackCode.length > 0 && rawTrackCode.length <= 10 ? rawTrackCode : "UNK";
-
-  const rawDate = parts[1] ?? "";
-  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-  const isValidDate = dateRegex.test(rawDate) && !isNaN(new Date(rawDate).getTime());
-  const raceDate = isValidDate ? rawDate : new Date().toISOString().split("T")[0];
-
+  const leaf = s3Key.split("/").pop() ?? s3Key;
+  const baseName = stripRacecardUuidPrefix(leaf);
+  const { trackCode, raceDate } = parseRacecardFilename(baseName);
   return { trackCode, raceDate, fileName: baseName };
 }
 
@@ -226,7 +205,7 @@ async function handleRequest(req: Request): Promise<Response> {
         file_name: fileName,
         file_url: s3Key,
         track_code: trackCode,
-        track_name: trackCode,
+        track_name: getRacetrackLabel(trackCode),
         race_date: raceDate,
         ...(actingUserId ? { uploaded_by: actingUserId } : { uploaded_by: null }),
       };

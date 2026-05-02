@@ -4,12 +4,14 @@
  *
  * Filename convention (before .pdf):
  *   [track][YYMMDD][-N optional]
- * - **Track:** three letters (A–Z), sometimes shown with a stray `^` in exports — we strip non-letters
- *   and use the first three letters. Two-letter tracks (Ct, Gp, Op, Sa) map via racecard-track-prefixes.json.
+ * - **Track:** typically three letters (A–Z); Equibase may emit two-letter prefixes or `Cd^`-style names — non-letters
+ *   are stripped and prefixes resolve via racecard-track-prefixes.json.
  * - **YYMMDD:** six digits for the race date (20YY assumed).
  * - **-N:** optional same-day duplicate (-1 → __2 in output name).
  *
- * Output: `TRACKCODE_YYYY-MM-DD.pdf` in `racecards-staging/` (gitignored).
+ * Output: `TRACKCODE_YYYY-MM-DD.pdf` in `racecards-staging/` (gitignored), never caret form.
+ * Direct admin / S3 sync parsing also accepts: `XXXYYMMDD` (three letters + YYMMDD), `XX^YYMMDD`, and optional `__N`
+ * before `.pdf` (see `supabase/functions/_shared/parseRacecardFilename.ts`).
  *
  * Usage: npm run prepare:racecards
  */
@@ -23,7 +25,7 @@ const SRC = path.join(ROOT, "race cards");
 const OUT = path.join(ROOT, "racecards-staging");
 const PREFIXES = JSON.parse(fs.readFileSync(path.join(__dirname, "racecard-track-prefixes.json"), "utf8"));
 
-/** Prefix (letters + optional junk like ^) + YYMMDD + optional -dup */
+/** Prefix (letters; optional `^` / noise stripped later) + YYMMDD + optional -dup */
 const FILE_RE = /^(.+?)(\d{2})(\d{2})(\d{2})(?:-(\d+))?\.pdf$/i;
 
 /**

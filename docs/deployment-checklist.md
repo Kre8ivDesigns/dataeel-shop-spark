@@ -18,6 +18,7 @@ Use this when standing up or auditing an environment so **database, S3 files, Ed
   - `AWS_REGION`
   - `AWS_ACCESS_KEY_ID`
   - `AWS_SECRET_ACCESS_KEY`
+  - `RACECARD_DOWNLOAD_TZ` — IANA timezone for race-day download cutoff (default **`America/New_York`** if unset). Downloads stop at **local midnight after the calendar `race_date`** (next day 00:00 in this zone); `download-racecard` returns **403** after that for everyone, including prior purchasers.
 
 ## 3. Edge Functions
 
@@ -49,6 +50,7 @@ Use this when standing up or auditing an environment so **database, S3 files, Ed
 
 - [ ] `VITE_SUPABASE_URL`
 - [ ] `VITE_SUPABASE_PUBLISHABLE_KEY` (anon)
+- [ ] Optional: `VITE_RACECARD_DOWNLOAD_TZ` — same IANA zone as Edge `RACECARD_DOWNLOAD_TZ` so the browse UI disables downloads when the server would refuse them (defaults to **`America/New_York`** when omitted).
 - [ ] Copy from `.env.example` for local dev; **never commit** `.env` (see `.gitignore`). If `.env` was ever committed, **rotate** the Supabase anon key and any other secrets that lived in that file.
 - [ ] `vercel.json` CSP `connect-src` includes `https://*.amazonaws.com` so **presigned S3 PUT** from the admin uploader works in the browser.
 - [ ] Production build: `npm run build` passes; smoke-test auth, `/racecards`, `/dashboard`, `/buy-credits`, admin routes.

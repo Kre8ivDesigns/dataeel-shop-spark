@@ -20,6 +20,14 @@ import { metadataListingLine, parseRacecardMetadata } from "@/lib/raceMetadata";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRacecardsPublicForDate } from "@/lib/queries/racecardsPublic";
 import { racecardDownloadKeys, userDashboardKeys } from "@/lib/queryKeys";
+import {
+  DEFAULT_RACECARD_DOWNLOAD_TZ,
+  getRacecardDownloadUiBlock,
+} from "@/lib/racecardDownloadDeadline";
+import { getInvokeErrorMessage } from "@/lib/edgeFunctionErrors";
+
+const RACECARD_DOWNLOAD_TZ =
+  import.meta.env.VITE_RACECARD_DOWNLOAD_TZ ?? DEFAULT_RACECARD_DOWNLOAD_TZ;
 
 const RaceCardsBrowse = () => {
   const { user } = useAuth();
@@ -81,13 +89,13 @@ const RaceCardsBrowse = () => {
 
     setDownloading(racecardId);
     try {
-      const { data, error } = await supabase.functions.invoke("download-racecard", {
+      const { data, error, response: invokeResponse } = await supabase.functions.invoke("download-racecard", {
         body: { racecardId },
       });
 
       if (error || !data?.signedUrl) {
-        const msg = data?.error || "Download failed";
-        toast({ title: "Download failed", description: msg, variant: "destructive" });
+        const msg = await getInvokeErrorMessage("download-racecard", error, data, invokeResponse);
+        toast({ title: "Download failed", description: msg || "Download failed", variant: "destructive" });
         return;
       }
 
@@ -190,6 +198,12 @@ const RaceCardsBrowse = () => {
                 const owned = isOwned(card.id);
                 const isDownloading = downloading === card.id;
                 const metaLine = metadataListingLine(parseRacecardMetadata(card.metadata));
+                const dlBlock = getRacecardDownloadUiBlock(
+                  card.race_date,
+                  RACECARD_DOWNLOAD_TZ,
+                  Date.now(),
+                );
+                const downloadDisabled = dlBlock.blocked;
 
                 return (
                   <motion.div
@@ -231,11 +245,16 @@ const RaceCardsBrowse = () => {
                       <span className="text-info font-medium">Aptitude™</span>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-col gap-1.5">
                       <Button
                         className="flex-1 bg-primary text-primary-foreground hover:brightness-110 font-semibold text-sm h-10 shadow-neon"
                         onClick={() => void handleDownload(card.id)}
-                        disabled={isDownloading}
+                        disabled={isDownloading || downloadDisabled}
+                        title={
+                          downloadDisabled
+                            ? "Downloads closed after the race day in the configured timezone."
+                            : undefined
+                        }
                       >
                         {isDownloading ? (
                           <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
@@ -244,6 +263,13 @@ const RaceCardsBrowse = () => {
                         )}
                         {owned ? "Re-download" : "Download · 1 Credit"}
                       </Button>
+                      {downloadDisabled && (
+                        <p className="text-[11px] text-muted-foreground leading-snug px-0.5">
+                          {dlBlock.reason === "past_race_day"
+                            ? "This race day has passed; downloads are no longer available."
+                            : "Download window closed (end of race day)."}
+                        </p>
+                      )}
                     </div>
                   </motion.div>
                 );

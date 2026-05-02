@@ -5,6 +5,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { S3Client, GetObjectCommand } from "https://esm.sh/@aws-sdk/client-s3@3";
 import { getSignedUrl } from "https://esm.sh/@aws-sdk/s3-request-presigner@3";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import {
+  DEFAULT_RACECARD_DOWNLOAD_TZ,
+  isRacecardDownloadAvailableAt,
+} from "../_shared/racecardDeadline.ts";
 
 Deno.serve(async (req) => {
   const cors = getCorsHeaders(req);
@@ -43,7 +47,7 @@ Deno.serve(async (req) => {
     if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -51,7 +55,7 @@ Deno.serve(async (req) => {
     if (!racecardId) {
       return new Response(JSON.stringify({ error: "Missing racecardId" }), {
         status: 400,
-        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -65,8 +69,36 @@ Deno.serve(async (req) => {
     if (rcError || !racecard) {
       return new Response(JSON.stringify({ error: "Racecard not found" }), {
         status: 404,
-        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
+    }
+
+    const downloadTz = Deno.env.get("RACECARD_DOWNLOAD_TZ")?.trim() ||
+      DEFAULT_RACECARD_DOWNLOAD_TZ;
+    const raceDate = racecard.race_date as string | undefined;
+    if (!raceDate || typeof raceDate !== "string") {
+      return new Response(
+        JSON.stringify({ error: "Racecard has no race date", detail: "Cannot verify download window." }),
+        {
+          status: 400,
+          headers: { ...cors, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const nowMs = Date.now();
+    if (!isRacecardDownloadAvailableAt(raceDate, downloadTz, nowMs)) {
+      return new Response(
+        JSON.stringify({
+          error: "Downloads closed for this race day",
+          detail:
+            `Racecard downloads ended at the start of the next calendar day after the race (${downloadTz}). No presigned URLs are issued after that time, including if you already purchased this download.`,
+        }),
+        {
+          status: 403,
+          headers: { ...cors, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Atomic credit check, deduction, and download recording
@@ -85,7 +117,7 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: "Failed to process download" }),
         {
           status: 500,
-          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+          headers: { ...cors, "Content-Type": "application/json" },
         }
       );
     }
@@ -97,7 +129,7 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: "Insufficient credits" }),
         {
           status: 402,
-          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+          headers: { ...cors, "Content-Type": "application/json" },
         }
       );
     }
@@ -127,7 +159,7 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: "Failed to generate download link" }),
         {
           status: 500,
-          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+          headers: { ...cors, "Content-Type": "application/json" },
         }
       );
     }
@@ -140,14 +172,14 @@ Deno.serve(async (req) => {
       }),
       {
         status: 200,
-        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       }
     );
   } catch (err) {
     console.error("Download error:", err);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
-      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 });

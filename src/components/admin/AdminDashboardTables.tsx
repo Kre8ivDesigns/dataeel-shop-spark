@@ -271,8 +271,12 @@ export function AdminRacecardsTab({
           </div>
         </div>
         <p className="text-xs text-muted-foreground mt-1">
-          Name files as <code className="bg-muted px-1 rounded">TRACKCODE_YYYY-MM-DD.pdf</code> for auto-detection.
-          Use <strong>Site metadata</strong> to cache weather, post times, and conditions — no live API calls on the
+          Name files{" "}
+          <code className="bg-muted px-1 rounded">TRACKCODE_YYYY-MM-DD.pdf</code> (ISO date),{" "}
+          <code className="bg-muted px-1 rounded">XXXYYMMDD.pdf</code> (three letters + 6-digit date, no separator), or{" "}
+          <code className="bg-muted px-1 rounded">XX^YYMMDD.pdf</code> (two letters, caret, date). Optional same-day
+          index: <code className="bg-muted px-1 rounded">__N</code> before <code className="bg-muted px-1 rounded">.pdf</code>
+          . Use <strong>Site metadata</strong> to cache weather, post times, and conditions — no live API calls on the
           public site.
         </p>
       </CardHeader>
