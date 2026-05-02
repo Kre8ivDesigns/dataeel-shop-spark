@@ -100,10 +100,11 @@ const BuyCredits = () => {
         .from("credit_balances")
         .select("credits")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
       return data?.credits ?? 0;
     },
     enabled: !!user,
+    refetchOnWindowFocus: "always",
   });
 
   const currentCredits = creditBalance ?? 0;

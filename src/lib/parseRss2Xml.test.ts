@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseRss2Items } from "./parseRss2Xml";
+import { parseRss2ChannelTitle, parseRss2Items } from "./parseRss2Xml";
 
 describe("parseRss2Items", () => {
   it("returns empty array for non-xml", () => {
@@ -49,6 +49,23 @@ ${[1, 2, 3].map((i) => `<item><title>T${i}</title><link>https://x/${i}</link></i
     expect(items[0]?.title).toContain("’");
     expect(items[0]?.title).toContain("&");
     expect(items[0]?.link).toBe("https://www.thoroughbreddailynews.com/story/");
+  });
+
+  it("decodes entity spellings inside CDATA titles (not parsed by XML)", () => {
+    const xml = `<rss><channel><item>
+<title><![CDATA[America&apos;s Best Racing — Daily]]></title>
+<link>https://example.com</link>
+</item></channel></rss>`;
+    const items = parseRss2Items(xml, 5);
+    expect(items[0]?.title).toBe("America's Best Racing — Daily");
+  });
+
+  it("parses channel title with encoded apostrophe", () => {
+    const xml = `<?xml version="1.0"?><rss><channel>
+<title>America&apos;s Best Racing</title>
+<item><title>T</title><link>https://x</link></item>
+</channel></rss>`;
+    expect(parseRss2ChannelTitle(xml)).toBe("America's Best Racing");
   });
 
   it("parses description with encoded HTML like Equibase RSS", () => {

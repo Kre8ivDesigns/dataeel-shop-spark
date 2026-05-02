@@ -145,5 +145,7 @@ export function useUserDashboard(userId: string | undefined) {
     enabled: !!userId,
     staleTime: STALE_MS,
     gcTime: GC_MS,
+    // Credits change after Stripe webhook latency; don't let a "fresh" stale window hide updates on tab focus.
+    refetchOnWindowFocus: "always",
   });
 }

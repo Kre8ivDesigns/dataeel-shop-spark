@@ -187,14 +187,14 @@ const PricingPage = () => {
       {/* Pricing Cards */}
       <section className="py-20">
         <div className="container mx-auto px-4">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 max-w-7xl mx-auto">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 max-w-7xl mx-auto items-stretch">
             {creditPackages.map((plan, index) => (
               <motion.div
                 key={plan.name}
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 * index }}
-                className={`relative rounded-xl p-6 flex flex-col transition-all duration-200 ${
+                className={`relative rounded-xl p-6 flex flex-col h-full transition-all duration-200 ${
                   plan.popular
                     ? "bg-secondary border-2 border-primary shadow-neon lg:scale-110 z-10"
                     : "card-dark"
@@ -241,7 +241,7 @@ const PricingPage = () => {
                 </div>
 
                 {/* Features */}
-                <ul className="space-y-2 mb-6 flex-1">
+                <ul className="space-y-2 flex-1">
                   {plan.features.map((feature, i) => (
                     <li key={i} className="flex items-start gap-2">
                       <Check className="h-4 w-4 flex-shrink-0 mt-0.5 text-primary" />
@@ -251,6 +251,7 @@ const PricingPage = () => {
                 </ul>
 
                 {/* CTA */}
+                <div className="mt-auto w-full pt-6">
                 <Button
                   asChild
                   className={`w-full font-semibold ${
@@ -264,6 +265,7 @@ const PricingPage = () => {
                     {plan.popular && <Zap className="ml-2 h-4 w-4" />}
                   </Link>
                 </Button>
+                </div>
               </motion.div>
             ))}
           </div>

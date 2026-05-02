@@ -1,5 +1,7 @@
 /** Minimal RSS 2.0 item parser for small feeds (America's Best Racing, etc.). */
 
+import { decodeHtmlEntities } from "@/lib/decodeHtmlEntities";
+
 export type Rss2Item = {
   title: string;
   link: string;
@@ -7,17 +9,6 @@ export type Rss2Item = {
   /** Plain text (HTML stripped); e.g. Equibase scratch lines */
   description?: string;
 };
-
-function decodeXmlEntities(s: string): string {
-  return s
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(parseInt(n, 10)))
-    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)));
-}
 
 function stripTags(s: string): string {
   return s.replace(/<[^>]*>/g, "").trim();
@@ -42,9 +33,21 @@ function firstTagContent(block: string, tag: string): string | null {
 
 /** Decode entities, turn &lt;br&gt; into space, strip tags, collapse whitespace. */
 export function normalizeRssDescriptionFragment(raw: string): string {
-  const decoded = decodeXmlEntities(raw.trim());
+  const decoded = decodeHtmlEntities(raw.trim());
   const spaced = decoded.replace(/<br\s*\/?>/gi, " ");
   return stripTags(spaced).replace(/\s+/g, " ").trim();
+}
+
+/**
+ * First &lt;title&gt; inside the first &lt;channel&gt; (RSS 2.0).
+ */
+export function parseRss2ChannelTitle(xml: string): string | null {
+  const ch = xml.match(/<channel\b[^>]*>([\s\S]*?)<\/channel>/i);
+  if (!ch) return null;
+  const titleRaw = firstTagContent(ch[1], "title");
+  if (!titleRaw) return null;
+  const t = decodeHtmlEntities(titleRaw).trim();
+  return t || null;
 }
 
 /**
@@ -61,14 +64,14 @@ export function parseRss2Items(xml: string, maxItems: number): Rss2Item[] {
     const pubRaw = firstTagContent(block, "pubDate");
     const descRaw = firstTagInnerRaw(block, "description");
     if (!titleRaw || !linkRaw) continue;
-    const title = decodeXmlEntities(titleRaw).trim();
+    const title = decodeHtmlEntities(titleRaw).trim();
     const link = linkRaw.trim();
     if (!title || !link) continue;
     const description = descRaw ? normalizeRssDescriptionFragment(descRaw) : undefined;
     items.push({
       title,
       link,
-      pubDate: pubRaw ? decodeXmlEntities(pubRaw).trim() : undefined,
+      pubDate: pubRaw ? decodeHtmlEntities(pubRaw).trim() : undefined,
       description: description || undefined,
     });
   }

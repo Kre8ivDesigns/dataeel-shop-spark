@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, Newspaper, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { parseRss2Items, type Rss2Item } from "@/lib/parseRss2Xml";
+import { parseRss2ChannelTitle, parseRss2Items, type Rss2Item } from "@/lib/parseRss2Xml";
 
 const ABR_HOME = "https://www.americasbestracing.net/";
 const ABR_RSS_SOURCE = "https://www.americasbestracing.net/rss/the-sport";
@@ -10,7 +10,7 @@ const TDN_RSS_SOURCE = "https://www.thoroughbreddailynews.com/feed/";
 const QUERY_KEY = ["us-racing-news-rss"] as const;
 const MAX_ITEMS = 8;
 
-type UsRacingFeed = { items: Rss2Item[]; source: "abr" | "tdn" };
+type UsRacingFeed = { items: Rss2Item[]; source: "abr" | "tdn"; channelTitle: string | null };
 
 async function fetchFunctionXml(functionName: string, base: string, key: string): Promise<string> {
   const res = await fetch(`${base}/functions/v1/${functionName}`, {
@@ -32,13 +32,27 @@ async function fetchUsRacingNews(): Promise<UsRacingFeed> {
   if (!base || !key) {
     throw new Error("Missing Supabase env");
   }
-  const abrXml = await fetchFunctionXml("abr-rss", base, key);
-  const abrItems = parseRss2Items(abrXml, MAX_ITEMS);
-  if (abrItems.length > 0) {
-    return { items: abrItems, source: "abr" };
+  let abrItems: Rss2Item[] = [];
+  let abrXml: string | null = null;
+  try {
+    abrXml = await fetchFunctionXml("abr-rss", base, key);
+    abrItems = parseRss2Items(abrXml, MAX_ITEMS);
+  } catch {
+    /* fall through to TDN */
+  }
+  if (abrItems.length > 0 && abrXml) {
+    return {
+      items: abrItems,
+      source: "abr",
+      channelTitle: parseRss2ChannelTitle(abrXml),
+    };
   }
   const tdnXml = await fetchFunctionXml("tdn-rss", base, key);
-  return { items: parseRss2Items(tdnXml, MAX_ITEMS), source: "tdn" };
+  return {
+    items: parseRss2Items(tdnXml, MAX_ITEMS),
+    source: "tdn",
+    channelTitle: parseRss2ChannelTitle(tdnXml),
+  };
 }
 
 function formatPubDate(pubDate?: string): string | null {
@@ -59,7 +73,7 @@ export function AbrNewsSection() {
 
   return (
     <section id="us-racing-news" className="py-20 bg-muted/30 border-y border-border">
-      <div className="container mx-auto px-4 max-w-4xl">
+      <div className="container mx-auto px-4 sm:px-6">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
           <div>
             <h2 className="text-3xl md:text-4xl font-bold text-foreground font-heading flex items-center gap-2">
@@ -67,8 +81,8 @@ export function AbrNewsSection() {
               US racing news
             </h2>
             <p className="text-muted-foreground mt-2 text-sm md:text-base max-w-xl">
-              US racing headlines (America&apos;s Best Racing &quot;The Sport&quot;; if that feed is empty, Thoroughbred Daily
-              News). Links open in a new tab.
+              US racing headlines (America’s Best Racing “The Sport”; if that feed is empty, Thoroughbred Daily News).
+              Links open in a new tab.
             </p>
           </div>
         </div>
@@ -76,7 +90,9 @@ export function AbrNewsSection() {
         <Card className="bg-card border-border shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg text-foreground">
-              {data?.source === "tdn" ? "Thoroughbred Daily News" : "America&apos;s Best Racing — The Sport"}
+              {data?.source === "tdn"
+                ? data.channelTitle ?? "Thoroughbred Daily News"
+                : data.channelTitle ?? "America’s Best Racing — The Sport"}
             </CardTitle>
             <CardDescription>
               {data?.source === "tdn" ? (

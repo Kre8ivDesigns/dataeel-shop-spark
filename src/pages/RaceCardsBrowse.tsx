@@ -63,10 +63,11 @@ const RaceCardsBrowse = () => {
         .from("credit_balances")
         .select("credits")
         .eq("user_id", user!.id)
-        .single();
+        .maybeSingle();
       return data?.credits ?? 0;
     },
     enabled: !!user,
+    refetchOnWindowFocus: "always",
   });
 
   const { data: downloadIds = [] } = useQuery({

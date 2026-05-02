@@ -84,7 +84,7 @@ export const Pricing = () => {
         </motion.div>
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto items-stretch">
           {pricingPlans.map((plan, index) => (
             <motion.div
               key={plan.name}
@@ -92,7 +92,7 @@ export const Pricing = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.1 * index }}
-              className={`relative rounded-xl p-8 transition-all duration-200 ${
+              className={`relative flex flex-col h-full rounded-xl p-8 transition-all duration-200 ${
                 plan.popular
                   ? "bg-secondary border-2 border-primary shadow-neon scale-105 z-10"
                   : "card-dark"
@@ -138,7 +138,7 @@ export const Pricing = () => {
               </div>
 
               {/* Features */}
-              <ul className="space-y-3 mb-8">
+              <ul className="space-y-3">
                 {plan.features.map((feature, i) => (
                   <li key={i} className="flex items-center gap-3">
                     <Check className="h-5 w-5 flex-shrink-0 text-primary" />
@@ -148,19 +148,21 @@ export const Pricing = () => {
               </ul>
 
               {/* CTA */}
-              <Button
-                asChild
-                className={`w-full py-6 font-semibold text-base ${
-                  plan.popular
-                    ? "bg-primary text-primary-foreground hover:brightness-110 shadow-neon"
-                    : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                }`}
-              >
-                <Link to={`/buy-credits?credits=${plan.credits}`}>
-                  {plan.cta}
-                  {plan.popular && <Zap className="ml-2 h-4 w-4" />}
-                </Link>
-              </Button>
+              <div className="mt-auto w-full pt-8">
+                <Button
+                  asChild
+                  className={`w-full py-6 font-semibold text-base ${
+                    plan.popular
+                      ? "bg-primary text-primary-foreground hover:brightness-110 shadow-neon"
+                      : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                  }`}
+                >
+                  <Link to={`/buy-credits?credits=${plan.credits}`}>
+                    {plan.cta}
+                    {plan.popular && <Zap className="ml-2 h-4 w-4" />}
+                  </Link>
+                </Button>
+              </div>
             </motion.div>
           ))}
         </div>

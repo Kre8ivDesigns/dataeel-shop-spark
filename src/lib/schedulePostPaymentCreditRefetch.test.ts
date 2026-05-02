@@ -22,14 +22,12 @@ describe("schedulePostPaymentCreditRefetch", () => {
 
     expect(invalidateQueries).toHaveBeenCalledTimes(0);
 
-    vi.advanceTimersByTime(0);
-    expect(invalidateQueries).toHaveBeenCalledTimes(2);
-
-    vi.advanceTimersByTime(800);
-    expect(invalidateQueries).toHaveBeenCalledTimes(4);
-
-    vi.advanceTimersByTime(2500 - 800);
-    expect(invalidateQueries).toHaveBeenCalledTimes(6);
+    let prev = 0;
+    for (const ms of POST_PAYMENT_CREDIT_REFETCH_DELAYS_MS) {
+      vi.advanceTimersByTime(ms - prev);
+      prev = ms;
+      expect(invalidateQueries).toHaveBeenCalledTimes((POST_PAYMENT_CREDIT_REFETCH_DELAYS_MS.indexOf(ms) + 1) * 2);
+    }
   });
 
   it("exports delays covering webhook latency", () => {
