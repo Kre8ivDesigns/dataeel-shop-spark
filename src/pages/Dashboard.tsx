@@ -30,7 +30,6 @@ import {
 } from "@/lib/postPaymentConfirmation";
 import { schedulePostPaymentCreditRefetch } from "@/lib/schedulePostPaymentCreditRefetch";
 import { StripeTestModeDevBanner } from "@/components/StripeTestModeDevBanner";
-import { DashboardRacingResultsSection } from "@/components/DashboardRacingResultsSection";
 import { DashboardRecentDownloadsColumn } from "@/components/dashboard/DashboardRecentDownloadsColumn";
 import { DashboardUpcomingRacecardsColumn } from "@/components/dashboard/DashboardUpcomingRacecardsColumn";
 import { DashboardPurchasesAndCredits } from "@/components/dashboard/DashboardPurchasesAndCredits";
@@ -400,8 +399,11 @@ const Dashboard = () => {
             </div>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 mb-8">
-            <DashboardRacingResultsSection />
+          {/*
+            Race results: reintroduce via Edge `otb-results-rss` (and optional `hrn-headlines-rss` fallback)
+            when we have a reliable display model — see former `DashboardRacingResultsSection` in git history.
+          */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 mb-8 max-w-5xl mx-auto w-full">
             <DashboardRecentDownloadsColumn loading={loading} recentDownloads={recentDownloads} />
             <DashboardUpcomingRacecardsColumn loading={loading} upcomingForDisplay={upcomingForDisplay} />
           </div>
