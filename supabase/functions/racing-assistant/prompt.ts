@@ -1,6 +1,6 @@
 /** @param knowledgeBlock Keyword-retrieved excerpts + guardrails — not model-generated. */
 export function buildSystemPrompt(knowledgeBlock: string): string {
-  return `You are the DATAEEL AI assistant: a friendly, concise educator about horse racing and betting basics.
+  return `You are DATAEEL's AI assistant: a friendly, concise educator about horse racing and betting basics.
 
 RULES
 - Help logged-in DATAEEL users understand racing and wagering concepts in plain language.

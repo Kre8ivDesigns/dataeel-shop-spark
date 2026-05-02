@@ -8,20 +8,20 @@ VALUES
   (
     'homepage',
     'Home',
-    '<section class="hero"><h1>Welcome to DataEel</h1><p>Your premier racing data and analysis platform.</p></section>',
+    '<section class="hero"><h1>Welcome to DATAEEL</h1><p>Your premier racing data and analysis platform.</p></section>',
     '',
     false,
-    'DataEel – race data and analysis platform.',
+    'DATAEEL – race data and analysis platform.',
     now(),
     now()
   ),
   (
     'about',
     'About Us',
-    '<section><h1>About DataEel</h1><p>Tell your story here.</p></section>',
+    '<section><h1>About DATAEEL</h1><p>Tell your story here.</p></section>',
     '',
     false,
-    'Learn more about DataEel and our mission.',
+    'Learn more about DATAEEL and our mission.',
     now(),
     now()
   ),
@@ -31,17 +31,17 @@ VALUES
     '<section><h1>Pricing</h1><p>Choose a plan that works for you.</p></section>',
     '',
     false,
-    'DataEel pricing plans and credit packages.',
+    'DATAEEL pricing plans and credit packages.',
     now(),
     now()
   ),
   (
     'terms',
     'Terms of Service',
-    '<section><h1>Terms of Service</h1><p>Please read these terms carefully before using DataEel.</p></section>',
+    '<section><h1>Terms of Service</h1><p>Please read these terms carefully before using DATAEEL.</p></section>',
     '',
     false,
-    'DataEel terms of service and usage policy.',
+    'DATAEEL terms of service and usage policy.',
     now(),
     now()
   ),
@@ -51,7 +51,7 @@ VALUES
     '<section><h1>Privacy Policy</h1><p>How we collect, use, and protect your data.</p></section>',
     '',
     false,
-    'DataEel privacy policy and data handling.',
+    'DATAEEL privacy policy and data handling.',
     now(),
     now()
   )

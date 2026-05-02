@@ -97,7 +97,7 @@ export function buildTrackResultsRssXml(trackCode: string, records: TrackResultR
   const nowRfc = new Date().toUTCString();
   const channelTitle = `${canonicalTrackLabel} Horse Racing Results`;
   const channelLink = `${siteUrl.replace(/\/$/, "")}/dashboard`;
-  const channelDescription = `Latest ${canonicalTrackLabel} race results republished by Dataeel.`;
+  const channelDescription = `Latest ${canonicalTrackLabel} race results republished by DATAEEL.`;
 
   const itemsXml = records
     .map((row) => {

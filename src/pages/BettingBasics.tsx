@@ -126,7 +126,7 @@ const BettingBasics = () => {
               <Sparkles className="h-7 w-7 text-primary" />
             </div>
             <div className="flex-1">
-              <h3 className="text-xl font-bold text-foreground font-heading mb-2">Ask the DATAEEL assistant</h3>
+              <h3 className="text-xl font-bold text-foreground font-heading mb-2">Ask DATAEEL&apos;s assistant</h3>
               <p className="text-muted-foreground text-sm leading-relaxed">
                 Logged-in members see a DATAEEL bubble on screen. Use it for short questions about racing vocabulary,
                 bet types, and how to think about a race — not for &quot;picks&quot; or guarantees.

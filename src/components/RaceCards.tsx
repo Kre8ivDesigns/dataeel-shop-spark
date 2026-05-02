@@ -51,8 +51,8 @@ export const RaceCards = () => {
             Get Your <span className="text-neon">EEL RaceCards</span>
           </h2>
           <p className="section-subtitle">
-            Tracks with published cards for the date you pick. Schedule and conditions are stored with each card
-            (database + files); this section uses a short browser cache to avoid redundant loads.
+            Pick a date to see which tracks have RaceCards available. Published cards for that day appear here as soon
+            as they are ready.
           </p>
         </motion.div>
 

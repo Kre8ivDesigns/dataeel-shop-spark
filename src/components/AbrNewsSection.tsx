@@ -97,7 +97,7 @@ export function AbrNewsSection() {
             <CardDescription>
               {data?.source === "tdn" ? (
                 <>
-                  Syndicated via RSS (fallback). Dataeel is not affiliated with TDN.{" "}
+                  Syndicated via RSS (fallback). DATAEEL is not affiliated with TDN.{" "}
                   <a
                     href={TDN_RSS_SOURCE}
                     target="_blank"
@@ -109,7 +109,7 @@ export function AbrNewsSection() {
                 </>
               ) : (
                 <>
-                  Syndicated via RSS for convenience. Dataeel is not affiliated with ABR.{" "}
+                  Syndicated via RSS for convenience. DATAEEL is not affiliated with ABR.{" "}
                   <a
                     href={ABR_RSS_SOURCE}
                     target="_blank"

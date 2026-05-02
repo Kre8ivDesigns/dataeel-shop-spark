@@ -16,10 +16,10 @@ CREATE INDEX IF NOT EXISTS idx_pages_published_slug
 -- editor shows a blank canvas that admins can fill in.
 INSERT INTO public.pages (slug, title, html, css, published, meta_description)
 VALUES
-  ('home',       'Home',            '', '', true, 'Dataeel — racing intelligence and racecards.'),
-  ('about',      'About',           '', '', true, 'About Dataeel.'),
+  ('home',       'Home',            '', '', true, 'DATAEEL — racing intelligence and racecards.'),
+  ('about',      'About',           '', '', true, 'About DATAEEL.'),
   ('pricing',    'Pricing',         '', '', true, 'Credit packages and pricing.'),
-  ('contact',    'Contact',         '', '', true, 'Contact Dataeel support.'),
+  ('contact',    'Contact',         '', '', true, 'Contact DATAEEL support.'),
   ('terms',      'Terms of Service','', '', true, 'Terms governing use of the service.'),
   ('privacy',    'Privacy Policy',  '', '', true, 'How we collect and use your information.'),
   ('disclaimer', 'Disclaimer',      '', '', true, 'Legal disclaimer for racing content.')

@@ -25,6 +25,10 @@ content_path = "./supabase/templates/reset-password.html"
 subject = "Your Dataeel sign-in link"
 content_path = "./supabase/templates/magic-link.html"
 
+# Database Webhook (profiles INSERT) — HMAC/secret in headers, not user JWT
+[functions.notify-admin-new-signup]
+verify_jwt = false
+
 # stripe-webhook is called server-to-server by Stripe — no JWT
 [functions.stripe-webhook]
 verify_jwt = false

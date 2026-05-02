@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ ok: true, already_fulfilled: true }), { status: 200, headers });
       case "skipped_metadata":
         return new Response(
-          JSON.stringify({ ok: false, error: "Session is missing app metadata (not a Dataeel credit checkout)" }),
+          JSON.stringify({ ok: false, error: "Session is missing app metadata (not a DATAEEL credit checkout)" }),
           { status: 400, headers },
         );
       case "skipped_unpaid":

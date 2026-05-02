@@ -16,10 +16,13 @@ import {
   completeOpenAI,
   completeOpenRouter,
   estimateCostUsd,
+  resolveOpenRouterModelsFromEnv,
   type ChatTurn,
+  type OpenRouterCompletionOptions,
 } from "./llm_providers.ts";
 import { GUARD_CHUNK, KNOWLEDGE_CHUNKS } from "./knowledge_library.ts";
 import { RACING_ASSISTANT_KNOWLEDGE } from "./knowledge.ts";
+import { OPENROUTER_DEFAULT_FREE_MODELS } from "./openrouter_chain.ts";
 import { buildSystemPrompt } from "./prompt.ts";
 
 const SITE_CONTENT_KNOWLEDGE_KEY = "racing_assistant_knowledge";
@@ -32,7 +35,6 @@ const MAX_HISTORY_MESSAGES = 2;
 const MAX_HISTORY_CONTENT_CHARS = 650;
 
 const DEFAULT_PROVIDER = "openrouter";
-const DEFAULT_MODEL_OR = "openai/gpt-4o-mini";
 
 /** Default daily spend cap (USD per user, UTC calendar day) when `ai_daily_cost_cap_usd` is unset. */
 const DEFAULT_AI_DAILY_CAP_USD = 5;
@@ -47,8 +49,14 @@ function parseDailyCapUsd(raw: string | undefined): number {
 
 type Provider = "openrouter" | "anthropic" | "openai";
 
+function getOpenRouterKeyFromEnv(): string {
+  return (Deno.env.get("OPENROUTER_API_KEY") || "").trim();
+}
+
 function hasProviderApiKey(settings: Record<string, string>, p: Provider): boolean {
-  if (p === "openrouter") return !!(settings.openrouter_api_key || "").trim();
+  if (p === "openrouter") {
+    return !!getOpenRouterKeyFromEnv() || !!(settings.openrouter_api_key || "").trim();
+  }
   if (p === "anthropic") return !!(settings.anthropic_api_key || "").trim();
   return !!(settings.openai_api_key || "").trim();
 }
@@ -121,7 +129,14 @@ Deno.serve(async (req) => {
     const { data: { user }, error: userErr } = await supabaseUser.auth.getUser();
     if (userErr || !user) return respond({ error: "Unauthorized" }, 401);
 
-    const body = await req.json() as { message?: string; history?: ChatTurn[] };
+    const body = await req.json() as {
+      message?: string;
+      history?: ChatTurn[];
+      /** OpenRouter: enable JSON object mode (`response_format.type = json_object`). */
+      json_mode?: boolean;
+      /** OpenRouter structured outputs: JSON Schema (model-dependent). */
+      json_schema?: { name: string; strict?: boolean; schema: Record<string, unknown> };
+    };
     const rawMessage = typeof body.message === "string" ? body.message : "";
     const message = trimMessage(rawMessage, MAX_USER_MESSAGE_CHARS);
     if (!message) return respond({ error: "message is required" }, 400);
@@ -211,8 +226,9 @@ Deno.serve(async (req) => {
 
     const provider = resolveChatProvider(settings);
 
-    const orKey = (settings.openrouter_api_key || "").trim();
-    const orModel = (settings.openrouter_model || "").trim() || DEFAULT_MODEL_OR;
+    const orKey = getOpenRouterKeyFromEnv() || (settings.openrouter_api_key || "").trim();
+    const orAdminModel = (settings.openrouter_model || "").trim();
+    const orModels = resolveOpenRouterModelsFromEnv(orAdminModel);
     const anKey = (settings.anthropic_api_key || "").trim();
     const anModel = (settings.anthropic_model || "").trim() || "claude-3-5-haiku-20241022";
     const oaKey = (settings.openai_api_key || "").trim();
@@ -240,8 +256,11 @@ Deno.serve(async (req) => {
 
     const usageDateUtc = new Date().toISOString().slice(0, 10);
     const dailyCapUsd = parseDailyCapUsd(settings.ai_daily_cost_cap_usd);
-    const modelForEstimate =
-      provider === "openrouter" ? orModel : provider === "anthropic" ? anModel : oaModel;
+    const modelForEstimate = provider === "openrouter"
+      ? orModels[0] ?? OPENROUTER_DEFAULT_FREE_MODELS[0]
+      : provider === "anthropic"
+      ? anModel
+      : oaModel;
     const promptEst = roughPromptTokenEstimate(systemPrompt, history, message);
     const maxEstUsd = estimateMaxSingleTurnCostUsd(provider, modelForEstimate, promptEst);
 
@@ -273,12 +292,41 @@ Deno.serve(async (req) => {
 
     let result: Awaited<ReturnType<typeof completeOpenRouter>>;
 
+    let openRouterOptions: OpenRouterCompletionOptions | undefined;
+    if (provider === "openrouter") {
+      const js = body.json_schema;
+      if (js?.name && js.schema && typeof js.schema === "object") {
+        openRouterOptions = {
+          responseFormat: {
+            type: "json_schema",
+            json_schema: {
+              name: js.name,
+              strict: js.strict ?? true,
+              schema: js.schema as Record<string, unknown>,
+            },
+          },
+        };
+      } else if (body.json_mode) {
+        openRouterOptions = { responseFormat: { type: "json_object" } };
+      }
+    }
+
     try {
       if (provider === "openrouter") {
         if (!orKey) {
-          return respond({ error: "OpenRouter API key not configured (Admin → Settings → AI)." }, 503);
+          return respond({
+            error:
+              "OpenRouter API key not configured. Set Edge secret OPENROUTER_API_KEY or Admin → Settings → AI.",
+          }, 503);
         }
-        result = await completeOpenRouter(orKey, orModel, history, message, systemPrompt);
+        result = await completeOpenRouter(
+          orKey,
+          orModels,
+          history,
+          message,
+          systemPrompt,
+          openRouterOptions,
+        );
       } else if (provider === "anthropic") {
         if (!anKey) {
           return respond({ error: "Anthropic API key not configured (Admin → Settings → AI)." }, 503);

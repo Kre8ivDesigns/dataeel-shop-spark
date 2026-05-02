@@ -34,6 +34,10 @@ Use this when standing up or auditing an environment so **database, S3 files, Ed
   - `APP_SETTINGS_ENCRYPTION_KEY` — **64+ hex chars** for `manage-app-settings` / AI key encryption / Stripe mode resolution.
   - `CRON_SECRET` — required for scheduled/manual invocation of `ingest-race-results` (and existing cron-protected jobs).
 - [ ] Optional: `SITE_PUBLIC_URL` for OpenRouter referrer header.
+- [ ] **New user → admin email (optional but recommended):** `notify-admin-new-signup` uses the same **Admin → Settings → SMTP** credentials as `manage-app-settings` (from `app_settings` + `APP_SETTINGS_ENCRYPTION_KEY`). Set Edge Function secrets:
+  - `ADMIN_NOTIFICATION_EMAIL` — where to send “new signup” alerts.
+  - `ADMIN_SIGNUP_WEBHOOK_SECRET` — long random string; must match the **Secret** on the Database Webhook (see below).
+- [ ] **Database Webhook (Dashboard → Database → Webhooks):** after deploy, add a webhook on table **`public.profiles`**, event **INSERT**, HTTP **POST** to `https://<project-ref>.supabase.co/functions/v1/notify-admin-new-signup`, and set **HTTP Headers** or the webhook **Secret** field to send `x-webhook-secret: <same as ADMIN_SIGNUP_WEBHOOK_SECRET>`. This fires for every new `auth.users` row (self-service signup and `admin-create-user`) because `handle_new_user` inserts into `profiles`. No client-visible spam endpoint.
 - [ ] Auth → Email Templates: paste templates listed in `supabase/config.toml` (`confirm-signup.html`, `reset-password.html`, `magic-link.html`). Confirm signup must use **`confirm-signup.html`**, not the legacy `confirmation.html`, unless you change both Dashboard and `config.toml`. Local `supabase start` uses `config.toml`; hosted projects use Dashboard copies.
 
 | Function | Role |
@@ -42,6 +46,7 @@ Use this when standing up or auditing an environment so **database, S3 files, Ed
 | `download-racecard` | Presigned S3 GET + credit RPC |
 | `sync-s3-racecards` | List S3 `racecards/`, insert missing DB rows |
 | `manage-app-settings` | Encrypted site + AI settings |
+| `notify-admin-new-signup` | Database Webhook on `profiles` INSERT → SMTP alert to `ADMIN_NOTIFICATION_EMAIL`; `verify_jwt = false`, requires `x-webhook-secret` |
 | `racing-assistant` | LLM chat; reads `site_content` + app_settings |
 | `ai-admin` | Admin model list / connection tests |
 | `abr-rss` | Proxies [ABR “The Sport” RSS](https://www.americasbestracing.net/rss/the-sport) for the homepage (CORS-safe); `verify_jwt = false`, fixed URL only |

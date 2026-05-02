@@ -251,7 +251,7 @@ export function AdminSmtpSettingsPanel({
             <Input
               id="smtp-from-name"
               value={form.smtp_from_name}
-              placeholder="DataEel"
+              placeholder="DATAEEL"
               onChange={(e) => set("smtp_from_name")(e.target.value)}
             />
           </div>
