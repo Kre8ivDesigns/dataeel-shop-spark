@@ -62,7 +62,7 @@ describe("invokeReconcileCheckoutSession", () => {
 
   it("returns error when invoke fails", async () => {
     mockInvoke.mockResolvedValue({ data: null, error: { message: "network" } });
-    await expect(invokeReconcileCheckoutSession("cs_test")).resolves.toEqual({
+    await expect(invokeReconcileCheckoutSession("cs_test")).resolves.toMatchObject({
       ok: false,
       error: "network",
     });

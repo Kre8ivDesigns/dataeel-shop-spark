@@ -27,6 +27,7 @@ import {
   invokeReconcileCheckoutSession,
   purchaseTransactionExists,
   waitForPurchaseTransaction,
+  type ReconcileCheckoutInvokeResult,
 } from "@/lib/postPaymentConfirmation";
 import { schedulePostPaymentCreditRefetch } from "@/lib/schedulePostPaymentCreditRefetch";
 import { StripeTestModeDevBanner } from "@/components/StripeTestModeDevBanner";
@@ -165,11 +166,15 @@ const Dashboard = () => {
           await refetchCommerceQueries();
 
           let reconcileAttempted = false;
+          let reconcileResult: ReconcileCheckoutInvokeResult | undefined;
           if (!ok) {
             reconcileAttempted = true;
-            await invokeReconcileCheckoutSession(sessionId);
+            reconcileResult = await invokeReconcileCheckoutSession(sessionId);
             await refetchCommerceQueries();
-            ok = await purchaseTransactionExists(userId, sessionId);
+            const reconcileOk =
+              reconcileResult.ok &&
+              (Boolean(reconcileResult.fulfilled) || Boolean(reconcileResult.alreadyFulfilled));
+            ok = reconcileOk || (await purchaseTransactionExists(userId, sessionId));
           }
 
           if (ok) {
@@ -183,13 +188,17 @@ const Dashboard = () => {
                   : "Your credits have been updated. Receipts appear under Invoices (Account menu).",
             });
           } else {
+            const unpaidProcessing =
+              reconcileResult?.ok === false && reconcileResult.code === "skipped_unpaid";
             pending.update({
               id: pending.id,
               variant: "destructive",
-              title: "Credits not visible yet",
-              description: reconcileAttempted
-                ? "We synced with Stripe directly, but your purchase still is not on file. Try refreshing the page. If it persists, contact support with your Stripe receipt or session id."
-                : "Stripe redirected successfully, but your purchase has not appeared in our system yet. Try refreshing — webhook delays can exceed a minute. If nothing changes, contact support with your Stripe receipt.",
+              title: unpaidProcessing ? "Payment still clearing" : "Credits not visible yet",
+              description: unpaidProcessing
+                ? "Stripe still shows this checkout as unpaid (typical for bank debits and some async methods). Credits apply automatically when the charge settles — try again later or contact support with your session id if it persists."
+                : reconcileAttempted
+                  ? "We synced with Stripe directly, but your purchase still is not on file. Try refreshing the page. If it persists, contact support with your Stripe receipt or session id."
+                  : "Stripe redirected successfully, but your purchase has not appeared in our system yet. Try refreshing — webhook delays can exceed a minute. If nothing changes, contact support with your Stripe receipt.",
             });
           }
         } else {

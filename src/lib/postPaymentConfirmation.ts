@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getInvokeErrorMessage } from "@/lib/edgeFunctionErrors";
 
 /** Poll interval while waiting for stripe-webhook to insert `transactions`. */
 export const POST_PAYMENT_POLL_INTERVAL_MS = 1_000;
@@ -79,30 +80,38 @@ export async function purchaseTransactionExists(userId: string, sessionId: strin
 
 export type ReconcileCheckoutInvokeResult =
   | { ok: true; alreadyFulfilled?: boolean; fulfilled?: boolean }
-  | { ok: false; error: string };
+  | {
+      ok: false;
+      error: string;
+      code?: string;
+      payment_status?: string;
+      session_status?: string;
+      payment_intent_status?: string | null;
+    };
 
 /**
  * Server-side repair when the Stripe webhook did not record the purchase.
  * Same fulfillment path as `checkout.session.completed` (idempotent).
  */
 export async function invokeReconcileCheckoutSession(sessionId: string): Promise<ReconcileCheckoutInvokeResult> {
-  const { data, error } = await supabase.functions.invoke("reconcile-checkout-session", {
+  const { data, error, response } = await supabase.functions.invoke("reconcile-checkout-session", {
     body: { session_id: sessionId },
   });
 
-  if (error) {
-    return { ok: false, error: error.message || "Reconcile request failed" };
-  }
-
-  const d = data as {
+  const d = (data ?? {}) as {
     ok?: boolean;
     error?: string;
+    code?: string;
     already_fulfilled?: boolean;
     fulfilled?: boolean;
     detail?: string;
+    payment_status?: string;
+    session_status?: string;
+    payment_intent_status?: string | null;
+    message?: string;
   };
 
-  if (d?.ok === true) {
+  if (d.ok === true) {
     return {
       ok: true,
       alreadyFulfilled: Boolean(d.already_fulfilled),
@@ -110,12 +119,32 @@ export async function invokeReconcileCheckoutSession(sessionId: string): Promise
     };
   }
 
-  const msg =
-    typeof d?.error === "string"
-      ? d.error
-      : typeof (d as { message?: string })?.message === "string"
-        ? (d as { message: string }).message
-        : "Payment could not be synced";
+  const meta = {
+    code: typeof d.code === "string" ? d.code : undefined,
+    payment_status: typeof d.payment_status === "string" ? d.payment_status : undefined,
+    session_status: typeof d.session_status === "string" ? d.session_status : undefined,
+    payment_intent_status:
+      d.payment_intent_status === null || typeof d.payment_intent_status === "string"
+        ? d.payment_intent_status
+        : undefined,
+  };
 
-  return { ok: false, error: msg };
+  if (typeof d.error === "string" && d.error.trim()) {
+    return { ok: false, error: d.error.trim(), ...meta };
+  }
+  if (typeof d.message === "string" && d.message.trim()) {
+    return { ok: false, error: d.message.trim(), ...meta };
+  }
+
+  const invokeMsg =
+    error && typeof error === "object" && typeof (error as { message?: unknown }).message === "string"
+      ? (error as { message: string }).message.trim()
+      : "";
+  if (invokeMsg) {
+    return { ok: false, error: invokeMsg, ...meta };
+  }
+
+  const msg = await getInvokeErrorMessage("reconcile-checkout-session", error, data, response ?? null);
+
+  return { ok: false, error: msg || "Payment could not be synced", ...meta };
 }

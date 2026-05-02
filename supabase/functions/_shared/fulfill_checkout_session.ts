@@ -13,11 +13,44 @@ export function paymentIntentIdFromSession(session: Stripe.Checkout.Session): st
   return null;
 }
 
+/** Expanded PaymentIntent status when `payment_intent` is expanded on the Session. */
+export function paymentIntentStatusFromSession(session: Stripe.Checkout.Session): string | null {
+  const pi = session.payment_intent;
+  if (typeof pi === "object" && pi !== null && "status" in pi) {
+    const st = (pi as Stripe.PaymentIntent).status;
+    return typeof st === "string" ? st : null;
+  }
+  return null;
+}
+
+/**
+ * Whether credits should be granted for this Checkout Session.
+ *
+ * Authoritative: `payment_status` is `paid` or `no_payment_required` per
+ * https://stripe.com/docs/api/checkout/sessions/object
+ *
+ * Fallback: expanded `payment_intent.status === "succeeded"` — funds captured while
+ * `payment_status` can briefly lag (webhook ordering). Do not use `session.status === "complete"`
+ * alone; complete + unpaid is valid for async/deferred methods until paid or PI succeeds.
+ */
+export function isCheckoutSessionPaidForFulfillment(session: Stripe.Checkout.Session): boolean {
+  const ps = session.payment_status;
+  if (ps === "paid" || ps === "no_payment_required") return true;
+  if (paymentIntentStatusFromSession(session) === "succeeded") return true;
+  return false;
+}
+
 export type FulfillCheckoutCompletedOutcome =
   | { outcome: "fulfilled" }
   | { outcome: "duplicate" }
   | { outcome: "skipped_metadata" }
-  | { outcome: "skipped_unpaid"; payment_status: string }
+  | {
+      outcome: "skipped_unpaid";
+      code: "skipped_unpaid";
+      payment_status: string;
+      payment_intent_status: string | null;
+      session_status: string | null;
+    }
   | { outcome: "skipped_acknowledged"; reason: string }
   | { outcome: "transaction_error"; error: unknown }
   | { outcome: "fulfillment_error"; error: unknown };
@@ -32,7 +65,8 @@ export async function fulfillCheckoutSessionCompleted(
   sessionIn: Stripe.Checkout.Session,
 ): Promise<FulfillCheckoutCompletedOutcome> {
   let session = sessionIn;
-  if (!paymentIntentIdFromSession(session)) {
+
+  if (!isCheckoutSessionPaidForFulfillment(session)) {
     try {
       session = await stripe.checkout.sessions.retrieve(session.id, {
         expand: ["payment_intent"],
@@ -42,16 +76,24 @@ export async function fulfillCheckoutSessionCompleted(
     }
   }
 
-  const paidLike =
-    session.payment_status === "paid" || session.payment_status === "no_payment_required";
-  if (!paidLike) {
+  if (!isCheckoutSessionPaidForFulfillment(session)) {
+    const piStatus = paymentIntentStatusFromSession(session);
     console.log(
-      "[fulfillCheckoutSessionCompleted] skip until paid:",
-      session.id,
-      "payment_status=",
-      session.payment_status,
+      JSON.stringify({
+        msg: "fulfill_skip_unpaid",
+        stripe_session_id: session.id,
+        payment_status: session.payment_status,
+        payment_intent_status: piStatus,
+        session_status: session.status,
+      }),
     );
-    return { outcome: "skipped_unpaid", payment_status: session.payment_status ?? "unknown" };
+    return {
+      outcome: "skipped_unpaid",
+      code: "skipped_unpaid",
+      payment_status: session.payment_status ?? "unknown",
+      payment_intent_status: piStatus,
+      session_status: session.status ?? null,
+    };
   }
 
   const paymentIntentId = paymentIntentIdFromSession(session);

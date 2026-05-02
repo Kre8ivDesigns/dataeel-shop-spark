@@ -100,18 +100,88 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
     const result = await fulfillCheckoutSessionCompleted(supabaseAdmin, stripe, sessionObj);
     switch (result.outcome) {
       case "fulfilled":
-        break;
-      case "duplicate":
-        return jsonResponse({ received: true, duplicate: true }, 200);
-      case "skipped_metadata":
-        return jsonResponse({ received: true, skipped: true }, 200);
-      case "skipped_unpaid":
         return jsonResponse(
-          { received: true, skipped: true, reason: "payment_not_final", payment_status: result.payment_status },
+          {
+            received: true,
+            fulfilled: true,
+            skipped: false,
+            duplicate: false,
+            checkout_session_id: sessionObj.id,
+          },
+          200,
+        );
+      case "duplicate":
+        console.log(
+          "[stripe-webhook] checkout duplicate (no new credits); session=",
+          sessionObj.id,
+        );
+        return jsonResponse(
+          {
+            received: true,
+            fulfilled: false,
+            skipped: false,
+            duplicate: true,
+            reason: "already_recorded",
+            checkout_session_id: sessionObj.id,
+          },
+          200,
+        );
+      case "skipped_metadata":
+        console.error(
+          "[stripe-webhook] checkout skipped metadata; session=",
+          sessionObj.id,
+          "reason=missing_or_invalid_metadata",
+        );
+        return jsonResponse(
+          {
+            received: true,
+            fulfilled: false,
+            skipped: true,
+            duplicate: false,
+            reason: "missing_or_invalid_metadata",
+            checkout_session_id: sessionObj.id,
+          },
+          200,
+        );
+      case "skipped_unpaid":
+        console.log(
+          "[stripe-webhook] checkout skipped unpaid; session=",
+          sessionObj.id,
+          "reason=payment_not_final",
+        );
+        return jsonResponse(
+          {
+            received: true,
+            fulfilled: false,
+            skipped: true,
+            duplicate: false,
+            code: result.code,
+            reason: "payment_not_final",
+            payment_status: result.payment_status,
+            payment_intent_status: result.payment_intent_status,
+            session_status: result.session_status,
+            checkout_session_id: sessionObj.id,
+          },
           200,
         );
       case "skipped_acknowledged":
-        return jsonResponse({ received: true, skipped: true, reason: result.reason }, 200);
+        console.error(
+          "[stripe-webhook] checkout skipped (acknowledged DB); session=",
+          sessionObj.id,
+          "reason=",
+          result.reason,
+        );
+        return jsonResponse(
+          {
+            received: true,
+            fulfilled: false,
+            skipped: true,
+            duplicate: false,
+            reason: result.reason,
+            checkout_session_id: sessionObj.id,
+          },
+          200,
+        );
       case "transaction_error":
         return jsonResponse(jsonErrBody("Transaction recording failed", result.error), 500);
       case "fulfillment_error":
@@ -126,12 +196,40 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
   if (event.type === "invoice.paid") {
     const invoice = event.data.object as Stripe.Invoice;
     if (invoice.subscription) {
-      return jsonResponse({ received: true, skipped: "subscription_invoice" }, 200);
+      console.log(
+        "[stripe-webhook] invoice.paid skipped subscription_invoice; invoice=",
+        invoice.id,
+      );
+      return jsonResponse(
+        {
+          received: true,
+          fulfilled: false,
+          skipped: true,
+          duplicate: false,
+          reason: "subscription_invoice",
+          stripe_invoice_id: invoice.id,
+        },
+        200,
+      );
     }
 
     const paymentIntentId = paymentIntentIdFromInvoice(invoice);
     if (!paymentIntentId) {
-      return jsonResponse({ received: true, skipped: "no_payment_intent" }, 200);
+      console.log(
+        "[stripe-webhook] invoice.paid skipped no_payment_intent; invoice=",
+        invoice.id,
+      );
+      return jsonResponse(
+        {
+          received: true,
+          fulfilled: false,
+          skipped: true,
+          duplicate: false,
+          reason: "no_payment_intent",
+          stripe_invoice_id: invoice.id,
+        },
+        200,
+      );
     }
 
     let inv = invoice;
@@ -140,7 +238,21 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
         inv = await stripe.invoices.retrieve(invoice.id, { expand: ["lines.data.price"] });
       } catch (e) {
         console.error("[stripe-webhook] invoice retrieve failed:", e instanceof Error ? e.message : e);
-        return jsonResponse({ received: true, skipped: "invoice_expand_failed" }, 200);
+        console.log(
+          "[stripe-webhook] invoice.paid skipped invoice_expand_failed; invoice=",
+          invoice.id,
+        );
+        return jsonResponse(
+          {
+            received: true,
+            fulfilled: false,
+            skipped: true,
+            duplicate: false,
+            reason: "invoice_expand_failed",
+            stripe_invoice_id: invoice.id,
+          },
+          200,
+        );
       }
     }
 
@@ -194,8 +306,19 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
       console.log(
         "[stripe-webhook] invoice.paid skipped (no user/credits); invoice=",
         inv.id,
+        "reason=no_user_or_credits",
       );
-      return jsonResponse({ received: true, skipped: true }, 200);
+      return jsonResponse(
+        {
+          received: true,
+          fulfilled: false,
+          skipped: true,
+          duplicate: false,
+          reason: "no_user_or_credits",
+          stripe_invoice_id: inv.id,
+        },
+        200,
+      );
     }
 
     const amount = (inv.amount_paid ?? 0) / 100;
@@ -218,7 +341,18 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
     if (txError) {
       if (txError.code === "23505") {
         console.log("[stripe-webhook] invoice.paid duplicate (same payment_intent):", paymentIntentId);
-        return jsonResponse({ received: true, duplicate: true }, 200);
+        return jsonResponse(
+          {
+            received: true,
+            fulfilled: false,
+            skipped: false,
+            duplicate: true,
+            reason: "already_recorded",
+            stripe_invoice_id: inv.id,
+            stripe_payment_intent_id: paymentIntentId,
+          },
+          200,
+        );
       }
       const ack = acknowledgeOnlyDbError(txError);
       if (ack.acknowledge) {
@@ -228,7 +362,18 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
           txError.code,
           txError.message,
         );
-        return jsonResponse({ received: true, skipped: true, reason: ack.reason }, 200);
+        return jsonResponse(
+          {
+            received: true,
+            fulfilled: false,
+            skipped: true,
+            duplicate: false,
+            reason: ack.reason,
+            stripe_invoice_id: inv.id,
+            stripe_payment_intent_id: paymentIntentId,
+          },
+          200,
+        );
       }
       console.error("[stripe-webhook] invoice.paid transaction insert failed:", txError.code, txError.message);
       return jsonResponse(jsonErrBody("Transaction recording failed", txError), 500);
@@ -258,7 +403,18 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
             grantError.code,
             grantError.message,
           );
-          return jsonResponse({ received: true, skipped: true, reason: ack.reason }, 200);
+          return jsonResponse(
+            {
+              received: true,
+              fulfilled: false,
+              skipped: true,
+              duplicate: false,
+              reason: ack.reason,
+              stripe_invoice_id: inv.id,
+              stripe_payment_intent_id: paymentIntentId,
+            },
+            200,
+          );
         }
         console.error("[stripe-webhook] invoice.paid unlimited grant failed:", grantError.code, grantError.message);
         return jsonResponse(jsonErrBody("Unlimited grant failed", grantError), 500);
@@ -282,7 +438,18 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
             creditError.code,
             creditError.message,
           );
-          return jsonResponse({ received: true, skipped: true, reason: ack.reason }, 200);
+          return jsonResponse(
+            {
+              received: true,
+              fulfilled: false,
+              skipped: true,
+              duplicate: false,
+              reason: ack.reason,
+              stripe_invoice_id: inv.id,
+              stripe_payment_intent_id: paymentIntentId,
+            },
+            200,
+          );
         }
         console.error("[stripe-webhook] invoice.paid credit update failed:", creditError.code, creditError.message);
         return jsonResponse(jsonErrBody("Credit update failed", creditError), 500);
@@ -305,7 +472,36 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
     if (auditError) {
       console.error("[stripe-webhook] invoice.paid audit log failed (non-fatal):", auditError.code, auditError.message);
     }
+
+    console.log(
+      "[stripe-webhook] invoice.paid fulfilled; invoice=",
+      inv.id,
+      "payment_intent=",
+      paymentIntentId,
+    );
+    return jsonResponse(
+      {
+        received: true,
+        fulfilled: true,
+        skipped: false,
+        duplicate: false,
+        stripe_invoice_id: inv.id,
+        stripe_payment_intent_id: paymentIntentId,
+      },
+      200,
+    );
   }
 
-  return jsonResponse({ received: true }, 200);
+  console.log("[stripe-webhook] event acknowledged (no credit action); type=", event.type);
+  return jsonResponse(
+    {
+      received: true,
+      fulfilled: false,
+      skipped: true,
+      duplicate: false,
+      reason: "event_type_not_credited",
+      stripe_event_type: event.type,
+    },
+    200,
+  );
 }

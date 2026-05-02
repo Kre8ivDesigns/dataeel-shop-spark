@@ -5,7 +5,10 @@
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
-import { fulfillCheckoutSessionCompleted } from "../_shared/fulfill_checkout_session.ts";
+import {
+  fulfillCheckoutSessionCompleted,
+  isCheckoutSessionPaidForFulfillment,
+} from "../_shared/fulfill_checkout_session.ts";
 import { jsonErrBody } from "../_shared/stripe_webhook_errors.ts";
 import { resolveStripeConfig } from "../_shared/stripe_config.ts";
 
@@ -91,14 +94,22 @@ Deno.serve(async (req) => {
       });
     }
 
-    const paidLike =
-      session.payment_status === "paid" || session.payment_status === "no_payment_required";
-    if (!paidLike) {
+    if (!isCheckoutSessionPaidForFulfillment(session)) {
+      console.log(
+        JSON.stringify({
+          msg: "reconcile_reject_unpaid",
+          stripe_session_id: session.id,
+          payment_status: session.payment_status,
+          session_status: session.status,
+        }),
+      );
       return new Response(
         JSON.stringify({
           ok: false,
+          code: "skipped_unpaid",
           error: "Checkout Session is not paid yet",
           payment_status: session.payment_status,
+          session_status: session.status,
         }),
         { status: 400, headers },
       );
@@ -128,8 +139,11 @@ Deno.serve(async (req) => {
         return new Response(
           JSON.stringify({
             ok: false,
+            code: result.code,
             error: "Checkout Session is not paid yet",
             payment_status: result.payment_status,
+            payment_intent_status: result.payment_intent_status,
+            session_status: result.session_status,
           }),
           { status: 400, headers },
         );
