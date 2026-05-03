@@ -43,6 +43,8 @@ export type UserDashboardData = {
   tracksScheduledToday: number;
   recentDownloads: RecentDownloadRow[];
   upcomingCards: UpcomingCard[];
+  /** Racecard IDs in the upcoming window the user has already downloaded (for Open vs Buy now). */
+  ownedUpcomingRacecardIds: string[];
   recentPurchases: PurchaseRow[];
 };
 
@@ -133,6 +135,20 @@ export async function fetchUserDashboard(userId: string): Promise<UserDashboardD
     tracksTodayRes.error;
   if (err) throw err;
 
+  const upcomingCards = (upcomingRes.data ?? []) as UpcomingCard[];
+  const upcomingIds = upcomingCards.map((c) => c.id).filter(Boolean);
+
+  let ownedUpcomingRacecardIds: string[] = [];
+  if (upcomingIds.length > 0) {
+    const ownedRes = await supabase
+      .from("racecard_downloads")
+      .select("racecard_id")
+      .eq("user_id", userId)
+      .in("racecard_id", upcomingIds);
+    if (ownedRes.error) throw ownedRes.error;
+    ownedUpcomingRacecardIds = [...new Set((ownedRes.data ?? []).map((r) => r.racecard_id))];
+  }
+
   return {
     credits: balRes.data?.credits ?? 0,
     unlimitedCredits: balRes.data?.unlimited_credits ?? false,
@@ -141,7 +157,8 @@ export async function fetchUserDashboard(userId: string): Promise<UserDashboardD
     totalDownloads: totalRes.count ?? 0,
     tracksScheduledToday: tracksTodayRes.count ?? 0,
     recentDownloads: (recentRes.data ?? []) as RecentDownloadRow[],
-    upcomingCards: (upcomingRes.data ?? []) as UpcomingCard[],
+    upcomingCards,
+    ownedUpcomingRacecardIds,
     recentPurchases: (purchasesRes.data ?? []) as PurchaseRow[],
   };
 }

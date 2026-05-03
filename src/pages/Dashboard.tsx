@@ -68,6 +68,7 @@ const Dashboard = () => {
   const tracksScheduledToday = data?.tracksScheduledToday ?? null;
   const recentDownloads = data?.recentDownloads ?? [];
   const upcomingCards = data?.upcomingCards ?? [];
+  const ownedUpcomingRacecardIds = data?.ownedUpcomingRacecardIds ?? [];
   const recentPurchases = data?.recentPurchases ?? [];
 
   /** Dedupe: unique id, then one row per `(canonical_track_code, race_date)`; merged duplicates note count in subtitle. */
@@ -86,10 +87,14 @@ const Dashboard = () => {
       g.push(c);
       groups.set(key, g);
     }
-    const rows: { primary: (typeof unique)[0]; mergedCount: number }[] = [];
+    const rows: { primary: (typeof unique)[0]; mergedCount: number; racecardIds: string[] }[] = [];
     for (const arr of groups.values()) {
       arr.sort((a, b) => a.id.localeCompare(b.id));
-      rows.push({ primary: arr[0], mergedCount: arr.length });
+      rows.push({
+        primary: arr[0],
+        mergedCount: arr.length,
+        racecardIds: arr.map((c) => c.id),
+      });
     }
     rows.sort((a, b) => {
       const d = a.primary.race_date.localeCompare(b.primary.race_date);
@@ -403,7 +408,13 @@ const Dashboard = () => {
           <DashboardRacingResultsSection />
           <div className="grid grid-cols-1 md:grid-cols-[3fr_1fr] gap-6 lg:gap-8 mb-8 w-full">
             <DashboardRecentDownloadsColumn loading={loading} recentDownloads={recentDownloads} />
-            <DashboardUpcomingRacecardsColumn loading={loading} upcomingForDisplay={upcomingForDisplay} />
+            <DashboardUpcomingRacecardsColumn
+              loading={loading}
+              upcomingForDisplay={upcomingForDisplay}
+              ownedUpcomingRacecardIds={ownedUpcomingRacecardIds}
+              credits={credits}
+              unlimitedCredits={unlimitedCredits}
+            />
           </div>
 
           <DashboardPurchasesAndCredits

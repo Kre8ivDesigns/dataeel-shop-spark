@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { isValid } from "date-fns";
 import { Loader2 } from "lucide-react";
@@ -10,14 +11,27 @@ import { formatLocalDate } from "@/lib/formatDashboardDate";
 export type UpcomingDisplayRow = {
   primary: UpcomingCard;
   mergedCount: number;
+  /** All racecard IDs in this merged row (for ownership checks). */
+  racecardIds: string[];
 };
 
 type Props = {
   loading: boolean;
   upcomingForDisplay: UpcomingDisplayRow[];
+  ownedUpcomingRacecardIds: string[];
+  credits: number | null;
+  unlimitedCredits: boolean;
 };
 
-export function DashboardUpcomingRacecardsColumn({ loading, upcomingForDisplay }: Props) {
+export function DashboardUpcomingRacecardsColumn({
+  loading,
+  upcomingForDisplay,
+  ownedUpcomingRacecardIds,
+  credits,
+  unlimitedCredits,
+}: Props) {
+  const ownedSet = useMemo(() => new Set(ownedUpcomingRacecardIds), [ownedUpcomingRacecardIds]);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -25,7 +39,7 @@ export function DashboardUpcomingRacecardsColumn({ loading, upcomingForDisplay }
       transition={{ delay: 0.55 }}
       className="flex flex-col min-h-0"
     >
-      <h2 className="text-lg font-semibold text-foreground mb-4 font-heading">Upcoming racecards</h2>
+      <h2 className="text-lg font-semibold text-primary mb-4 font-heading">Upcoming racecards</h2>
       <div className="space-y-3 flex-1">
         {loading && (
           <div className="card-dark py-8 flex justify-center text-muted-foreground min-h-[200px]">
@@ -38,7 +52,7 @@ export function DashboardUpcomingRacecardsColumn({ loading, upcomingForDisplay }
           </div>
         )}
         {!loading &&
-          upcomingForDisplay.map(({ primary: race, mergedCount }) => {
+          upcomingForDisplay.map(({ primary: race, mergedCount, racecardIds }) => {
             const codeRaw = race.track_code ?? race.track_name;
             const title = getRacetrackLabel(codeRaw);
             const codeBadge = extractCanonicalTrackCode(codeRaw);
@@ -49,6 +63,11 @@ export function DashboardUpcomingRacecardsColumn({ loading, upcomingForDisplay }
                 }`
               : (race.race_date ?? "—");
             const mergedNote = mergedCount > 1 ? ` · ${mergedCount} racecards` : "";
+            const hasOwned = racecardIds.some((id) => ownedSet.has(id));
+            const needsCredits =
+              !hasOwned && !unlimitedCredits && credits !== null && credits <= 0;
+            const ctaHref = needsCredits ? "/buy-credits" : "/racecards";
+            const ctaLabel = hasOwned ? "Open" : "Buy now";
             return (
               <div
                 key={`${codeBadge}|${race.race_date}|${race.id}`}
@@ -68,9 +87,9 @@ export function DashboardUpcomingRacecardsColumn({ loading, upcomingForDisplay }
                     </div>
                   </div>
                 </div>
-                <Link to="/racecards" className="shrink-0">
+                <Link to={ctaHref} className="shrink-0">
                   <Button size="sm" className="bg-primary text-primary-foreground hover:brightness-110 text-xs">
-                    Open
+                    {ctaLabel}
                   </Button>
                 </Link>
               </div>
