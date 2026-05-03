@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow, isValid } from "date-fns";
 import { Download, FileText, Loader2 } from "lucide-react";
-import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -129,11 +128,6 @@ export function DashboardRecentDownloadsColumn({ loading, recentDownloads }: Pro
     >
       <div className="flex items-center justify-between mb-4 gap-2">
         <h2 className="text-lg font-semibold text-foreground font-heading">Recent downloads</h2>
-        <Link to="/racecards">
-          <Button variant="ghost" size="sm" className="text-primary text-xs hover:text-primary/80 shrink-0">
-            Browse racecards →
-          </Button>
-        </Link>
       </div>
       <div className="space-y-3 flex-1 min-h-[200px]">
         {loading && <RecentDownloadsSkeleton />}
@@ -145,9 +139,6 @@ export function DashboardRecentDownloadsColumn({ loading, recentDownloads }: Pro
               No downloads yet. When you download a racecard pack, it will show up here with meet details and a quick
               re-download button.
             </p>
-            <Button asChild size="sm" className="bg-primary text-primary-foreground hover:brightness-110">
-              <Link to="/racecards">Browse racecards</Link>
-            </Button>
           </div>
         )}
 
@@ -202,11 +193,11 @@ export function DashboardRecentDownloadsColumn({ loading, recentDownloads }: Pro
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-stretch sm:items-center gap-2 shrink-0 w-full sm:w-auto">
+                  <div className="flex items-stretch sm:items-center shrink-0 w-full sm:w-auto sm:max-w-[14rem]">
                     <Button
                       type="button"
                       size="sm"
-                      className="flex-1 sm:flex-initial bg-primary text-primary-foreground hover:brightness-110 text-xs min-h-9"
+                      className="w-full sm:w-auto bg-primary text-primary-foreground hover:brightness-110 text-xs min-h-9"
                       aria-label={`Download PDF for ${title}`}
                       disabled={isBusy || downloadDisabled || !rc}
                       title={
@@ -224,9 +215,6 @@ export function DashboardRecentDownloadsColumn({ loading, recentDownloads }: Pro
                         <Download className="mr-1.5 h-3.5 w-3.5" aria-hidden />
                       )}
                       {!rc ? "Unavailable" : downloadDisabled ? "Unavailable" : "Download PDF"}
-                    </Button>
-                    <Button size="sm" variant="outline" className="text-xs border-border text-foreground/80" asChild>
-                      <Link to="/racecards">Browse</Link>
                     </Button>
                   </div>
                 </div>
