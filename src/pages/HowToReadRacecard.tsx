@@ -51,7 +51,7 @@ const sections: {
     icon: CircleDot,
     title: "“In the money”",
     paragraphs: [
-      'In this guide, a horse is “in the money” when it finishes 1st, 2nd, or 3rd. A win is 1st; place is 2nd; show is 3rd — win, place, and show bets all correspond to those finishes.',
+      'A horse is “in the money” when it finishes 1st, 2nd, or 3rd. A win is 1st; place is 2nd; show is 3rd — win, place, and show bets all correspond to “being in the money”.',
     ],
   },
   {
