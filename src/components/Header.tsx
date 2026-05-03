@@ -7,12 +7,12 @@ import {
   Shield,
   ChevronDown,
   LogOut,
-  Download,
   DollarSign,
   BarChart3,
   Inbox,
   Table2,
   LayoutList,
+  LayoutDashboard,
   Coins,
 } from "lucide-react";
 import logo from "@/assets/dataeel-logo.png";
@@ -99,7 +99,7 @@ export const Header = () => {
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                 className="font-medium text-foreground/80 hover:text-foreground hover:bg-muted gap-1.5"
               >
-                Account
+                Dashboard
                 <ChevronDown className={`h-4 w-4 transition-transform ${isUserMenuOpen ? "rotate-180" : ""}`} />
               </Button>
               <AnimatePresence>
@@ -128,8 +128,8 @@ export const Header = () => {
                       onClick={() => setIsUserMenuOpen(false)}
                       className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
                     >
-                      <Download className="h-4 w-4" />
-                      RaceCard downloads
+                      <LayoutDashboard className="h-4 w-4" />
+                      Dashboard &amp; RaceCard downloads
                     </Link>
                     {isAdmin && (
                       <>
@@ -261,7 +261,7 @@ export const Header = () => {
                     </p>
                     <Link to="/dashboard#recent-downloads" onClick={() => setIsMobileMenuOpen(false)}>
                       <Button variant="outline" className="w-full border-secondary text-foreground gap-2">
-                        <Download className="h-4 w-4" /> RaceCard downloads
+                        <LayoutDashboard className="h-4 w-4" /> Dashboard &amp; RaceCard downloads
                       </Button>
                     </Link>
                     {isAdmin && (
