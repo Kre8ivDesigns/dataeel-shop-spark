@@ -1,10 +1,17 @@
+import { useCallback, useState } from "react";
 import { motion } from "framer-motion";
 import { formatDistanceToNow, isValid } from "date-fns";
 import { Download, Loader2, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { getInvokeErrorMessage } from "@/lib/edgeFunctionErrors";
 import type { RecentDownloadRow } from "@/lib/queries/userDashboard";
 import { formatLocalDate } from "@/lib/formatDashboardDate";
+import { racecardDownloadKeys, userDashboardKeys } from "@/lib/queryKeys";
 
 type Props = {
   loading: boolean;
@@ -12,6 +19,54 @@ type Props = {
 };
 
 export function DashboardRecentDownloadsColumn({ loading, recentDownloads }: Props) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [downloadingRacecardId, setDownloadingRacecardId] = useState<string | null>(null);
+
+  const handleRedownload = useCallback(
+    async (racecardId: string, trackLabel: string) => {
+      if (!user) {
+        toast({
+          title: "Please sign in",
+          description: "You need to be logged in to download racecards.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setDownloadingRacecardId(racecardId);
+      try {
+        const { data, error, response: invokeResponse } = await supabase.functions.invoke("download-racecard", {
+          body: { racecardId },
+        });
+
+        if (error || !data?.signedUrl) {
+          const msg = await getInvokeErrorMessage("download-racecard", error, data, invokeResponse);
+          toast({ title: "Download failed", description: msg || "Download failed", variant: "destructive" });
+          return;
+        }
+
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["credit-balance", user.id] }),
+          queryClient.invalidateQueries({ queryKey: racecardDownloadKeys.byUser(user.id) }),
+          queryClient.invalidateQueries({ queryKey: userDashboardKeys.detail(user.id) }),
+        ]);
+
+        window.open(data.signedUrl, "_blank");
+        toast({
+          title: data.alreadyOwned ? "Re-downloading" : "Downloaded!",
+          description: `${data.fileName ?? trackLabel}`,
+        });
+      } catch {
+        toast({ title: "Error", description: "Something went wrong.", variant: "destructive" });
+      } finally {
+        setDownloadingRacecardId(null);
+      }
+    },
+    [queryClient, toast, user],
+  );
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -72,11 +127,25 @@ export function DashboardRecentDownloadsColumn({ loading, recentDownloads }: Pro
                       return isValid(at) ? formatDistanceToNow(at, { addSuffix: true }) : "—";
                     })()}
                   </span>
-                  <Link to="/racecards">
-                    <Button variant="ghost" size="sm" className="text-xs text-foreground/60 hover:text-foreground">
-                      <Download className="h-3.5 w-3.5" />
-                    </Button>
-                  </Link>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-foreground/60 hover:text-foreground"
+                    aria-label={`Re-download PDF for ${label}`}
+                    disabled={downloadingRacecardId === dl.racecard_id}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      void handleRedownload(dl.racecard_id, label);
+                    }}
+                  >
+                    {downloadingRacecardId === dl.racecard_id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                    ) : (
+                      <Download className="h-3.5 w-3.5" aria-hidden />
+                    )}
+                  </Button>
                 </div>
               </div>
             );

@@ -9,8 +9,10 @@ export type RecentDownloadRow = {
   racecard_id: string;
   racecards: {
     track_name: string;
+    track_code: string;
     race_date: string;
     num_races: number | null;
+    file_name: string;
   } | null;
 };
 
@@ -89,8 +91,10 @@ export async function fetchUserDashboard(userId: string): Promise<UserDashboardD
             racecard_id,
             racecards (
               track_name,
+              track_code,
               race_date,
-              num_races
+              num_races,
+              file_name
             )
           `,
       )
