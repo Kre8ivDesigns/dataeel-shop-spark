@@ -241,7 +241,7 @@ const Dashboard = () => {
     downloadsLastMonth > 0
       ? `${downloadsThisMonth >= downloadsLastMonth ? "+" : ""}${downloadsThisMonth - downloadsLastMonth} vs last month`
       : downloadsThisMonth > 0
-        ? "First downloads this month"
+        ? null
         : "No downloads yet this month";
 
   const stats = [
