@@ -65,20 +65,20 @@ const PricingPage = () => {
       <Header />
 
       <section
-        className="pt-32 pb-16 relative overflow-hidden"
+        className="pt-24 pb-6 md:pb-8 relative overflow-hidden lg:pt-[5.5rem] lg:pb-6"
         style={{
           background: "linear-gradient(135deg, hsl(232 59% 8%) 0%, hsl(214 52% 20%) 100%)",
         }}
       >
-        <div className="absolute inset-0">
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-warning/5 rounded-full blur-3xl" />
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-0 left-1/4 w-72 h-72 md:w-96 md:h-96 bg-primary/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 right-1/4 w-64 h-64 md:w-80 md:h-80 bg-warning/5 rounded-full blur-3xl" />
         </div>
 
         <div className="container mx-auto px-4 relative">
           <Link
             to="/"
-            className="inline-flex items-center gap-2 text-foreground/50 hover:text-foreground mb-8 transition-colors"
+            className="inline-flex items-center gap-2 text-foreground/50 hover:text-foreground mb-3 md:mb-4 text-sm transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Home
@@ -89,11 +89,11 @@ const PricingPage = () => {
             animate={{ opacity: 1, y: 0 }}
             className="text-center max-w-3xl mx-auto"
           >
-            <span className="badge-neon mb-4 inline-block">Simple Pricing</span>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6 font-heading tracking-tight">
+            <span className="badge-neon mb-2 md:mb-3 inline-block text-xs md:text-sm py-1">Simple Pricing</span>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-3 md:mb-4 font-heading tracking-tight lg:text-[2.75rem] lg:leading-tight">
               Credit Packages for <span className="text-neon">Every Bettor</span>
             </h1>
-            <p className="text-lg text-foreground/60 max-w-2xl mx-auto">
+            <p className="text-sm md:text-base text-foreground/60 max-w-2xl mx-auto leading-relaxed">
               Buy credits, use them anytime. One credit = one full day of predictions for any track. No
               subscriptions, no hidden fees.
             </p>
@@ -101,9 +101,9 @@ const PricingPage = () => {
         </div>
       </section>
 
-      <section className="py-8 bg-card border-b border-border">
+      <section className="py-4 md:py-5 bg-card border-b border-border">
         <div className="container mx-auto px-4">
-          <div className="flex flex-wrap justify-center gap-8 md:gap-16">
+          <div className="flex flex-wrap justify-center gap-5 md:gap-10 lg:gap-14">
             {benefits.map((benefit, index) => (
               <motion.div
                 key={benefit.title}
@@ -125,7 +125,7 @@ const PricingPage = () => {
         </div>
       </section>
 
-      <section className="py-20">
+      <section className="py-8 md:py-10 lg:py-12">
         <div className="container mx-auto px-4">
           {isLoading ? (
             <PricingPageSkeleton />
@@ -161,7 +161,7 @@ const PricingPage = () => {
                       transition={{ delay: 0.1 * index }}
                       className={`relative rounded-xl p-6 flex flex-col h-full transition-all duration-200 ${
                         popular
-                          ? "bg-secondary border-2 border-primary shadow-neon lg:scale-110 z-10"
+                          ? "bg-secondary border-2 border-primary shadow-neon lg:scale-[1.03] z-10"
                           : "card-dark"
                       }`}
                     >

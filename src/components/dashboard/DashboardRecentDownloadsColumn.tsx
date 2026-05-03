@@ -121,10 +121,11 @@ export function DashboardRecentDownloadsColumn({ loading, recentDownloads }: Pro
 
   return (
     <motion.div
+      id="recent-downloads"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.5 }}
-      className="flex flex-col min-h-0"
+      className="flex flex-col min-h-0 scroll-mt-28"
     >
       <div className="flex items-center justify-between mb-5 gap-2">
         <h2 className="text-xl md:text-2xl font-bold tracking-tight text-primary font-heading">

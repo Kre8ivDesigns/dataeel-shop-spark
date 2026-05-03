@@ -7,7 +7,6 @@ import {
   Shield,
   ChevronDown,
   LogOut,
-  LayoutDashboard,
   Download,
   DollarSign,
   BarChart3,
@@ -125,15 +124,7 @@ export const Header = () => {
                       </span>
                     </div>
                     <Link
-                      to="/dashboard"
-                      onClick={() => setIsUserMenuOpen(false)}
-                      className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
-                    >
-                      <LayoutDashboard className="h-4 w-4" />
-                      Dashboard
-                    </Link>
-                    <Link
-                      to="/racecards"
+                      to="/dashboard#recent-downloads"
                       onClick={() => setIsUserMenuOpen(false)}
                       className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
                     >
@@ -268,12 +259,7 @@ export const Header = () => {
                         </span>
                       </span>
                     </p>
-                    <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button variant="outline" className="w-full border-secondary text-foreground gap-2">
-                        <LayoutDashboard className="h-4 w-4" /> Dashboard
-                      </Button>
-                    </Link>
-                    <Link to="/racecards" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Link to="/dashboard#recent-downloads" onClick={() => setIsMobileMenuOpen(false)}>
                       <Button variant="outline" className="w-full border-secondary text-foreground gap-2">
                         <Download className="h-4 w-4" /> RaceCard downloads
                       </Button>
