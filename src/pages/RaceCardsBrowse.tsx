@@ -30,6 +30,7 @@ import {
   getRacecardDownloadUiBlock,
 } from "@/lib/racecardDownloadDeadline";
 import { getInvokeErrorMessage } from "@/lib/edgeFunctionErrors";
+import { downloadFromSignedUrl } from "@/lib/downloadSignedUrl";
 import { TrackCardHeroImage } from "@/components/TrackCardHeroImage";
 import { extractCanonicalTrackCode, getRacetrackLabel, getRacetrackLocation } from "@/lib/racetracks";
 
@@ -105,8 +106,25 @@ const RaceCardsBrowse = () => {
         queryClient.invalidateQueries({ queryKey: userDashboardKeys.detail(user.id) }),
       ]);
 
-      window.open(data.signedUrl, "_blank");
-      toast({ title: data.alreadyOwned ? "Re-downloading" : "Downloaded!", description: `${data.fileName}` });
+      const desc = `${data.fileName}`;
+      const dl = await downloadFromSignedUrl(data.signedUrl, desc);
+      if (dl.status === "failed") {
+        toast({
+          title: "Download failed",
+          description: dl.error,
+          variant: "destructive",
+        });
+        return;
+      }
+      if (dl.status === "navigate_same_tab") {
+        toast({
+          title: data.alreadyOwned ? "Re-downloading" : "Downloaded!",
+          description: desc,
+        });
+        window.location.assign(dl.url);
+        return;
+      }
+      toast({ title: data.alreadyOwned ? "Re-downloading" : "Downloaded!", description: desc });
     } catch {
       toast({ title: "Error", description: "Something went wrong.", variant: "destructive" });
     } finally {

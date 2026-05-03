@@ -17,6 +17,7 @@ import {
   DEFAULT_RACECARD_DOWNLOAD_TZ,
   getRacecardDownloadUiBlock,
 } from "@/lib/racecardDownloadDeadline";
+import { downloadFromSignedUrl } from "@/lib/downloadSignedUrl";
 
 const RACECARD_DOWNLOAD_TZ =
   import.meta.env.VITE_RACECARD_DOWNLOAD_TZ ?? DEFAULT_RACECARD_DOWNLOAD_TZ;
@@ -88,10 +89,27 @@ export function DashboardRecentDownloadsColumn({ loading, recentDownloads }: Pro
           queryClient.invalidateQueries({ queryKey: userDashboardKeys.detail(user.id) }),
         ]);
 
-        window.open(data.signedUrl, "_blank");
+        const desc = `${data.fileName ?? trackLabel}`;
+        const dl = await downloadFromSignedUrl(data.signedUrl, desc);
+        if (dl.status === "failed") {
+          toast({
+            title: "Download failed",
+            description: dl.error,
+            variant: "destructive",
+          });
+          return;
+        }
+        if (dl.status === "navigate_same_tab") {
+          toast({
+            title: data.alreadyOwned ? "Re-downloading" : "Downloaded!",
+            description: desc,
+          });
+          window.location.assign(dl.url);
+          return;
+        }
         toast({
           title: data.alreadyOwned ? "Re-downloading" : "Downloaded!",
-          description: `${data.fileName ?? trackLabel}`,
+          description: desc,
         });
       } catch {
         toast({ title: "Error", description: "Something went wrong.", variant: "destructive" });
@@ -196,7 +214,7 @@ export function DashboardRecentDownloadsColumn({ loading, recentDownloads }: Pro
                           ? "Racecard is no longer available"
                           : downloadDisabled
                             ? "Downloads closed after the race day in the configured timezone."
-                            : "Open PDF in a new tab"
+                            : "Download PDF"
                       }
                       onClick={() => void handleRedownload(dl.racecard_id, title)}
                     >
