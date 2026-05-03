@@ -3,8 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { sanitizeError } from "@/lib/errorHandler";
 import { motion } from "framer-motion";
-import { Mail, HelpCircle, Clock, Send, AlertTriangle, ArrowLeft, CheckCircle } from "lucide-react";
-import heroContact from "@/assets/hero-contact.jpg";
+import { Mail, HelpCircle, Clock, Send, AlertTriangle, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { PageHero } from "@/components/PageHero";
 import {
   Accordion,
   AccordionContent,
@@ -113,51 +113,15 @@ const ContactPage = () => {
     <div className="min-h-screen bg-background">
       <Header />
 
-      {/* Hero — distinct crop asset vs Home (Hero.tsx uses @/assets/hero-racing.jpg) */}
-      <section className="relative min-h-[22rem] flex flex-col justify-center overflow-hidden pt-28 pb-14 md:pt-32 md:pb-16">
-        <div className="absolute inset-0">
-          <img
-            src={heroContact}
-            alt="Horse racing at the track"
-            className="w-full h-full object-cover object-[52%_center]"
-          />
-          <div
-            className="absolute inset-0"
-            style={{
-              background:
-                "linear-gradient(135deg, hsl(232 59% 8% / 0.92) 0%, hsl(214 52% 15% / 0.88) 50%, hsl(232 59% 6% / 0.9) 100%)",
-            }}
-          />
-          <div
-            className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent pointer-events-none"
-            aria-hidden
-          />
-        </div>
-
-        <div className="container mx-auto px-4 relative z-10">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 text-white/70 hover:text-white mb-8 transition-colors text-sm"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Home
-          </Link>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center max-w-3xl mx-auto"
-          >
-            <div className="h-1 w-16 bg-primary mx-auto rounded-full mb-4" aria-hidden />
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 font-heading tracking-tight">
-              Get in Touch
-            </h1>
-            <p className="text-lg text-white/85">
-              We're here to help you win more
-            </p>
-          </motion.div>
-        </div>
-      </section>
+      <PageHero
+        badge="Contact"
+        title={
+          <>
+            Get in <span className="text-neon">Touch</span>
+          </>
+        }
+        subtitle="We're here to help — questions about credits, downloads, or your account."
+      />
 
       {/* Contact Options */}
       <section className="py-16">

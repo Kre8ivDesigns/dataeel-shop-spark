@@ -1,16 +1,9 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import {
-  ArrowLeft,
-  BookOpen,
-  CircleDot,
-  Columns2,
-  Sparkles,
-  AlertCircle,
-  ArrowRight,
-} from "lucide-react";
+import { BookOpen, CircleDot, Columns2, Sparkles, AlertCircle, ArrowRight } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { PageHero } from "@/components/PageHero";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import racecardExampleImage from "@/assets/racecard-guide/racecard-guide-page-02.webp";
@@ -140,70 +133,51 @@ const HowToReadRacecard = () => {
     <div className="min-h-screen bg-background">
       <Header />
 
-      <section
-        className="pt-28 pb-16 relative overflow-hidden"
-        style={{
-          background: "linear-gradient(135deg, hsl(232 59% 8%) 0%, hsl(214 52% 20%) 100%)",
-        }}
-      >
-        <div className="mx-auto w-full max-w-[1400px] px-4 relative">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 text-foreground/50 hover:text-foreground mb-8 text-sm transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Home
-          </Link>
-
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.72fr)] lg:items-center"
-          >
-            <div>
-              <p className="text-primary font-medium text-sm uppercase tracking-wide mb-3">Guide</p>
-              <h1 className="text-4xl md:text-5xl font-bold text-foreground font-heading tracking-tight mb-4">
-                How to read the RaceCard
-              </h1>
-              <p className="text-lg text-foreground/75 leading-relaxed mb-6 max-w-3xl">
-                A plain-language walkthrough of the EEL RaceCard layout, what Concert™ and Aptitude™ mean, and how to
-                interpret rankings — adapted from DATAEEL instructional materials.
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <Button asChild className="bg-primary text-primary-foreground hover:brightness-110">
-                  <Link to="/racecards">Browse RaceCards</Link>
-                </Button>
-                <Button asChild variant="outline" className="border-border text-foreground hover:bg-muted">
-                  <Link to="/betting-basics">Betting basics</Link>
-                </Button>
-              </div>
-            </div>
-
-            <figure className="max-w-2xl overflow-hidden rounded-xl border border-white/10 bg-background/20 shadow-2xl lg:ml-auto">
-              <button
-                type="button"
-                onClick={() =>
-                  openImage({
-                    src: racecardExampleImage,
-                    alt: "Example EEL RaceCard page with race header, Concert table, Aptitude table, and note area.",
-                    caption: "Example EEL RaceCard page with race header, Concert table, Aptitude table, and note area.",
-                  })
-                }
-                className="group block w-full cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                aria-label="Open larger image: Example EEL RaceCard page with race header, Concert table, Aptitude table, and note area."
-              >
-                <img
-                  src={racecardExampleImage}
-                  alt="Example EEL RaceCard page with race header, Concert table, Aptitude table, and note area."
-                  className="h-full max-h-[340px] w-full object-cover object-top transition-transform duration-300 group-hover:scale-[1.02]"
-                  loading="eager"
-                  decoding="async"
-                />
-              </button>
-            </figure>
-          </motion.div>
-        </div>
-      </section>
+      <PageHero
+        badge="Guide"
+        title={
+          <>
+            How to read the <span className="text-neon">RaceCard</span>
+          </>
+        }
+        subtitle="A plain-language walkthrough of the EEL RaceCard layout, what Concert™ and Aptitude™ mean, and how to interpret rankings — adapted from DATAEEL instructional materials."
+        align="left"
+        actions={
+          <>
+            <Button asChild className="bg-primary text-primary-foreground hover:brightness-110">
+              <Link to="/racecards">Browse RaceCards</Link>
+            </Button>
+            <Button asChild variant="outline" className="border-border text-foreground hover:bg-muted">
+              <Link to="/betting-basics">Betting basics</Link>
+            </Button>
+          </>
+        }
+        aside={
+          <figure className="max-w-2xl overflow-hidden rounded-xl border border-white/10 bg-background/20 shadow-2xl lg:ml-auto lg:max-w-none">
+            <button
+              type="button"
+              onClick={() =>
+                openImage({
+                  src: racecardExampleImage,
+                  alt: "Example EEL RaceCard page with race header, Concert table, Aptitude table, and note area.",
+                  caption: "Example EEL RaceCard page with race header, Concert table, Aptitude table, and note area.",
+                })
+              }
+              className="group block w-full cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              aria-label="Open larger image: Example EEL RaceCard page with race header, Concert table, Aptitude table, and note area."
+            >
+              <img
+                src={racecardExampleImage}
+                alt="Example EEL RaceCard page with race header, Concert table, Aptitude table, and note area."
+                className="h-full max-h-[340px] w-full object-cover object-top transition-transform duration-300 group-hover:scale-[1.02]"
+                loading="eager"
+                decoding="async"
+              />
+            </button>
+          </figure>
+        }
+        sectionClassName="pb-8 lg:pb-12"
+      />
 
       <section className="py-16">
         <div className="mx-auto w-full max-w-[1400px] space-y-14 px-4">

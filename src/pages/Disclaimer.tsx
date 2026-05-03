@@ -1,7 +1,8 @@
 import { useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { PageHero } from "@/components/PageHero";
 import { DISCLAIMER_INTRO, DISCLAIMER_SECTIONS } from "@/legal/disclaimer/disclaimerSections";
 
 const Disclaimer = () => {
@@ -18,19 +19,9 @@ const Disclaimer = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="pt-28 pb-16">
+      <PageHero badge="Legal" title="Disclaimer" align="center" sectionClassName="pb-8" />
+      <main className="pb-16 pt-4 md:pt-6">
         <div className="container mx-auto px-4 sm:px-6">
-          <p className="text-sm text-muted-foreground mb-2">
-            <Link to="/" className="hover:text-primary transition-colors">
-              Home
-            </Link>
-            <span className="mx-2">/</span>
-            <span className="text-foreground">Disclaimer</span>
-          </p>
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground font-heading tracking-tight mb-8">
-            Disclaimer
-          </h1>
-
           <p className="text-muted-foreground leading-relaxed mb-10">{DISCLAIMER_INTRO}</p>
 
           <h2 className="text-lg font-bold text-foreground font-heading mb-4 uppercase tracking-wide">

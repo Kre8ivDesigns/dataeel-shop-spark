@@ -1,9 +1,10 @@
 import { motion } from "framer-motion";
-import { Check, Zap, Crown, ArrowLeft, Shield, CreditCard, Clock } from "lucide-react";
+import { Check, Zap, Crown, Shield, CreditCard, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { PageHero } from "@/components/PageHero";
 import {
   useCreditPackages,
   packageFeatureBullets,
@@ -64,42 +65,15 @@ const PricingPage = () => {
     <div className="min-h-screen bg-background">
       <Header />
 
-      <section
-        className="pt-24 pb-6 md:pb-8 relative overflow-hidden lg:pt-[5.5rem] lg:pb-6"
-        style={{
-          background: "linear-gradient(135deg, hsl(232 59% 8%) 0%, hsl(214 52% 20%) 100%)",
-        }}
-      >
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-1/4 w-72 h-72 md:w-96 md:h-96 bg-primary/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 right-1/4 w-64 h-64 md:w-80 md:h-80 bg-warning/5 rounded-full blur-3xl" />
-        </div>
-
-        <div className="container mx-auto px-4 relative">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 text-foreground/50 hover:text-foreground mb-3 md:mb-4 text-sm transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Home
-          </Link>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center max-w-3xl mx-auto"
-          >
-            <span className="badge-neon mb-2 md:mb-3 inline-block text-xs md:text-sm py-1">Simple Pricing</span>
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-3 md:mb-4 font-heading tracking-tight lg:text-[2.75rem] lg:leading-tight">
-              Credit Packages for <span className="text-neon">Every Bettor</span>
-            </h1>
-            <p className="text-sm md:text-base text-foreground/60 max-w-2xl mx-auto leading-relaxed">
-              Buy credits, use them anytime. One credit = one full day of predictions for any track. No
-              subscriptions, no hidden fees.
-            </p>
-          </motion.div>
-        </div>
-      </section>
+      <PageHero
+        badge="Simple Pricing"
+        title={
+          <>
+            Credit Packages for <span className="text-neon">Every Bettor</span>
+          </>
+        }
+        subtitle="Buy credits, use them anytime. One credit = one full day of predictions for any track. No subscriptions, no hidden fees."
+      />
 
       <section className="py-4 md:py-5 bg-card border-b border-border">
         <div className="container mx-auto px-4">

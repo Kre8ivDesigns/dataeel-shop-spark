@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Heart, BookOpen, Coins, Shield, Sparkles } from "lucide-react";
+import { Heart, BookOpen, Coins, Shield, Sparkles } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { PageHero } from "@/components/PageHero";
 import { Button } from "@/components/ui/button";
 
 type SectionBlock = {
@@ -67,41 +68,26 @@ const BettingBasics = () => {
     <div className="min-h-screen bg-background">
       <Header />
 
-      <section
-        className="pt-28 pb-16 relative overflow-hidden"
-        style={{
-          background: "linear-gradient(135deg, hsl(232 59% 8%) 0%, hsl(214 52% 20%) 100%)",
-        }}
-      >
-        <div className="container mx-auto px-4 relative">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 text-foreground/50 hover:text-foreground mb-8 text-sm transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Home
-          </Link>
-
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-            <p className="text-primary font-medium text-sm uppercase tracking-wide mb-3">Learn</p>
-            <h1 className="text-4xl md:text-5xl font-bold text-foreground font-heading tracking-tight mb-4">
-              The basics of horse betting
-            </h1>
-            <p className="text-lg text-foreground/75 leading-relaxed mb-6">
-              A friendly primer on why people love the races, how bets are usually described, and how to keep the hobby
-              on the fun side of the line. No hype — just enough to feel oriented.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Button asChild className="bg-primary text-primary-foreground hover:brightness-110">
-                <Link to="/auth?mode=signup">Create an account</Link>
-              </Button>
-              <Button asChild variant="outline" className="border-border text-foreground hover:bg-muted">
-                <Link to="/disclaimer">Disclaimer &amp; risk</Link>
-              </Button>
-            </div>
-          </motion.div>
-        </div>
-      </section>
+      <PageHero
+        badge="Learn"
+        title={
+          <>
+            The basics of <span className="text-neon">horse betting</span>
+          </>
+        }
+        subtitle="A friendly primer on why people love the races, how bets are usually described, and how to keep the hobby on the fun side of the line. No hype — just enough to feel oriented."
+        actions={
+          <>
+            <Button asChild className="bg-primary text-primary-foreground hover:brightness-110">
+              <Link to="/auth?mode=signup">Create an account</Link>
+            </Button>
+            <Button asChild variant="outline" className="border-border text-foreground hover:bg-muted">
+              <Link to="/disclaimer">Disclaimer &amp; risk</Link>
+            </Button>
+          </>
+        }
+        sectionClassName="pb-8 md:pb-10"
+      />
 
       <section className="py-16">
         <div className="container mx-auto px-4 space-y-14">
