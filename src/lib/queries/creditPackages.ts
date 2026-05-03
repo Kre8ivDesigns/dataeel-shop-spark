@@ -53,7 +53,7 @@ export const PRICING_STANDARD_FEATURES = [
 export const PRICING_UNLIMITED_FEATURES = [
   "Unlimited RaceCard PDF downloads (fair use)",
   "Any Track Any Day only",
-  "Both algorithms included in every PDF",
+  "Both algorithms included",
   "Priority support",
 ] as const;
 
