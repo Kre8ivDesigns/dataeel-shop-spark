@@ -27,9 +27,8 @@ const benefits = [
   },
   {
     icon: Shield,
-    title: "Dedicated Support",
-    description:
-      "Questions about checkout, credits, or downloads? Email support@dataeel.com—we typically reply within one business day.",
+    title: "We're Here to Help",
+    description: "Reach out anytime—happy to assist.",
   },
 ];
 
