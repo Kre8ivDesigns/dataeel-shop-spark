@@ -278,9 +278,10 @@ const AdminDashboard = () => {
     });
     setDeletingUser(false);
     if (error || data?.error) {
+      const description = await getInvokeErrorMessage("admin-manage-user", error, data);
       toast({
         title: "Delete failed",
-        description: typeof data?.error === "string" ? data.error : describeFunctionInvokeError("admin-manage-user", error),
+        description,
         variant: "destructive",
       });
       return;
