@@ -33,7 +33,7 @@ const sections: SectionBlock[] = [
       <>
         Common bet types include <span className="text-neon font-semibold">win</span> (first only),{" "}
         <span className="text-neon font-semibold">place</span> (first or second), and{" "}
-        <span className="text-neon font-semibold">show</span> (often 1st, 2nd, and 3rd). “Exotic” bets like exactas,
+        <span className="text-neon font-semibold">show</span> (1st, 2nd, and 3rd). “Exotic” bets like exactas,
         daily doubles, trifectas, etc. ask you to predict finishing order for multiple horses — they are harder and
         more volatile.
       </>,
