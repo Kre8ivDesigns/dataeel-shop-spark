@@ -51,9 +51,9 @@ export const PRICING_STANDARD_FEATURES = [
 ] as const;
 
 export const PRICING_UNLIMITED_FEATURES = [
-  "Unlimited RaceCard PDFs (fair use)",
-  "Any track, any day",
-  "Both algorithms included",
+  "Unlimited RaceCard PDF downloads (fair use)",
+  "Full-day track PDF packs · any track, any day",
+  "Both algorithms included in every PDF",
   "Priority support",
 ] as const;
 
@@ -95,7 +95,7 @@ export function packageFeatureBullets(pkg: CreditPackageRow): string[] {
 export function packagePriceTagline(pkg: CreditPackageRow): string {
   const price = Number(pkg.price);
   if (pkg.unlimited_credits) {
-    return "Unlimited RaceCard downloads · one-time purchase";
+    return "Unlimited RaceCard PDF downloads · one-time purchase";
   }
   if (pkg.credits <= 0) return `${formatPackageUsd(price)} · Credit package`;
   const ppc = price / pkg.credits;
@@ -109,6 +109,6 @@ export function popularPackageIndex(count: number): number {
 }
 
 export function packageCtaLabel(pkg: CreditPackageRow): string {
-  if (pkg.unlimited_credits) return "Get unlimited access";
+  if (pkg.unlimited_credits) return "Get unlimited PDF access";
   return `Buy ${pkg.credits} credit${pkg.credits !== 1 ? "s" : ""}`;
 }

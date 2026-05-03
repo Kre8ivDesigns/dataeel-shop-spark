@@ -7,7 +7,6 @@ const footerLinks = {
     { label: "How It Works", href: "/#how-it-works" },
     { label: "RaceCards", href: "/#racecards" },
     { label: "Pricing", href: "/pricing" },
-    { label: "Results", href: "/#results" },
     { label: "News", href: "/#us-racing-news" },
   ],
   company: [

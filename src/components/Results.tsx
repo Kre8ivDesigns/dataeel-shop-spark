@@ -51,15 +51,19 @@ export const Results = () => {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <span className="badge-neon mb-4 inline-block">What you get</span>
+          <span className="badge-neon mb-4 inline-block">Proven Results</span>
           <h2 className="section-title mb-4">
-            Two Algorithms{" "}
-            <span className="text-neon">On Every Card</span>
+            See Our Algorithms{" "}
+            <span className="text-neon">In Action</span>
           </h2>
           <p className="section-subtitle">
-            Each EEL RaceCard PDF combines Concert™ and Aptitude™ views on structured race data for
-            handicapping education. Past marketing anecdotes are illustrations only — not guarantees for
-            future races.
+            Our algorithms provide insight for picking winners and help in making more complex selections for
+            exotic bets like TRIFECTAS, EXACTAS, DAILY DOUBLES, PICK 3s, 4s, etc. across all major tracks.
+            Illustrations below are for education — not guarantees for future races; see our{" "}
+            <Link to="/disclaimer" className="text-primary underline underline-offset-2 hover:text-neon">
+              Disclaimer
+            </Link>
+            .
           </p>
         </motion.div>
 
@@ -102,7 +106,7 @@ export const Results = () => {
         >
           <h3 className="text-xl font-semibold text-foreground mb-6 flex items-center gap-2 font-heading">
             <TrendingUp className="h-5 w-5 text-primary" />
-            Card highlights
+            Recent Algorithm Wins
           </h3>
 
           <div className="space-y-4">

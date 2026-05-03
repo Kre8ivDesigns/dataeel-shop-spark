@@ -11,7 +11,7 @@ const team = [
   {
     role: "Veteran Handicapper",
     experience: "40+ years",
-    description: "Deep racing knowledge and pattern recognition refined over decades at the track",
+    description: "Deep racing knowledge and refined handicapping from decades at the track",
     icon: Award,
   },
   {
@@ -54,13 +54,13 @@ export const About = () => {
             </div>
 
             <p className="text-lg text-muted-foreground mb-4 leading-relaxed">
-              theDATA<strong className="text-foreground">EEL</strong>™ has arrived – Algorithms
+              DATA<strong className="text-foreground">EEL</strong>™ has arrived – Algorithms
               for thoroughbred horse racing like no other. Are you NEW to horse racing?
-              Or maybe a seasoned player? theDATA<strong className="text-foreground">EEL</strong>™
+              Or maybe a seasoned player? DATA<strong className="text-foreground">EEL</strong>™
               will change your horse racing life.
             </p>
             <p className="text-base text-muted-foreground mb-8 leading-relaxed">
-              theDATA<strong className="text-foreground">EEL</strong>™ provides horse racing
+              DATA<strong className="text-foreground">EEL</strong>™ provides horse racing
               predictions powered by two proprietary algorithms—Concert™ and Aptitude™—that
               analyze race data from Equibase® to generate simplified predictions for
               everyday bettors. No complicated handicapping required.

@@ -104,7 +104,7 @@ const sections: {
     icon: ArrowRight,
     title: "Lesson 3 — Using Concert™, Aptitude™, or both",
     paragraphs: [
-      "Because the lists can differ, look for overlap when both models put the same horse toward the top — that can be a strong hint. When they disagree on who is best, neither is “wrong”; you decide whether you lean Concert-, Aptitude-, or blend both — some players mix the reads race by race and call that “doing the weave.”",
+      "Because the lists can differ, look for overlap when both models put the same horse toward the top — that can be a strong hint. When they disagree on who is best, neither is “wrong”; you choose how much weight to give Concert™ and Aptitude™ for that race, or you can blend both reads if that fits your style.",
       "Over time, tracking which approach matches how you like to bet can build intuition for which column to weight more on similar races.",
     ],
   },

@@ -26,7 +26,7 @@ export const DISCLAIMER_SECTIONS: DisclaimerSection[] = [
     id: "no-guarantee-of-accuracy",
     title: "No Guarantee of Accuracy",
     paragraphs: [
-      "The analytics and predictions provided are based on complex algorithms and data analysis, which are subject to change and interpretation. Past performance is not indicative of future results. We do not guarantee the accuracy or completeness of any race outcome predictions, and you should not rely solely on this information for making any decisions related to horse racing or betting.",
+      "The analytics and predictions provided are based on complex algorithms and data analysis, which are subject to change and interpretation. Past performance is not indicative of future results. We do not guarantee the accuracy or completeness of any race outcome predictions. Use them alongside official race information and your own judgment.",
     ],
   },
   {

@@ -87,7 +87,8 @@ export const Pricing = () => {
                       {pkg.name}
                     </h3>
                     <p className="text-sm text-muted-foreground min-h-[2.5rem]">
-                      {pkg.description?.trim() || (isUnlimited ? "Unlimited access" : "Credit package")}
+                      {pkg.description?.trim() ||
+                        (isUnlimited ? "Unlimited RaceCard PDF downloads" : "Credit package")}
                     </p>
                   </div>
 
@@ -99,7 +100,7 @@ export const Pricing = () => {
                     </div>
                     <div className="text-sm mt-2 text-muted-foreground">
                       {isUnlimited ? (
-                        <>Unlimited downloads · one-time purchase</>
+                        <>Unlimited RaceCard PDF downloads · one-time purchase</>
                       ) : (
                         <>
                           {pkg.credits} credits
@@ -133,7 +134,7 @@ export const Pricing = () => {
                       className="w-full py-6 font-semibold text-base bg-secondary text-secondary-foreground hover:bg-secondary/80"
                     >
                       <Link to={`/buy-credits?packageId=${encodeURIComponent(pkg.id)}`}>
-                        {isUnlimited ? "Get unlimited" : `Choose ${pkg.name}`}
+                        {isUnlimited ? "Get unlimited PDF access" : `Choose ${pkg.name}`}
                       </Link>
                     </Button>
                   </div>

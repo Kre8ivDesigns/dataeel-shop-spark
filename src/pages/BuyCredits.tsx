@@ -218,7 +218,10 @@ const BuyCredits = () => {
                               </div>
                               <div className="text-xs text-muted-foreground mt-0.5">
                                 {isUnlimitedPkg ? (
-                                  <>Unlimited RaceCard downloads · any track · {pkg.description ?? meta.description ?? ""}</>
+                                  <>
+                                    Unlimited RaceCard PDF downloads · any track ·{" "}
+                                    {pkg.description ?? meta.description ?? ""}
+                                  </>
                                 ) : (
                                   <>
                                     {pkg.credits} credit{pkg.credits > 1 ? "s" : ""} · $
@@ -311,7 +314,7 @@ const BuyCredits = () => {
                                 </div>
                                 <div className="text-xs text-muted-foreground mt-1">
                                   {isUnlimitedPkg || balanceSnap.unlimited
-                                    ? "Unlimited RaceCard access on your account after checkout."
+                                    ? "Unlimited RaceCard PDF downloads on your account after checkout."
                                     : `New balance: ${balanceSnap.credits + selected.credits} credits`}
                                 </div>
                               </div>

@@ -12,10 +12,10 @@ type FaqItem = { question: string; answer: ReactNode };
 
 const faqs: FaqItem[] = [
   {
-    question: "What is theDATA EEL™?",
+    question: "What is DATAEEL™?",
     answer: (
       <>
-        theDATA EEL™ delivers algorithms for thoroughbred racing like no other. You get predictions via
+        DATAEEL™ delivers algorithms for thoroughbred racing like no other. You get predictions via
         downloadable EEL RaceCards with Concert™ and Aptitude™ picks for every race at a track on a given
         day. Content is for entertainment and information—past performance does not guarantee future
         results; see our{" "}
@@ -108,7 +108,7 @@ export const FAQ = () => {
             Frequently Asked <span className="text-neon">Questions</span>
           </h2>
           <p className="section-subtitle">
-            Everything you need to know about theDATA EEL™ and our prediction service.
+            Everything you need to know about DATAEEL™ and our prediction service.
           </p>
         </motion.div>
 

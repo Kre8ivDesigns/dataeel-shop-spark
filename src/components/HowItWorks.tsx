@@ -8,19 +8,22 @@ const steps = [
     icon: UserPlus,
     number: "01",
     title: "Register for FREE",
-    description: "Registration is FREE and gives you access to see which racetracks are running with EEL RaceCards this week. Also get access to theDATA EEL™ newsletter.",
+    description:
+      "Registration is FREE and gives you access to see which racetracks are running with EEL RaceCards this week.",
   },
   {
     icon: MapPin,
     number: "02",
     title: "Choose Your Track",
-    description: "Select from 28+ racetracks across the U.S. and Canada. We cover all major venues every race day including Churchill Downs, Santa Anita, Gulfstream Park, and more.",
+    description:
+      "Select from 28+ racetracks across the U.S. and Canada. We cover all major thoroughbred venues every race day including Churchill Downs, Santa Anita, Gulfstream Park, and more.",
   },
   {
     icon: Download,
     number: "03",
     title: "Buy Credits & Download",
-    description: "Purchase credits from the Dashboard menu after login. 1 Credit = 1 full day of EEL RaceCard predictions for any track. Simple PDF download, instant access.",
+    description:
+      "Purchase credits from the RaceCard download menu after login. 1 Credit = 1 full day of EEL RaceCard predictions for a specific track. Simple PDF download, instant access.",
   },
   {
     icon: Trophy,

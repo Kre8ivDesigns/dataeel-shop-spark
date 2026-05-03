@@ -151,7 +151,7 @@ const PricingPage = () => {
                   const savings = savingsVsSmallestCreditBundle(plan, packages);
                   const subtitle =
                     plan.description?.trim() ||
-                    (plan.unlimited_credits ? "Unlimited RaceCard PDFs" : "Credit bundle");
+                    (plan.unlimited_credits ? "Unlimited RaceCard PDF downloads" : "Credit bundle");
 
                   return (
                     <motion.div
@@ -260,11 +260,11 @@ const PricingPage = () => {
               },
               {
                 q: "What payment methods do you accept?",
-                a: "We accept all major credit cards, debit cards, and PayPal. All transactions are securely processed.",
+                a: "We accept major credit and debit cards (Visa, Mastercard, American Express, Discover). Payments are processed securely through Stripe.",
               },
               {
-                q: "Can I get a refund?",
-                a: "Unused credits can be refunded within 30 days of purchase. Contact our support team for assistance.",
+                q: "Is my payment information secure?",
+                a: "Yes. Checkout uses industry-standard encryption via Stripe; we do not store full card numbers on our servers.",
               },
             ].map((faq, i) => (
               <div key={i} className="card-dark">

@@ -281,7 +281,7 @@ const AdminCreditPackages = () => {
                 }
               />
               <Label htmlFor="pkg-unlimited" className="text-sm font-normal cursor-pointer">
-                Unlimited RaceCards (no credit balance; grants unlimited downloads)
+                Unlimited RaceCard PDF downloads (no credit balance; fair-use policy applies)
               </Label>
             </div>
 

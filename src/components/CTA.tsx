@@ -32,7 +32,7 @@ export const CTA = () => {
             Horse Racing Simplified®
           </p>
           <p className="text-lg text-foreground/60 mb-10 max-w-2xl mx-auto">
-            theDATA<strong className="text-foreground">EEL</strong>™ will change your horse racing life.
+            DATA<strong className="text-foreground">EEL</strong>™ will change your horse racing life.
             Join thousands of bettors who've ditched the Racing Form and started
             winning with algorithmic predictions. Get your first RaceCard today.
           </p>
