@@ -35,6 +35,8 @@ type AdminUserDetailSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   allTransactions: AdminTransaction[];
+  currentUserId?: string;
+  onRequestDeleteUser: (c: AdminCustomer) => void;
   onGiveCredits: (c: AdminCustomer) => void;
   onUpdated: () => void;
 };
@@ -44,6 +46,8 @@ export function AdminUserDetailSheet({
   open,
   onOpenChange,
   allTransactions,
+  currentUserId,
+  onRequestDeleteUser,
   onGiveCredits,
   onUpdated,
 }: AdminUserDetailSheetProps) {
@@ -53,6 +57,8 @@ export function AdminUserDetailSheet({
   const [fullName, setFullName] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  /** Keeps UI in sync after admin_set_unlimited_credits when parent row cache is stale. */
+  const [unlimitedPlan, setUnlimitedPlan] = useState(false);
 
   const userTx = customer
     ? allTransactions.filter((t) => t.user_id === customer.user_id)
@@ -79,6 +85,7 @@ export function AdminUserDetailSheet({
   useEffect(() => {
     if (open && customer) {
       setFullName(customer.full_name ?? "");
+      setUnlimitedPlan(customer.unlimitedCredits);
       loadDownloads();
     }
   }, [open, customer, loadDownloads]);
@@ -154,6 +161,40 @@ export function AdminUserDetailSheet({
     }
   };
 
+  const handleSetUnlimitedPlan = async (next: boolean) => {
+    if (!customer) return;
+    if (next) {
+      if (
+        !confirm(
+          `Grant unlimited RaceCard credits to ${customer.email}? Downloads will not deduct credits while this is on.`,
+        )
+      ) {
+        return;
+      }
+    } else {
+      if (
+        !confirm(
+          `Remove unlimited access for ${customer.email}? They must have credits to download racecards they have not already downloaded.`,
+        )
+      ) {
+        return;
+      }
+    }
+    setBusy("unlimited");
+    const { error } = await supabase.rpc("admin_set_unlimited_credits", {
+      _user_id: customer.user_id,
+      _unlimited: next,
+    });
+    setBusy(null);
+    if (error) {
+      toast({ title: "Could not update plan", description: sanitizeError(error), variant: "destructive" });
+      return;
+    }
+    setUnlimitedPlan(next);
+    toast({ title: next ? "Unlimited credits enabled" : "Unlimited credits removed" });
+    onUpdated();
+  };
+
   if (!customer) return null;
 
   return (
@@ -170,8 +211,38 @@ export function AdminUserDetailSheet({
           <div>
             <Label className="text-foreground">Credits</Label>
             <p className="text-2xl font-mono-data text-foreground mt-1">
-              {customer.unlimitedCredits ? "Unlimited" : customer.credits}
+              {unlimitedPlan ? "Unlimited" : customer.credits}
             </p>
+            {!unlimitedPlan && (
+              <p className="text-xs text-muted-foreground mt-1">Stored balance when not on unlimited plan.</p>
+            )}
+          </div>
+
+          <div className="rounded-lg border border-border p-4 space-y-3">
+            <div>
+              <p className="text-sm font-medium text-foreground">Unlimited RaceCard credits</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Same capability as the unlimited credit package: downloads do not reduce the balance above.
+              </p>
+            </div>
+            {unlimitedPlan ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy !== null}
+                onClick={() => void handleSetUnlimitedPlan(false)}
+              >
+                {busy === "unlimited" ? "…" : "Remove unlimited plan"}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                disabled={busy !== null}
+                onClick={() => void handleSetUnlimitedPlan(true)}
+              >
+                {busy === "unlimited" ? "…" : "Assign unlimited plan"}
+              </Button>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -203,6 +274,22 @@ export function AdminUserDetailSheet({
             </Button>
             <Button type="button" variant="secondary" disabled={busy !== null} onClick={handleUnban}>
               {busy === "unban" ? "…" : "Remove ban"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="border-destructive/50 text-destructive hover:bg-destructive/10"
+              disabled={
+                busy !== null || (currentUserId !== undefined && customer.user_id === currentUserId)
+              }
+              title={
+                currentUserId !== undefined && customer.user_id === currentUserId
+                  ? "You cannot delete your own account"
+                  : "Delete this user permanently"
+              }
+              onClick={() => onRequestDeleteUser(customer)}
+            >
+              Delete account
             </Button>
           </div>
 

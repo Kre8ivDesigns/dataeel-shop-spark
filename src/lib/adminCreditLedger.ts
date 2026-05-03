@@ -30,6 +30,8 @@ export function creditLedgerDetailFromMeta(meta: Json | null | undefined): strin
   const m = metaRecord(meta);
   if (m.unlimited_grant === true) return "Unlimited access granted";
   if (m.unlimited === true) return "No credits charged (unlimited)";
+  if (m.unlimited_credits === true) return "Unlimited plan assigned by admin";
+  if (m.unlimited_credits === false) return "Unlimited plan removed by admin";
   return "";
 }
 
@@ -38,6 +40,7 @@ export function formatLedgerDelta(delta: number, meta: Json | null | undefined):
   const m = metaRecord(meta);
   if (m.unlimited_grant === true && delta === 0) return "0 (∞)";
   if (m.unlimited === true && delta === 0) return "0 (∞)";
+  if (typeof m.unlimited_credits === "boolean" && delta === 0) return "0 (∞)";
   return String(delta);
 }
 
@@ -45,6 +48,7 @@ export function formatLedgerDelta(delta: number, meta: Json | null | undefined):
 export function formatLedgerBalance(balanceAfter: number, meta: Json | null | undefined): string {
   const m = metaRecord(meta);
   if (m.unlimited_grant === true) return `${balanceAfter} (∞)`;
+  if (m.unlimited_credits === true) return `${balanceAfter} (∞)`;
   return String(balanceAfter);
 }
 

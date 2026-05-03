@@ -409,6 +409,13 @@ export type Database = {
         }
         Returns: number
       }
+      admin_set_unlimited_credits: {
+        Args: {
+          _unlimited: boolean
+          _user_id: string
+        }
+        Returns: null
+      }
       deduct_credit_if_sufficient: {
         Args: {
           p_racecard_id: string

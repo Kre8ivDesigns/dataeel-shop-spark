@@ -23,6 +23,8 @@ type CustomersProps = {
   filteredCustomers: AdminCustomer[];
   onGiveCredits: (c: AdminCustomer) => void;
   onViewCustomer: (c: AdminCustomer) => void;
+  currentUserId?: string;
+  onRequestDeleteUser: (c: AdminCustomer) => void;
 };
 
 export function AdminCustomersTab({
@@ -32,6 +34,8 @@ export function AdminCustomersTab({
   filteredCustomers,
   onGiveCredits,
   onViewCustomer,
+  currentUserId,
+  onRequestDeleteUser,
 }: CustomersProps) {
   return (
     <Card className="bg-card border-border">
@@ -80,6 +84,21 @@ export function AdminCustomersTab({
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => onGiveCredits(c)}>
                     Give Credits
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    disabled={currentUserId !== undefined && c.user_id === currentUserId}
+                    title={
+                      currentUserId !== undefined && c.user_id === currentUserId
+                        ? "You cannot delete your own account"
+                        : "Delete user"
+                    }
+                    onClick={() => onRequestDeleteUser(c)}
+                    aria-label={`Delete user ${c.email}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </TableCell>
               </TableRow>
@@ -375,6 +394,8 @@ type MainTabsProps = {
   filteredCustomers: AdminCustomer[];
   onGiveCredits: (c: AdminCustomer) => void;
   onViewCustomer: (c: AdminCustomer) => void;
+  currentUserId?: string;
+  onRequestDeleteUser: (c: AdminCustomer) => void;
   transactions: AdminTransaction[];
   emailByUserId: Record<string, string>;
   racecards: AdminRacecard[];
@@ -402,6 +423,8 @@ export function AdminDashboardMainTabs(props: MainTabsProps) {
           filteredCustomers={props.filteredCustomers}
           onGiveCredits={props.onGiveCredits}
           onViewCustomer={props.onViewCustomer}
+          currentUserId={props.currentUserId}
+          onRequestDeleteUser={props.onRequestDeleteUser}
         />
       </TabsContent>
       <TabsContent value="transactions">

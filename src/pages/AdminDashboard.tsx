@@ -10,6 +10,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Users,
   CreditCard,
   FileText,
@@ -23,6 +32,7 @@ import {
   Inbox,
   Table2,
   LayoutList,
+  Loader2,
 } from "lucide-react";
 import { sanitizeError } from "@/lib/errorHandler";
 import {
@@ -61,6 +71,8 @@ const AdminDashboard = () => {
   const [creatingUser, setCreatingUser] = useState(false);
   const [detailCustomer, setDetailCustomer] = useState<AdminCustomer | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [deleteConfirmCustomer, setDeleteConfirmCustomer] = useState<AdminCustomer | null>(null);
+  const [deletingUser, setDeletingUser] = useState(false);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -258,6 +270,33 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleConfirmDeleteUser = async () => {
+    if (!deleteConfirmCustomer) return;
+    setDeletingUser(true);
+    const { data, error } = await supabase.functions.invoke("admin-manage-user", {
+      body: { action: "delete_user", userId: deleteConfirmCustomer.user_id },
+    });
+    setDeletingUser(false);
+    if (error || data?.error) {
+      toast({
+        title: "Delete failed",
+        description: typeof data?.error === "string" ? data.error : describeFunctionInvokeError("admin-manage-user", error),
+        variant: "destructive",
+      });
+      return;
+    }
+    toast({
+      title: "User deleted",
+      description: `${deleteConfirmCustomer.email} was permanently removed from auth and related rows (cascaded).`,
+    });
+    if (detailCustomer?.user_id === deleteConfirmCustomer.user_id) {
+      setDetailOpen(false);
+      setDetailCustomer(null);
+    }
+    setDeleteConfirmCustomer(null);
+    fetchData();
+  };
+
   const filteredCustomers = customers.filter(
     (c) =>
       c.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -394,6 +433,8 @@ const AdminDashboard = () => {
             open={detailOpen}
             onOpenChange={setDetailOpen}
             allTransactions={transactions}
+            currentUserId={user?.id}
+            onRequestDeleteUser={(c) => setDeleteConfirmCustomer(c)}
             onGiveCredits={(c) => {
               setDetailOpen(false);
               setSelectedCustomer(c);
@@ -402,6 +443,42 @@ const AdminDashboard = () => {
             }}
             onUpdated={fetchData}
           />
+
+          <AlertDialog open={deleteConfirmCustomer !== null} onOpenChange={(open) => !open && !deletingUser && setDeleteConfirmCustomer(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete user permanently?</AlertDialogTitle>
+                <AlertDialogDescription className="space-y-2">
+                  <span className="block">
+                    This removes <strong className="text-foreground">{deleteConfirmCustomer?.email}</strong> from Supabase
+                    Auth. Profile, roles, credits, and related data with <code className="text-xs bg-muted px-1 rounded">ON DELETE CASCADE</code>{" "}
+                    are removed. This cannot be undone.
+                  </span>
+                  <span className="block text-destructive">
+                    You cannot delete your own account or the only remaining admin from here.
+                  </span>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={deletingUser}>Cancel</AlertDialogCancel>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={deletingUser}
+                  onClick={() => void handleConfirmDeleteUser()}
+                >
+                  {deletingUser ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Deleting…
+                    </>
+                  ) : (
+                    "Delete user"
+                  )}
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
           <AdminDashboardMainTabs
             searchQuery={searchQuery}
@@ -417,6 +494,8 @@ const AdminDashboard = () => {
               setDetailCustomer(c);
               setDetailOpen(true);
             }}
+            currentUserId={user?.id}
+            onRequestDeleteUser={(c) => setDeleteConfirmCustomer(c)}
             transactions={transactions}
             emailByUserId={emailByUserId}
             racecards={racecards}

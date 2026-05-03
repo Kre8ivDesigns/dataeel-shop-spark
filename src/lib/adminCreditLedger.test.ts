@@ -32,6 +32,11 @@ describe("creditLedgerDetailFromMeta", () => {
     expect(creditLedgerDetailFromMeta({ unlimited: true })).toBe("No credits charged (unlimited)");
     expect(creditLedgerDetailFromMeta({})).toBe("");
   });
+
+  it("describes admin unlimited plan toggles", () => {
+    expect(creditLedgerDetailFromMeta({ unlimited_credits: true })).toBe("Unlimited plan assigned by admin");
+    expect(creditLedgerDetailFromMeta({ unlimited_credits: false })).toBe("Unlimited plan removed by admin");
+  });
 });
 
 describe("formatLedgerDelta / formatLedgerBalance", () => {
@@ -43,7 +48,13 @@ describe("formatLedgerDelta / formatLedgerBalance", () => {
 
   it("suffixes balance on unlimited grant rows", () => {
     expect(formatLedgerBalance(20, { unlimited_grant: true })).toBe("20 (∞)");
+    expect(formatLedgerBalance(15, { unlimited_credits: true })).toBe("15 (∞)");
     expect(formatLedgerBalance(20, {})).toBe("20");
+  });
+
+  it("marks admin unlimited toggle delta rows", () => {
+    expect(formatLedgerDelta(0, { unlimited_credits: true })).toBe("0 (∞)");
+    expect(formatLedgerDelta(0, { unlimited_credits: false })).toBe("0 (∞)");
   });
 });
 
