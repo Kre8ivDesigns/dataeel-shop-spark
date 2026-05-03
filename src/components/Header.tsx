@@ -8,8 +8,7 @@ import {
   ChevronDown,
   LogOut,
   LayoutDashboard,
-  FileText,
-  Settings,
+  Download,
   DollarSign,
   BarChart3,
   Inbox,
@@ -27,7 +26,6 @@ const navItems = [
   { label: "Home", href: "/" },
   { label: "How It Works", href: "/#how-it-works" },
   { label: "RaceCards", href: "/racecards" },
-  { label: "Results", href: "/#results" },
   { label: "Pricing", href: "/pricing" },
   { label: "Betting Basics", href: "/betting-basics" },
   { label: "Reading the RaceCard", href: "/how-to-read-racecard" },
@@ -135,20 +133,12 @@ export const Header = () => {
                       Dashboard
                     </Link>
                     <Link
-                      to="/invoices"
+                      to="/racecards"
                       onClick={() => setIsUserMenuOpen(false)}
                       className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
                     >
-                      <FileText className="h-4 w-4" />
-                      Invoices
-                    </Link>
-                    <Link
-                      to="/account-settings"
-                      onClick={() => setIsUserMenuOpen(false)}
-                      className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
-                    >
-                      <Settings className="h-4 w-4" />
-                      Account Settings
+                      <Download className="h-4 w-4" />
+                      RaceCard downloads
                     </Link>
                     {isAdmin && (
                       <>
@@ -283,14 +273,9 @@ export const Header = () => {
                         <LayoutDashboard className="h-4 w-4" /> Dashboard
                       </Button>
                     </Link>
-                    <Link to="/invoices" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Link to="/racecards" onClick={() => setIsMobileMenuOpen(false)}>
                       <Button variant="outline" className="w-full border-secondary text-foreground gap-2">
-                        <FileText className="h-4 w-4" /> Invoices
-                      </Button>
-                    </Link>
-                    <Link to="/account-settings" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button variant="outline" className="w-full border-secondary text-foreground gap-2">
-                        <Settings className="h-4 w-4" /> Account Settings
+                        <Download className="h-4 w-4" /> RaceCard downloads
                       </Button>
                     </Link>
                     {isAdmin && (

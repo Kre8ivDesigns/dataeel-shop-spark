@@ -297,132 +297,137 @@ const Dashboard = () => {
       <main className="pt-24 pb-16">
         <div className="container mx-auto px-4">
           <StripeTestModeDevBanner />
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8"
-          >
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground font-heading tracking-tight">
-              Welcome back, <span className="text-neon">{displayName}</span>
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Your credits, downloads, and upcoming racecards in one place.
-            </p>
-          </motion.div>
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] xl:grid-cols-[1.1fr_0.9fr] gap-8 lg:gap-10 items-start">
+            {/* Left: Recent downloads first (top of page body) */}
+            <div className="min-w-0 space-y-8">
+              <DashboardRecentDownloadsColumn loading={loading} recentDownloads={recentDownloads} />
+            </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            {stats.map((stat, i) => (
+            {/* Right: stats, actions, results, upcoming, purchases */}
+            <div className="min-w-0 space-y-8">
               <motion.div
-                key={stat.label}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
-                className="stat-card"
+                className="space-y-3"
               >
-                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center mb-3">
-                  {loading ? (
-                    <Loader2 className="h-5 w-5 animate-spin text-foreground/40" />
-                  ) : (
-                    <stat.icon className={`h-5 w-5 ${stat.accent ? "text-primary" : "text-foreground/60"}`} />
-                  )}
-                </div>
-                <div
-                  className={`text-3xl font-bold font-mono-data ${stat.accent ? "text-primary" : "text-foreground"}`}
-                >
-                  {stat.value}
-                </div>
-                <div className="text-sm text-muted-foreground mt-1">{stat.label}</div>
-                {stat.trend && (
-                  <div
-                    className={`text-xs mt-2 ${
-                      stat.trendUp === true
-                        ? "text-success"
-                        : stat.trendUp === false
-                          ? "text-muted-foreground"
-                          : "text-muted-foreground"
-                    }`}
-                  >
-                    {stat.trendUp === true && "↑ "}
-                    {stat.trendUp === false && downloadsThisMonth < downloadsLastMonth && "↓ "}
-                    {stat.trend}
-                  </div>
-                )}
+                <h1 className="text-2xl md:text-3xl font-bold text-foreground font-heading tracking-tight">
+                  Welcome back, <span className="text-neon">{displayName}</span>
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  Your credits, downloads, and upcoming racecards in one place.
+                </p>
               </motion.div>
-            ))}
-          </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="mb-8"
-          >
-            <h2 className="text-lg font-semibold text-foreground mb-4 font-heading">Quick actions</h2>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-              {quickActions.map((action) => {
-                const content = (
-                  <div
-                    className={`relative card-dark flex items-center gap-4 group ${
-                      action.primary ? "border-primary/50" : ""
-                    }`}
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                {stats.map((stat, i) => (
+                  <motion.div
+                    key={stat.label}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="stat-card"
                   >
+                    <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center mb-2">
+                      {loading ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-foreground/40" />
+                      ) : (
+                        <stat.icon className={`h-4 w-4 ${stat.accent ? "text-primary" : "text-foreground/60"}`} />
+                      )}
+                    </div>
                     <div
-                      className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        action.primary ? "bg-primary/20" : "bg-muted"
-                      }`}
+                      className={`text-2xl sm:text-3xl font-bold font-mono-data leading-tight ${stat.accent ? "text-primary" : "text-foreground"}`}
                     >
-                      <action.icon
-                        className={`h-6 w-6 ${action.primary ? "text-primary" : "text-foreground/60"}`}
-                      />
+                      {stat.value}
                     </div>
-                    <div>
-                      <div className="font-semibold text-foreground text-sm">{action.label}</div>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-foreground/30 ml-auto group-hover:text-foreground/60 transition-colors" />
-                  </div>
-                );
+                    <div className="text-xs sm:text-sm text-muted-foreground mt-1 leading-snug">{stat.label}</div>
+                    {stat.trend && (
+                      <div
+                        className={`text-[11px] sm:text-xs mt-1.5 ${
+                          stat.trendUp === true
+                            ? "text-success"
+                            : stat.trendUp === false
+                              ? "text-muted-foreground"
+                              : "text-muted-foreground"
+                        }`}
+                      >
+                        {stat.trendUp === true && "↑ "}
+                        {stat.trendUp === false && downloadsThisMonth < downloadsLastMonth && "↓ "}
+                        {stat.trend}
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </div>
 
-                if (action.onClick) {
-                  return (
-                    <button
-                      key={action.label}
-                      type="button"
-                      onClick={action.onClick}
-                      disabled={portalLoading}
-                      className="text-left w-full disabled:opacity-60"
-                    >
-                      {content}
-                    </button>
-                  );
-                }
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <h2 className="text-lg font-semibold text-foreground mb-4 font-heading">Quick actions</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {quickActions.map((action) => {
+                    const content = (
+                      <div
+                        className={`relative card-dark flex items-center gap-3 group ${
+                          action.primary ? "border-primary/50" : ""
+                        }`}
+                      >
+                        <div
+                          className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                            action.primary ? "bg-primary/20" : "bg-muted"
+                          }`}
+                        >
+                          <action.icon
+                            className={`h-5 w-5 ${action.primary ? "text-primary" : "text-foreground/60"}`}
+                          />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-foreground text-sm">{action.label}</div>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-foreground/30 ml-auto group-hover:text-foreground/60 transition-colors" />
+                      </div>
+                    );
 
-                return (
-                  <Link key={action.label} to={action.href}>
-                    {content}
-                  </Link>
-                );
-              })}
+                    if (action.onClick) {
+                      return (
+                        <button
+                          key={action.label}
+                          type="button"
+                          onClick={action.onClick}
+                          disabled={portalLoading}
+                          className="text-left w-full disabled:opacity-60"
+                        >
+                          {content}
+                        </button>
+                      );
+                    }
+
+                    return (
+                      <Link key={action.label} to={action.href}>
+                        {content}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </motion.div>
+
+              <DashboardRacingResultsSection />
+              <DashboardUpcomingRacecardsColumn
+                loading={loading}
+                upcomingForDisplay={upcomingForDisplay}
+                ownedUpcomingRacecardIds={ownedUpcomingRacecardIds}
+                credits={credits}
+                unlimitedCredits={unlimitedCredits}
+              />
+              <DashboardPurchasesAndCredits
+                loading={loading}
+                recentPurchases={recentPurchases}
+                showLowCredits={showLowCredits}
+                credits={credits}
+              />
             </div>
-          </motion.div>
-
-          <DashboardRacingResultsSection />
-          <div className="grid grid-cols-1 md:grid-cols-[3fr_1fr] gap-6 lg:gap-8 mb-8 w-full">
-            <DashboardRecentDownloadsColumn loading={loading} recentDownloads={recentDownloads} />
-            <DashboardUpcomingRacecardsColumn
-              loading={loading}
-              upcomingForDisplay={upcomingForDisplay}
-              ownedUpcomingRacecardIds={ownedUpcomingRacecardIds}
-              credits={credits}
-              unlimitedCredits={unlimitedCredits}
-            />
           </div>
-
-          <DashboardPurchasesAndCredits
-            loading={loading}
-            recentPurchases={recentPurchases}
-            showLowCredits={showLowCredits}
-            credits={credits}
-          />
         </div>
       </main>
 

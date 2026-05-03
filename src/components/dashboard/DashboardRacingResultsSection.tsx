@@ -18,18 +18,13 @@ export function DashboardRacingResultsSection() {
 
   return (
     <section className="mb-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground font-heading">Race results by track</h2>
-          <p className="text-xs text-muted-foreground mt-1">
-            Ingested from broad source feed, normalized, and republished per track.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+      <div className="mb-4 space-y-2">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-2 sm:gap-x-3">
+          <h2 className="text-lg font-semibold text-foreground font-heading shrink-0">Race results by track</h2>
           <select
             value={selectedTrack}
             onChange={(event) => setSelectedTrack(event.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+            className="h-9 min-w-[10rem] max-w-[min(100%,18rem)] rounded-md border border-input bg-background px-3 text-sm text-foreground"
             aria-label="Select racetrack for results"
           >
             {trackOptions.map((track) => (
@@ -44,11 +39,15 @@ export function DashboardRacingResultsSection() {
             variant="outline"
             onClick={() => void refetch()}
             disabled={isFetching}
-            className="h-9"
+            className="h-9 shrink-0"
+            aria-label="Refresh race results"
           >
             {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           </Button>
         </div>
+        <p className="text-xs text-muted-foreground">
+          Ingested from broad source feed, normalized, and republished per track.
+        </p>
       </div>
 
       <div className="card-dark">
