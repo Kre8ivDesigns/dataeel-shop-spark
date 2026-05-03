@@ -1,7 +1,8 @@
 import { useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { PageHero } from "@/components/PageHero";
 import {
   PRIVACY_AFTER_SUMMARY,
   PRIVACY_INTRO_BULLETS,
@@ -26,19 +27,18 @@ const PrivacyPolicy = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="pt-28 pb-16">
+      <PageHero
+        badge="Legal"
+        title={
+          <>
+            Privacy <span className="text-neon">Policy</span>
+          </>
+        }
+        align="center"
+        sectionClassName="pb-8"
+      />
+      <main className="pb-16 pt-4 md:pt-6">
         <div className="container mx-auto px-4 max-w-3xl">
-          <p className="text-sm text-muted-foreground mb-2">
-            <Link to="/" className="hover:text-primary transition-colors">
-              Home
-            </Link>
-            <span className="mx-2">/</span>
-            <span className="text-foreground">Privacy Policy</span>
-          </p>
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground font-heading tracking-tight mb-6">
-            Privacy Policy
-          </h1>
-
           <div className="space-y-4 text-muted-foreground leading-relaxed mb-8">
             {PRIVACY_INTRO_PARAGRAPHS.map((p, i) => (
               <p key={i}>{p}</p>
