@@ -23,6 +23,7 @@ import { useCreditBalance } from "@/lib/queries/creditBalance";
 import { useCreditPackages } from "@/lib/queries/creditPackages";
 import { EMPTY_CREDIT_SNAPSHOT } from "@/lib/creditDisplay";
 import { StripeTestModeDevBanner } from "@/components/StripeTestModeDevBanner";
+import { PageHero } from "@/components/PageHero";
 
 // Static display metadata keyed by package name (lowercase) for UI enrichment
 const PACKAGE_META: Record<string, { pricePerCredit?: number; savings?: number; popular?: boolean; description?: string; features?: string[] }> = {
@@ -133,34 +134,31 @@ const BuyCredits = () => {
     <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="pt-24 pb-16">
-        <div className="container mx-auto px-4">
-          <StripeTestModeDevBanner />
-          <Link
-            to="/dashboard"
-            className="inline-flex items-center gap-2 text-foreground/50 hover:text-foreground mb-6 transition-colors text-sm"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Dashboard
-          </Link>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8"
-          >
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground font-heading tracking-tight">
+      <main className="pb-16">
+        <PageHero
+          backTo="/dashboard"
+          backLabel="Back to Dashboard"
+          badge="Credits"
+          title={
+            <>
               Buy <span className="text-neon">Credits</span>
-            </h1>
-            <p className="text-muted-foreground mt-1">
+            </>
+          }
+          subtitle={
+            <>
               Current balance:{" "}
               <span className="text-primary font-mono-data font-bold">
                 {balanceSnap.unlimited ? "Unlimited credits" : `${balanceSnap.credits} credits`}
               </span>
-            </p>
-          </motion.div>
+            </>
+          }
+          align="left"
+          sectionClassName="pb-8"
+        />
+        <div className="container mx-auto px-4">
+          <StripeTestModeDevBanner />
 
-          <div className="grid lg:grid-cols-3 gap-8">
+          <div className="grid lg:grid-cols-3 gap-8 mt-6 md:mt-8">
             <div className="lg:col-span-2">
               <h2 className="text-lg font-semibold text-foreground mb-4 font-heading">
                 Select a Package
