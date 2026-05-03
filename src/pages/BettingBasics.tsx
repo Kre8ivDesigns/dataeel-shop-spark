@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Heart, BookOpen, Coins, Shield, Sparkles } from "lucide-react";
@@ -5,7 +6,14 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 
-const sections = [
+type SectionBlock = {
+  id: string;
+  icon: typeof Heart;
+  title: string;
+  body: ReactNode[];
+};
+
+const sections: SectionBlock[] = [
   {
     id: "fun",
     icon: Heart,
@@ -22,7 +30,13 @@ const sections = [
     title: "The basics, without the jargon storm",
     body: [
       "A racecard lists the horses, post positions, and often recent form. Odds reflect how much the betting public favors each runner — they move as money comes in.",
-      "Common bet types include win (first only), place (first or second), and show (often 1st, 2nd, and 3rd). “Exotic” bets like exactas, daily doubles, trifectas, etc. ask you to predict finishing order for multiple horses — they are harder and more volatile.",
+      <>
+        Common bet types include <span className="text-neon font-semibold">win</span> (first only),{" "}
+        <span className="text-neon font-semibold">place</span> (first or second), and{" "}
+        <span className="text-neon font-semibold">show</span> (often 1st, 2nd, and 3rd). “Exotic” bets like exactas,
+        daily doubles, trifectas, etc. ask you to predict finishing order for multiple horses — they are harder and
+        more volatile.
+      </>,
       "Nothing in racing is guaranteed. Favorites lose often. Long shots win sometimes. That uncertainty is part of the sport — and a good reason to keep any wagering small and intentional.",
     ],
   },
