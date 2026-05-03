@@ -3,7 +3,18 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 
-const HERO_GRADIENT = "linear-gradient(135deg, hsl(232 59% 8%) 0%, hsl(214 52% 20%) 100%)";
+export const HERO_GRADIENT =
+  "linear-gradient(135deg, hsl(232 59% 8%) 0%, hsl(214 52% 20%) 100%)";
+
+/** Blurred primary/warning orbs — reuse on homepage sections for parity with PageHero / Pricing. */
+export function PageHeroAmbientOrbs() {
+  return (
+    <div className="absolute inset-0 pointer-events-none" aria-hidden>
+      <div className="absolute top-0 left-1/4 w-72 h-72 md:w-96 md:h-96 bg-primary/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-0 right-1/4 w-64 h-64 md:w-80 md:h-80 bg-warning/5 rounded-full blur-3xl" />
+    </div>
+  );
+}
 
 export type PageHeroProps = {
   backTo?: string;
@@ -73,10 +84,7 @@ export function PageHero({
       className={`pt-24 pb-6 md:pb-8 relative overflow-hidden lg:pt-[5.5rem] lg:pb-6 ${sectionClassName}`.trim()}
       style={{ background: HERO_GRADIENT }}
     >
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-72 h-72 md:w-96 md:h-96 bg-primary/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-64 h-64 md:w-80 md:h-80 bg-warning/5 rounded-full blur-3xl" />
-      </div>
+      <PageHeroAmbientOrbs />
 
       <div
         className={`relative mx-auto w-full px-4 ${containerClassName ?? (aside ? "max-w-[1400px]" : "container")}`}

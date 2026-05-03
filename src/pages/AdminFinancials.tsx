@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -20,7 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AlertCircle, ArrowLeft, Download, Loader2, TrendingUp, CreditCard, Receipt } from "lucide-react";
+import { AlertCircle, Download, Loader2, TrendingUp, CreditCard, Receipt } from "lucide-react";
+import { PageHero } from "@/components/PageHero";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Area,
@@ -136,24 +136,16 @@ const AdminFinancials = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="pt-24 pb-16">
-        <div className="container mx-auto px-4 max-w-[1400px]">
-          <Link
-            to="/admin"
-            className="inline-flex items-center gap-2 text-foreground/50 hover:text-foreground mb-6 text-sm transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Admin
-          </Link>
-
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground font-heading">Financials</h1>
-              <p className="text-muted-foreground text-sm mt-1">
-                Revenue from completed checkouts, credits sold, and transaction export.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
+      <main className="pb-16">
+        <PageHero
+          backTo="/admin"
+          backLabel="Back to Admin"
+          badge="Admin"
+          title={<span className="text-neon">Financials</span>}
+          subtitle="Revenue from completed checkouts, credits sold, and transaction export."
+          align="left"
+          aside={
+            <div className="flex flex-wrap items-center justify-end gap-2 lg:mt-6">
               <Select value={period} onValueChange={setPeriod}>
                 <SelectTrigger className="w-[180px] bg-card border-border">
                   <SelectValue />
@@ -176,8 +168,12 @@ const AdminFinancials = () => {
                 Export CSV
               </Button>
             </div>
-          </div>
-
+          }
+          asideGridClassName="lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start gap-6"
+          containerClassName="max-w-[1400px]"
+          sectionClassName="pb-8"
+        />
+        <div className="container mx-auto px-4 max-w-[1400px]">
           {queryError && (
             <Alert variant="destructive" className="mb-6">
               <AlertCircle className="h-4 w-4" />

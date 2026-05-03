@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { PageHero } from "@/components/PageHero";
 import logo from "@/assets/dataeel-logo.png";
 
 const Auth = () => {
@@ -123,14 +124,27 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pt-[var(--header-height)]">
+    <div className="min-h-screen bg-background">
       <Header />
-      <main className="pb-16 flex items-center justify-center min-h-[calc(100dvh-var(--header-height))]">
+      <PageHero
+        backTo="/"
+        backLabel="Back to Home"
+        badge="Account"
+        title={
+          <>
+            Welcome to <span className="text-neon">DATAEEL</span>®
+          </>
+        }
+        subtitle="Horse Racing Simplified®"
+        align="center"
+        sectionClassName="pb-6"
+      />
+      <main className="pb-16 flex items-start justify-center px-4 -mt-2">
         <Card className="w-full max-w-md bg-card border-border">
-          <CardHeader className="text-center">
-            <img src={logo} alt="DATAEEL" className="h-10 mx-auto mb-4" />
-            <CardTitle className="text-2xl text-foreground">Welcome to DATAEEL®</CardTitle>
-            <CardDescription>Horse Racing Simplified®</CardDescription>
+          <CardHeader className="text-center pb-2">
+            <img src={logo} alt="DATAEEL" className="h-10 mx-auto mb-2" />
+            <CardTitle className="text-lg text-foreground">Sign in or create an account</CardTitle>
+            <CardDescription>Use your email below.</CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue={searchParams.get("mode") === "signup" ? "signup" : "login"}>

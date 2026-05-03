@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { PageHero } from "@/components/PageHero";
 import { supabase } from "@/integrations/supabase/client";
 import NotFound from "./NotFound";
 
@@ -87,13 +88,27 @@ const PublicPage = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="pt-24 pb-16">
+      {loading ? (
+        <PageHero
+          badge="Page"
+          title="Loading…"
+          subtitle="Fetching this page."
+          align="left"
+          sectionClassName="pb-6"
+        />
+      ) : page ? (
+        <PageHero
+          badge="Page"
+          title={page.title || "Page"}
+          subtitle={page.meta_description ?? undefined}
+          align="left"
+          containerClassName="max-w-[1400px]"
+          sectionClassName="pb-6"
+        />
+      ) : null}
+      <main className="pb-16">
         <div className="container mx-auto px-4 max-w-[1400px]">
-          {loading ? (
-            <div className="flex items-center justify-center py-24">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-            </div>
-          ) : page ? (
+          {loading ? null : page ? (
             <>
               {page.css ? <style dangerouslySetInnerHTML={{ __html: page.css }} /> : null}
               <article

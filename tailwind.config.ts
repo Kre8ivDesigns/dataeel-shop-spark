@@ -103,11 +103,17 @@ export default {
           "0%, 100%": { boxShadow: "0 0 20px hsl(67 100% 50% / 0.3)" },
           "50%": { boxShadow: "0 0 40px hsl(67 100% 50% / 0.6)" },
         },
+        /** Seamless loop: content duplicated; -50% = one copy width */
+        "ticker-scroll": {
+          from: { transform: "translateX(0)" },
+          to: { transform: "translateX(-50%)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "pulse-neon": "pulse-neon 2s ease-in-out infinite",
+        "ticker-scroll": "ticker-scroll 40s linear infinite",
       },
     },
   },

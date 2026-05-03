@@ -1,5 +1,9 @@
 import { useLocation, Link } from "react-router-dom";
 import { useEffect } from "react";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
+import { PageHero } from "@/components/PageHero";
+import { Button } from "@/components/ui/button";
 
 const NotFound = () => {
   const location = useLocation();
@@ -9,14 +13,28 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">404</h1>
-        <p className="mb-4 text-xl text-muted-foreground">Oops! Page not found</p>
-        <Link to="/" className="text-primary underline hover:text-primary/90">
-          Return to Home
-        </Link>
-      </div>
+    <div className="min-h-screen bg-background">
+      <Header />
+      <PageHero
+        backTo="/"
+        backLabel="Return to Home"
+        badge="404"
+        title={
+          <>
+            Page <span className="text-neon">not found</span>
+          </>
+        }
+        subtitle="That URL doesn’t match anything on this site. Check the address or go back to the homepage."
+        align="center"
+        actions={
+          <Button asChild className="bg-primary text-primary-foreground font-semibold">
+            <Link to="/">Go to homepage</Link>
+          </Button>
+        }
+        sectionClassName="pb-10"
+      />
+      <main className="pb-16" />
+      <Footer />
     </div>
   );
 };

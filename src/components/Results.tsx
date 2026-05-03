@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { TrendingUp, Layers, MapPin, FileDown, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { HERO_GRADIENT, PageHeroAmbientOrbs } from "@/components/PageHero";
 
 const stats = [
   { number: "2", label: "Algorithms", sublabel: "Concert™ & Aptitude™", icon: Layers },
@@ -36,14 +37,14 @@ const cardHighlights = [
 
 export const Results = () => {
   return (
-    <section id="results" className="py-24 bg-card relative overflow-hidden">
-      {/* Decorative */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-20 left-20 w-64 h-64 border border-primary rounded-full" />
-        <div className="absolute bottom-20 right-20 w-48 h-48 border border-warning rounded-full" />
-      </div>
+    <section
+      id="results"
+      className="py-24 relative overflow-hidden"
+      style={{ background: HERO_GRADIENT }}
+    >
+      <PageHeroAmbientOrbs />
 
-      <div className="container mx-auto px-4 relative">
+      <div className="container mx-auto px-4 relative z-10">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}

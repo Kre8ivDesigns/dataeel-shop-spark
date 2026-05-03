@@ -9,8 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Link } from "react-router-dom";
-import { ArrowLeft, Loader2, Package, Plus, Pencil, Trash2 } from "lucide-react";
+import { Loader2, Package, Plus, Pencil, Trash2 } from "lucide-react";
+import { PageHero } from "@/components/PageHero";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { describeFunctionInvokeError } from "@/lib/edgeFunctionErrors";
@@ -143,24 +143,29 @@ const AdminCreditPackages = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="pt-24 pb-16">
-        <div className="container mx-auto px-4 max-w-[1400px]">
-          <Link
-            to="/admin"
-            className="inline-flex items-center gap-2 text-foreground/50 hover:text-foreground mb-6 transition-colors text-sm"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Admin
-          </Link>
-
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold text-foreground">Credit Packages</h1>
-            <Button onClick={openCreate} className="bg-primary text-primary-foreground font-semibold">
+      <main className="pb-16">
+        <PageHero
+          backTo="/admin"
+          backLabel="Back to Admin"
+          badge="Admin"
+          title={
+            <>
+              Credit <span className="text-neon">Packages</span>
+            </>
+          }
+          subtitle="Pricing tiers and Stripe price links for the storefront."
+          align="left"
+          aside={
+            <Button onClick={openCreate} className="bg-primary text-primary-foreground font-semibold lg:mt-6">
               <Plus className="h-4 w-4 mr-2" />
               Create Package
             </Button>
-          </div>
-
+          }
+          asideGridClassName="lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start gap-6"
+          containerClassName="max-w-[1400px]"
+          sectionClassName="pb-8"
+        />
+        <div className="container mx-auto px-4 max-w-[1400px]">
           <Card className="bg-card border-border">
             <CardHeader>
               <CardTitle className="text-foreground">Packages</CardTitle>

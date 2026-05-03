@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
@@ -15,7 +14,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Download, Loader2 } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
+import { PageHero } from "@/components/PageHero";
 import { sanitizeError } from "@/lib/errorHandler";
 import {
   creditLedgerDetailFromMeta,
@@ -164,23 +164,18 @@ const AdminReports = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="pt-24 pb-16">
+      <main className="pb-16">
+        <PageHero
+          backTo="/admin"
+          backLabel="Back to Admin"
+          badge="Admin"
+          title={<span className="text-neon">Reports</span>}
+          subtitle="Downloads, tracks, and credit ledger."
+          align="left"
+          containerClassName="max-w-[1400px]"
+          sectionClassName="pb-8"
+        />
         <div className="container mx-auto px-4 max-w-[1400px]">
-          <Link
-            to="/admin"
-            className="inline-flex items-center gap-2 text-foreground/50 hover:text-foreground mb-6 text-sm transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Admin
-          </Link>
-
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground font-heading">Reports</h1>
-              <p className="text-muted-foreground text-sm mt-1">Downloads, tracks, and credit ledger.</p>
-            </div>
-          </div>
-
           <Tabs defaultValue="downloads">
             <TabsList className="mb-6 flex flex-wrap h-auto gap-1">
               <TabsTrigger value="downloads">By racecard</TabsTrigger>

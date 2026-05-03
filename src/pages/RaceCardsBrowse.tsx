@@ -32,6 +32,7 @@ import {
 import { getInvokeErrorMessage } from "@/lib/edgeFunctionErrors";
 import { downloadFromSignedUrl } from "@/lib/downloadSignedUrl";
 import { TrackCardHeroImage } from "@/components/TrackCardHeroImage";
+import { PageHero } from "@/components/PageHero";
 import { extractCanonicalTrackCode, getRacetrackLabel, getRacetrackLocation } from "@/lib/racetracks";
 
 const RACECARD_DOWNLOAD_TZ =
@@ -149,41 +150,44 @@ const RaceCardsBrowse = () => {
   const loading = cardsLoading;
 
   return (
-    <div className="min-h-screen bg-background pt-[var(--header-height)]">
+    <div className="min-h-screen bg-background">
       <Header />
+
+      <PageHero
+        badge="Downloads"
+        title={
+          <>
+            Race<span className="text-neon">Cards</span>
+          </>
+        }
+        subtitle="Browse what's available by track and date. Signed-in members download PDFs with credits (presigned links from secure storage)."
+        align="left"
+        aside={
+          user ? (
+            <div className="flex items-center gap-3 justify-end lg:pt-1">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-card/80 border border-border backdrop-blur-sm">
+                <CreditCard className="h-4 w-4 text-primary" />
+                <span className="text-sm font-mono-data font-bold text-primary">
+                  {balanceLoading ? "—" : balanceSnap.unlimited ? "Unlimited" : balanceSnap.credits}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {balanceLoading || balanceSnap.unlimited ? "" : "credits"}
+                </span>
+              </div>
+              <Link to="/buy-credits">
+                <Button size="sm" variant="outline" className="border-primary text-primary hover:bg-primary/10 text-xs">
+                  Buy More
+                </Button>
+              </Link>
+            </div>
+          ) : undefined
+        }
+        asideGridClassName="lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start gap-6"
+        sectionClassName="pb-6 md:pb-8"
+      />
 
       <main className="pb-16">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-foreground font-heading tracking-tight">
-                Race<span className="text-neon">Cards</span>
-              </h1>
-              <p className="text-muted-foreground text-sm mt-1">
-                Browse what&apos;s available by track and date. Signed-in members download PDFs with credits (presigned
-                links from secure storage).
-              </p>
-            </div>
-            {user && (
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-card border border-border">
-                  <CreditCard className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-mono-data font-bold text-primary">
-                    {balanceLoading ? "—" : balanceSnap.unlimited ? "Unlimited" : balanceSnap.credits}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {balanceLoading || balanceSnap.unlimited ? "" : "credits"}
-                  </span>
-                </div>
-                <Link to="/buy-credits">
-                  <Button size="sm" variant="outline" className="border-primary text-primary hover:bg-primary/10 text-xs">
-                    Buy More
-                  </Button>
-                </Link>
-              </div>
-            )}
-          </div>
-
           {!user && (
             <motion.div
               initial={{ opacity: 0, y: 8 }}

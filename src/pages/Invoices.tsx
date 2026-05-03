@@ -6,9 +6,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { describeFunctionInvokeError } from "@/lib/edgeFunctionErrors";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download, ExternalLink, FileText, CreditCard, Loader2 } from "lucide-react";
+import { Download, ExternalLink, FileText, CreditCard, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { PageHero } from "@/components/PageHero";
 import { useToast } from "@/hooks/use-toast";
 import { useInvoiceList } from "@/lib/queries/invoices";
 
@@ -84,38 +85,29 @@ const Invoices = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="pt-24 pb-16">
-        <div className="container mx-auto px-4 sm:px-6">
-          <Link
-            to="/dashboard"
-            className="inline-flex items-center gap-2 text-foreground/50 hover:text-foreground mb-6 transition-colors text-sm"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Dashboard
-          </Link>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8"
-          >
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-foreground font-heading tracking-tight">
-                <span className="text-neon">Invoices</span>
-              </h1>
-              <p className="text-muted-foreground mt-1">View your billing history and manage payment details</p>
-            </div>
+      <main className="pb-16">
+        <PageHero
+          backTo="/dashboard"
+          backLabel="Back to Dashboard"
+          badge="Billing"
+          title={<span className="text-neon">Invoices</span>}
+          subtitle="View your billing history and manage payment details."
+          align="left"
+          aside={
             <Button
               onClick={openCustomerPortal}
               disabled={portalLoading}
               variant="outline"
-              className="gap-2 shrink-0"
+              className="gap-2 shrink-0 lg:mt-6"
             >
               {portalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
               Manage Billing
             </Button>
-          </motion.div>
-
+          }
+          asideGridClassName="lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start gap-6"
+          sectionClassName="pb-8"
+        />
+        <div className="container mx-auto px-4 sm:px-6">
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />

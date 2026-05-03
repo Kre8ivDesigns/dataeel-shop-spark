@@ -5,7 +5,6 @@ import { Footer } from "@/components/Footer";
 import {
   Check,
   Crown,
-  ArrowLeft,
   Shield,
   CreditCard,
   Clock,

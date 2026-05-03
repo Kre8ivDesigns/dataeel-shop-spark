@@ -25,6 +25,7 @@ import { useCreditBalance } from "@/lib/queries/creditBalance";
 import { EMPTY_CREDIT_SNAPSHOT } from "@/lib/creditDisplay";
 import { Loader2, ShieldCheck, ShieldOff, Copy, CheckCircle2, Mail, FlaskConical } from "lucide-react";
 import { hasClientStripePublishableKey } from "@/lib/stripeViteDev";
+import { PageHero } from "@/components/PageHero";
 
 type MfaStep = "idle" | "enrolling" | "verifying";
 
@@ -231,13 +232,20 @@ const AccountSettings = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pt-[var(--header-height)]">
+    <div className="min-h-screen bg-background">
       <Header />
       <main className="pb-16">
-        <div className="container mx-auto px-4 sm:px-6 space-y-6">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-bold text-foreground">Account Settings</h1>
-            <p className="text-sm text-muted-foreground">
+        <PageHero
+          backTo="/dashboard"
+          backLabel="Back to Dashboard"
+          badge="Account"
+          title={
+            <>
+              Account <span className="text-neon">Settings</span>
+            </>
+          }
+          subtitle={
+            <>
               RaceCard credits:{" "}
               <span className="font-mono font-medium text-foreground tabular-nums">
                 {creditsLoading ? "…" : creditSnap.unlimited ? "Unlimited" : creditSnap.credits}
@@ -246,8 +254,12 @@ const AccountSettings = () => {
               <Link to="/buy-credits" className="text-primary hover:underline">
                 Buy credits
               </Link>
-            </p>
-          </div>
+            </>
+          }
+          align="left"
+          sectionClassName="pb-8"
+        />
+        <div className="container mx-auto px-4 sm:px-6 space-y-6">
           {import.meta.env.DEV && !hasClientStripePublishableKey() && (
             <p className="text-xs text-muted-foreground max-w-2xl">
               Dev: add{" "}

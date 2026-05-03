@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Link } from "react-router-dom";
-import { ArrowLeft, Loader2, Eye, EyeOff, Save, CheckCircle2, XCircle, Copy, Check, Link2 } from "lucide-react";
+import { Loader2, Eye, EyeOff, Save, CheckCircle2, XCircle, Copy, Check, Link2 } from "lucide-react";
+import { PageHero } from "@/components/PageHero";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AdminAiSettingsPanel } from "@/components/admin/AdminAiSettingsPanel";
@@ -229,7 +229,17 @@ const AdminSettings = () => {
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        <main className="pt-24 pb-16 flex items-center justify-center">
+        <PageHero
+          backTo="/admin"
+          backLabel="Back to Admin"
+          badge="Admin"
+          title="Loading…"
+          subtitle="Fetching configuration."
+          align="left"
+          containerClassName="max-w-[1400px]"
+          sectionClassName="pb-6"
+        />
+        <main className="pb-16 flex items-center justify-center pt-4">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </main>
         <Footer />
@@ -240,24 +250,29 @@ const AdminSettings = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="pt-24 pb-16">
+      <main className="pb-16">
+        <PageHero
+          backTo="/admin"
+          backLabel="Back to Admin"
+          badge="Admin"
+          title={
+            <>
+              Admin <span className="text-neon">Settings</span>
+            </>
+          }
+          subtitle={
+            <span className="text-sm md:text-base">
+              Secrets are encrypted with AES-256-GCM at rest. Leave a field blank to keep the existing value. Edge
+              Functions still read payment keys from Supabase secrets (
+              <code className="text-xs bg-muted px-1 rounded">STRIPE_SECRET_KEY</code>, etc.); store duplicates here for a
+              single admin record if you want.
+            </span>
+          }
+          align="left"
+          containerClassName="max-w-[1400px]"
+          sectionClassName="pb-8"
+        />
         <div className="container mx-auto px-4 max-w-[1400px]">
-          <Link
-            to="/admin"
-            className="inline-flex items-center gap-2 text-foreground/50 hover:text-foreground mb-6 transition-colors text-sm"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Admin
-          </Link>
-
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-foreground">Admin Settings</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Secrets are encrypted with AES-256-GCM at rest. Leave a field blank to keep the existing value.
-              Edge Functions still read payment keys from Supabase secrets (<code className="text-xs bg-muted px-1 rounded">STRIPE_SECRET_KEY</code>, etc.); store duplicates here for a single admin record if you want.
-            </p>
-          </div>
-
           <Tabs defaultValue="ai">
             <TabsList className="mb-4 flex flex-wrap h-auto gap-1">
               <TabsTrigger value="ai">AI providers</TabsTrigger>

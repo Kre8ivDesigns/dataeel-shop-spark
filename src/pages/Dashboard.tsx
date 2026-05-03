@@ -29,6 +29,7 @@ import {
   type ReconcileCheckoutInvokeResult,
 } from "@/lib/postPaymentConfirmation";
 import { schedulePostPaymentCreditRefetch } from "@/lib/schedulePostPaymentCreditRefetch";
+import { PageHero } from "@/components/PageHero";
 import { StripeTestModeDevBanner } from "@/components/StripeTestModeDevBanner";
 import { DashboardRecentDownloadsColumn } from "@/components/dashboard/DashboardRecentDownloadsColumn";
 import { DashboardUpcomingRacecardsColumn } from "@/components/dashboard/DashboardUpcomingRacecardsColumn";
@@ -294,7 +295,20 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="pt-24 pb-16">
+      <main className="pb-16">
+        <PageHero
+          backTo="/"
+          backLabel="Back to Home"
+          badge="Dashboard"
+          title={
+            <>
+              Welcome back, <span className="text-neon">{displayName}</span>
+            </>
+          }
+          subtitle="Your credits, downloads, and upcoming racecards in one place."
+          align="left"
+          sectionClassName="pb-8"
+        />
         <div className="container mx-auto px-4">
           <StripeTestModeDevBanner />
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] xl:grid-cols-[1.1fr_0.9fr] gap-8 lg:gap-10 items-start">
@@ -305,19 +319,6 @@ const Dashboard = () => {
 
             {/* Right: stats, actions, results, upcoming, purchases */}
             <div className="min-w-0 space-y-8">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-3"
-              >
-                <h1 className="text-2xl md:text-3xl font-bold text-foreground font-heading tracking-tight">
-                  Welcome back, <span className="text-neon">{displayName}</span>
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  Your credits, downloads, and upcoming racecards in one place.
-                </p>
-              </motion.div>
-
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 {stats.map((stat, i) => (
                   <motion.div

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
@@ -20,7 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Loader2, UserPlus, Download, Activity, AlertTriangle } from "lucide-react";
+import { Loader2, UserPlus, Download, Activity, AlertTriangle } from "lucide-react";
+import { PageHero } from "@/components/PageHero";
 import {
   CartesianGrid,
   Legend,
@@ -137,25 +137,21 @@ const AdminAnalytics = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="pt-24 pb-16">
-        <div className="container mx-auto px-4 max-w-[1400px]">
-          <Link
-            to="/admin"
-            className="inline-flex items-center gap-2 text-foreground/50 hover:text-foreground mb-6 text-sm transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Admin
-          </Link>
-
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground font-heading">Site analytics</h1>
-              <p className="text-muted-foreground text-sm mt-1">
-                First-party metrics from your database. Pair with Plausible or GA from Settings.
-              </p>
-            </div>
+      <main className="pb-16">
+        <PageHero
+          backTo="/admin"
+          backLabel="Back to Admin"
+          badge="Admin"
+          title={
+            <>
+              Site <span className="text-neon">analytics</span>
+            </>
+          }
+          subtitle="First-party metrics from your database. Pair with Plausible or GA from Settings."
+          align="left"
+          aside={
             <Select value={range} onValueChange={setRange}>
-              <SelectTrigger className="w-[200px] bg-card border-border">
+              <SelectTrigger className="w-[200px] bg-card border-border lg:mt-6">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -166,8 +162,12 @@ const AdminAnalytics = () => {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-
+          }
+          asideGridClassName="lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start gap-6"
+          containerClassName="max-w-[1400px]"
+          sectionClassName="pb-8"
+        />
+        <div className="container mx-auto px-4 max-w-[1400px]">
           {loading ? (
             <div className="flex justify-center py-24">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />

@@ -15,7 +15,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, ExternalLink, Loader2, PlusCircle } from "lucide-react";
+import { ExternalLink, Loader2, PlusCircle } from "lucide-react";
+import { PageHero } from "@/components/PageHero";
 import { sanitizeError } from "@/lib/errorHandler";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
@@ -57,29 +58,27 @@ const AdminPages = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="pt-24 pb-16">
-        <div className="container mx-auto px-4 max-w-[1400px]">
-          <Link
-            to="/admin"
-            className="inline-flex items-center gap-2 text-foreground/50 hover:text-foreground mb-6 text-sm transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Admin
-          </Link>
-
-          <div className="mb-8 flex items-center justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground font-heading">Pages</h1>
-              <p className="text-muted-foreground text-sm mt-1">Drafts stay private until published.</p>
-            </div>
-            <Button asChild>
+      <main className="pb-16">
+        <PageHero
+          backTo="/admin"
+          backLabel="Back to Admin"
+          badge="Admin"
+          title={<span className="text-neon">Pages</span>}
+          subtitle="Drafts stay private until published."
+          align="left"
+          aside={
+            <Button asChild className="lg:mt-6">
               <Link to="/admin/page-editor">
                 <PlusCircle className="h-4 w-4 mr-2" />
                 New Page
               </Link>
             </Button>
-          </div>
-
+          }
+          asideGridClassName="lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start gap-6"
+          containerClassName="max-w-[1400px]"
+          sectionClassName="pb-8"
+        />
+        <div className="container mx-auto px-4 max-w-[1400px]">
           <Card className="bg-card border-border">
             <CardHeader>
               <CardTitle className="text-foreground">All pages</CardTitle>

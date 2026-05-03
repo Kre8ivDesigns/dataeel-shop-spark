@@ -37,6 +37,7 @@ import { parseRacecardFilename } from "@/lib/parseRacecardFilename";
 import { AdminDashboardMainTabs } from "@/components/admin/AdminDashboardTables";
 import { AdminUserDetailSheet } from "@/components/admin/AdminUserDetailSheet";
 import { getRacetrackLabel } from "@/lib/racetracks";
+import { PageHero } from "@/components/PageHero";
 
 const AdminDashboard = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
@@ -310,23 +311,28 @@ const AdminDashboard = () => {
         </DialogContent>
       </Dialog>
 
-      <main className="pt-24 pb-16">
-        <div className="container mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4"
-          >
-            <div>
-              <h1 className="text-3xl font-bold text-foreground font-heading">Admin Dashboard</h1>
-              <p className="text-muted-foreground mt-1">Customers, purchases, racecards, and operations.</p>
-            </div>
-            <Button variant="outline" size="sm" onClick={() => fetchData()} disabled={loading} className="shrink-0 gap-2">
+      <main className="pb-16">
+        <PageHero
+          backTo="/"
+          backLabel="Back to Site"
+          badge="Admin"
+          title={
+            <>
+              Admin <span className="text-neon">Dashboard</span>
+            </>
+          }
+          subtitle="Customers, purchases, racecards, and operations."
+          align="left"
+          aside={
+            <Button variant="outline" size="sm" onClick={() => fetchData()} disabled={loading} className="shrink-0 gap-2 lg:mt-6">
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
               Refresh data
             </Button>
-          </motion.div>
-
+          }
+          asideGridClassName="lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start gap-6"
+          sectionClassName="pb-8"
+        />
+        <div className="container mx-auto px-4">
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             {stats.map((s, i) => (
               <motion.div key={s.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
