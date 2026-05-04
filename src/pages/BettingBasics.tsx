@@ -22,7 +22,7 @@ const sections: SectionBlock[] = [
     body: [
       "Horse racing is a live sport with real athletes — equine and human — and every race tells a small story: who found their best stride, who got the trip, who surprised the crowd.",
       "For many fans, the fun is social: a day at the track or a watch party, comparing notes with friends, and feeling the build-up as the field turns for home.",
-      "There is also a puzzle to it. Past performances, pace, class, and surface can all matter. You do not need to be an expert to enjoy the spectacle — but learning a little can make each race more interesting.",
+      "There is also a puzzle to it. Past performances, pace, class, potential, and surface can all matter. You do not need to be an expert to enjoy the spectacle — but learning a little can make each race more interesting.",
     ],
   },
   {
@@ -37,7 +37,7 @@ const sections: SectionBlock[] = [
         <span className="text-neon font-bold">show</span> (1st, 2nd, and 3rd). “Exotic” bets like{" "}
         <span className="text-neon font-bold">exactas</span>, <span className="text-neon font-bold">daily doubles</span>,{" "}
         <span className="text-neon font-bold">trifectas</span>, etc. ask you to predict finishing order for multiple horses —
-        they are harder and more volatile.
+        they are harder, more volatile, but the rewards are greater.
       </>,
       "Nothing in racing is guaranteed. Favorites lose often. Long shots win sometimes. That uncertainty is part of the sport — and a good reason to keep any wagering small and intentional.",
     ],

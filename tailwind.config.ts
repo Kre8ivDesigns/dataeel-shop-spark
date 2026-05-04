@@ -113,7 +113,11 @@ export default {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "pulse-neon": "pulse-neon 2s ease-in-out infinite",
+<<<<<<< Updated upstream
         "ticker-scroll": "ticker-scroll 180s linear infinite",
+=======
+        "ticker-scroll": "ticker-scroll 120s linear infinite",
+>>>>>>> Stashed changes
       },
     },
   },

@@ -5,6 +5,8 @@ interface ImportMetaEnv {
   readonly VITE_RACECARD_DOWNLOAD_TZ?: string;
   /** Optional; when `pk_test_…`, shows a dev test-mode banner on Buy credits / Dashboard */
   readonly VITE_STRIPE_PUBLISHABLE_KEY?: string;
+  /** Optional; “Complete Introduction” hero link on How to read the RaceCard (YouTube or similar) */
+  readonly VITE_DATAEEL_INTRO_VIDEO_URL?: string;
 }
 
 interface ImportMeta {

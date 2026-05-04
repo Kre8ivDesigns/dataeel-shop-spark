@@ -14,6 +14,8 @@ import {
   LayoutList,
   LayoutDashboard,
   Coins,
+  ShoppingCart,
+  Star,
 } from "lucide-react";
 import logo from "@/assets/dataeel-logo.png";
 import { motion, AnimatePresence } from "framer-motion";
@@ -83,8 +85,12 @@ export const Header = () => {
       }`}
     >
       <div className="container mx-auto px-4 flex items-center justify-between">
-        <Link to="/" className="flex items-center">
+        <Link to="/" className="flex flex-col items-start gap-1">
+          <Star className="h-4 w-4 text-pink-400 shrink-0 fill-pink-400/35" aria-hidden />
           <img src={logo} alt="DATAEEL®" className="h-10 w-auto" />
+          <span className="text-[11px] font-semibold tracking-wide text-pink-400 border-b border-pink-400/70 pb-px leading-tight">
+            Horse Racing simplified
+          </span>
         </Link>
 
         <nav className="hidden lg:flex items-center gap-8">
@@ -130,6 +136,14 @@ export const Header = () => {
                     >
                       <LayoutDashboard className="h-4 w-4" />
                       Dashboard &amp; RaceCard downloads
+                    </Link>
+                    <Link
+                      to="/buy-credits"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-pink-400 hover:bg-muted hover:text-pink-300 transition-colors"
+                    >
+                      <ShoppingCart className="h-4 w-4 text-pink-400 shrink-0" />
+                      Buy credits
                     </Link>
                     {isAdmin && (
                       <>
@@ -262,6 +276,11 @@ export const Header = () => {
                     <Link to="/dashboard#recent-downloads" onClick={() => setIsMobileMenuOpen(false)}>
                       <Button variant="outline" className="w-full border-secondary text-foreground gap-2">
                         <LayoutDashboard className="h-4 w-4" /> Dashboard &amp; RaceCard downloads
+                      </Button>
+                    </Link>
+                    <Link to="/buy-credits" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button variant="outline" className="w-full border-pink-400/50 text-pink-400 gap-2 hover:bg-muted hover:text-pink-300">
+                        <ShoppingCart className="h-4 w-4" /> Buy credits
                       </Button>
                     </Link>
                     {isAdmin && (

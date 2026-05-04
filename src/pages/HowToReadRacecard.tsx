@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { BookOpen, CircleDot, Columns2, Sparkles, AlertCircle, ArrowRight } from "lucide-react";
+import { BookOpen, CircleDot, Columns2, Sparkles, AlertCircle, ArrowRight, Play } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { PageHero } from "@/components/PageHero";
@@ -12,6 +12,10 @@ import racecardFormatImage from "@/assets/racecard-guide/racecard-guide-page-04.
 import racecardAlgorithmsImage from "@/assets/racecard-guide/racecard-guide-page-05.webp";
 import racecardNoDataImage from "@/assets/racecard-guide/racecard-guide-page-07.webp";
 import { useState } from "react";
+
+const INTRO_VIDEO_URL =
+  import.meta.env.VITE_DATAEEL_INTRO_VIDEO_URL?.trim() ||
+  "https://www.youtube.com/results?search_query=DATAEEL+complete+introduction";
 
 /**
  * Educational content adapted from DATAEEL RaceCard instructions (Nov 2024).
@@ -153,29 +157,52 @@ const HowToReadRacecard = () => {
           </>
         }
         aside={
-          <figure className="max-w-2xl overflow-hidden rounded-xl border border-white/10 bg-background/20 shadow-2xl lg:ml-auto lg:max-w-none">
-            <button
-              type="button"
-              onClick={() =>
-                openImage({
-                  src: racecardExampleImage,
-                  alt: "Example EEL RaceCard page with race header, Concert table, Aptitude table, and note area.",
-                  caption: "Example EEL RaceCard page with race header, Concert table, Aptitude table, and note area.",
-                })
-              }
-              className="group block w-full cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              aria-label="Open larger image: Example EEL RaceCard page with race header, Concert table, Aptitude table, and note area."
+          <div className="grid w-full max-w-2xl gap-4 sm:grid-cols-2 lg:max-w-none">
+            <a
+              href={INTRO_VIDEO_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-col overflow-hidden rounded-xl border border-white/15 bg-black/80 shadow-xl transition hover:border-primary/40 hover:shadow-neon/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
-              <img
-                src={racecardExampleImage}
-                alt="Example EEL RaceCard page with race header, Concert table, Aptitude table, and note area."
-                className="h-full max-h-[340px] w-full object-cover object-top transition-transform duration-300 group-hover:scale-[1.02]"
-                loading="eager"
-                decoding="async"
-              />
-            </button>
-          </figure>
+              <div className="flex items-center justify-between gap-3 px-4 py-3">
+                <span className="text-sm font-semibold text-primary">see our product</span>
+                <span className="inline-flex h-11 w-14 shrink-0 items-center justify-center rounded-md bg-red-600/95">
+                  <Play className="h-6 w-6 fill-white text-white" aria-hidden />
+                </span>
+              </div>
+              <div className="border-t border-white/10 px-3 py-2 text-center">
+                <p className="text-xs font-semibold uppercase tracking-wide text-red-400">A Complete Introduction</p>
+              </div>
+            </a>
+
+            <figure className="flex flex-col overflow-hidden rounded-xl border border-white/10 bg-card/90 shadow-2xl">
+              <figcaption className="px-3 py-2 text-center text-xs font-medium text-foreground sm:text-sm">
+                This is an example of a typical EEL RaceCard
+              </figcaption>
+              <button
+                type="button"
+                onClick={() =>
+                  openImage({
+                    src: racecardExampleImage,
+                    alt: "Example EEL RaceCard page with race header, Concert table, Aptitude table, and note area.",
+                    caption: "Example EEL RaceCard page with race header, Concert table, Aptitude table, and note area.",
+                  })
+                }
+                className="group block w-full cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                aria-label="Open larger image: Example EEL RaceCard page with race header, Concert table, Aptitude table, and note area."
+              >
+                <img
+                  src={racecardExampleImage}
+                  alt="Example EEL RaceCard page with race header, Concert table, Aptitude table, and note area."
+                  className="h-full max-h-[280px] w-full object-cover object-top transition-transform duration-300 group-hover:scale-[1.02] sm:max-h-[300px]"
+                  loading="eager"
+                  decoding="async"
+                />
+              </button>
+            </figure>
+          </div>
         }
+        asideGridClassName="lg:grid-cols-[minmax(0,1fr)_minmax(320px,1fr)] xl:grid-cols-[minmax(0,1.05fr)_minmax(560px,1.15fr)] lg:items-start gap-8 xl:gap-10"
         sectionClassName="pb-8 lg:pb-12"
       />
 

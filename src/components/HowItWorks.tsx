@@ -23,13 +23,14 @@ const steps = [
     number: "03",
     title: "Buy Credits & Download",
     description:
-      "Purchase credits from the RaceCard download menu after login. 1 Credit = 1 full day of EEL RaceCard predictions for a specific track. Simple PDF download, instant access.",
+      "Purchase credits from the Dashboard after login. 1 Credit = 1 full day of EEL RaceCard predictions for a specific track. Simple PDF download, instant access.",
   },
   {
     icon: Trophy,
     number: "04",
     title: "Enjoy the Races",
-    description: "No software, no learning curve. Just follow the Concert™ and Aptitude™ picks and enjoy a simplified and honest approach to Horse Racing.",
+    description:
+      "No software, no learning curve. Just follow the picks from our algorithms and enjoy a simplified and honest approach to Horse Racing.",
   },
 ];
 

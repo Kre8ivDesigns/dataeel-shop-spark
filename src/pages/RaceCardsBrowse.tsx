@@ -52,9 +52,9 @@ const RaceCardsBrowse = () => {
   const dayTabs = useMemo(() => {
     const today = new Date();
     return [
-      { label: "Today", date: format(today, "yyyy-MM-dd") },
-      { label: "Tomorrow", date: format(addDays(today, 1), "yyyy-MM-dd") },
-      { label: format(addDays(today, 2), "MMM d"), date: format(addDays(today, 2), "yyyy-MM-dd") },
+      { label: `Today ${format(today, "M/d")}`, date: format(today, "yyyy-MM-dd") },
+      { label: `Tomorrow ${format(addDays(today, 1), "M/d")}`, date: format(addDays(today, 1), "yyyy-MM-dd") },
+      { label: format(addDays(today, 2), "EEE M/d"), date: format(addDays(today, 2), "yyyy-MM-dd") },
     ];
   }, []);
 
@@ -154,13 +154,12 @@ const RaceCardsBrowse = () => {
       <Header />
 
       <PageHero
-        badge="Downloads"
         title={
           <>
             Race<span className="text-neon">Cards</span>
           </>
         }
-        subtitle="Browse what's available by track and date. Signed-in members download PDFs with credits (presigned links from secure storage)."
+        subtitle="Browse what's available by track and date. Signed-in members download PDFs with credits."
         align="left"
         aside={
           user ? (
@@ -236,9 +235,9 @@ const RaceCardsBrowse = () => {
                   key={day.date}
                   type="button"
                   onClick={() => setSelectedDateIndex(idx)}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${
                     selectedDateIndex === idx
-                      ? "bg-primary text-primary-foreground"
+                      ? "bg-primary text-primary-foreground shadow-neon"
                       : "text-foreground/60 hover:text-foreground"
                   }`}
                 >
