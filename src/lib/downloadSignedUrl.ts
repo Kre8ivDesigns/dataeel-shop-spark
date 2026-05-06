@@ -10,6 +10,13 @@ export type DownloadSignedUrlResult =
   /** Last resort: same-tab navigation works everywhere for GET; caller should toast then `location.assign(url)`. */
   | { status: "navigate_same_tab"; url: string };
 
+const UNSAFE_DOWNLOAD_FILENAME_CHARS = new Set(["<", ">", ":", "\"", "|", "?", "*"]);
+
+function sanitizeDownloadChar(char: string): string {
+  const code = char.charCodeAt(0);
+  return code < 32 || UNSAFE_DOWNLOAD_FILENAME_CHARS.has(char) ? "_" : char;
+}
+
 /** Strip path segments and characters unsafe in `download` / common filesystems. Keeps e.g. `^` (caret filenames). */
 export function sanitizeDownloadFileName(raw: string): string {
   let name = raw.trim();
@@ -17,8 +24,7 @@ export function sanitizeDownloadFileName(raw: string): string {
     return "racecard.pdf";
   }
   name = name.replace(/^.*[/\\]/, "");
-  name = name.replace(/\0/g, "");
-  name = name.replace(/[<>:"|?*\x00-\x1f]/g, "_");
+  name = Array.from(name, sanitizeDownloadChar).join("");
   if (!name || name === "." || name === "..") {
     name = "racecard.pdf";
   }

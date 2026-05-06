@@ -1,0 +1,6 @@
+database/
+.claude/
+.agents/
+.codex/
+.ijfw/
+supabase/.temp/

@@ -26,6 +26,10 @@ import {
 
 const STRIPE_WEBHOOK_PATH = "/functions/v1/stripe-webhook";
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 const ConfiguredBadge = ({ status }: { status?: SettingStatus }) => {
@@ -149,8 +153,8 @@ const AdminSettings = () => {
       if (typeof capReadable === "string") {
         setForm((f) => ({ ...f, ai_daily_cost_cap_usd: capReadable }));
       }
-    } catch (err: any) {
-      toast.error(err?.message ?? "Failed to load settings");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Failed to load settings"));
     } finally {
       setLoading(false);
     }
@@ -218,8 +222,8 @@ const AdminSettings = () => {
       });
       setForm(cleared);
       fetchStatus();
-    } catch (err: any) {
-      toast.error(err?.message ?? "Failed to save settings");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Failed to save settings"));
     } finally {
       setSaving(null);
     }

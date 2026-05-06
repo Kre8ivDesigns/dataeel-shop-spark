@@ -10,15 +10,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
   Users,
   CreditCard,
   FileText,
@@ -32,7 +23,6 @@ import {
   Inbox,
   Table2,
   LayoutList,
-  Loader2,
 } from "lucide-react";
 import { sanitizeError } from "@/lib/errorHandler";
 import {
@@ -48,6 +38,8 @@ import { AdminDashboardMainTabs } from "@/components/admin/AdminDashboardTables"
 import { AdminUserDetailSheet } from "@/components/admin/AdminUserDetailSheet";
 import { getRacetrackLabel } from "@/lib/racetracks";
 import { PageHero } from "@/components/PageHero";
+import { WordPressMemberImportCard } from "@/components/admin/WordPressMemberImportCard";
+import { AdminDeleteUserDialog } from "@/components/admin/AdminDeleteUserDialog";
 
 const AdminDashboard = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
@@ -409,6 +401,8 @@ const AdminDashboard = () => {
             ))}
           </div>
 
+          <WordPressMemberImportCard onImported={() => void fetchData()} />
+
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogContent>
               <DialogHeader>
@@ -445,41 +439,12 @@ const AdminDashboard = () => {
             onUpdated={fetchData}
           />
 
-          <AlertDialog open={deleteConfirmCustomer !== null} onOpenChange={(open) => !open && !deletingUser && setDeleteConfirmCustomer(null)}>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete user permanently?</AlertDialogTitle>
-                <AlertDialogDescription className="space-y-2">
-                  <span className="block">
-                    This removes <strong className="text-foreground">{deleteConfirmCustomer?.email}</strong> from Supabase
-                    Auth. Profile, roles, credits, and related data with <code className="text-xs bg-muted px-1 rounded">ON DELETE CASCADE</code>{" "}
-                    are removed. This cannot be undone.
-                  </span>
-                  <span className="block text-destructive">
-                    You cannot delete your own account or the only remaining admin from here.
-                  </span>
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={deletingUser}>Cancel</AlertDialogCancel>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  disabled={deletingUser}
-                  onClick={() => void handleConfirmDeleteUser()}
-                >
-                  {deletingUser ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Deleting…
-                    </>
-                  ) : (
-                    "Delete user"
-                  )}
-                </Button>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <AdminDeleteUserDialog
+            customer={deleteConfirmCustomer}
+            deleting={deletingUser}
+            onOpenChange={(open) => !open && !deletingUser && setDeleteConfirmCustomer(null)}
+            onConfirm={() => void handleConfirmDeleteUser()}
+          />
 
           <AdminDashboardMainTabs
             searchQuery={searchQuery}

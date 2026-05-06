@@ -15,7 +15,6 @@ import {
   LayoutDashboard,
   Coins,
   ShoppingCart,
-  Star,
 } from "lucide-react";
 import logo from "@/assets/dataeel-logo.png";
 import { motion, AnimatePresence } from "framer-motion";
@@ -86,9 +85,11 @@ export const Header = () => {
     >
       <div className="container mx-auto px-4 flex items-center justify-between">
         <Link to="/" className="flex flex-col items-start gap-1">
-          <Star className="h-4 w-4 text-pink-400 shrink-0 fill-pink-400/35" aria-hidden />
           <img src={logo} alt="DATAEEL®" className="h-10 w-auto" />
-          <span className="text-[11px] font-semibold tracking-wide text-pink-400 border-b border-pink-400/70 pb-px leading-tight">
+          <span className="relative pl-3 text-[11px] font-semibold tracking-wide text-primary leading-tight">
+            <span className="absolute -left-0.5 -top-1 text-[9px] leading-none" aria-hidden>
+              ®
+            </span>
             Horse Racing simplified
           </span>
         </Link>

@@ -32,8 +32,12 @@ dist-ssr
 racecards-staging/
 race cards/
 
+# Local database dumps / one-off migration artifacts
+database/
+
 # Local AI/dev tooling state — not project source
 .ijfw/
 .agents/
 .codex/
 .claude-context.md
+.vercel
