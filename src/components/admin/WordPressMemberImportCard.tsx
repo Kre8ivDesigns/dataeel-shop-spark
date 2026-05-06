@@ -17,7 +17,9 @@ import { getInvokeErrorMessage } from "@/lib/edgeFunctionErrors";
 
 type WpImportSummary = {
   createdAuthUsers: number;
+  syncedExistingImportedUsers?: number;
   skippedExistingOriginalEmails: number;
+  upsertedPublicMembers?: number;
   insertedCreditLedgerRows: number;
   errors: { email: string; error: string }[];
 };
@@ -66,7 +68,7 @@ export function WordPressMemberImportCard({ onImported }: WordPressMemberImportC
 
     toast({
       title: "WordPress import complete",
-      description: `${summary.createdAuthUsers} users created, ${summary.skippedExistingOriginalEmails} existing emails skipped, ${summary.insertedCreditLedgerRows} credit entries added.`,
+      description: `${summary.createdAuthUsers} users created, ${summary.syncedExistingImportedUsers ?? 0} existing imports synced, ${summary.skippedExistingOriginalEmails} existing emails skipped, ${summary.insertedCreditLedgerRows} credit entries added.`,
     });
     onImported();
   };

@@ -139,7 +139,7 @@ const Auth = () => {
         align="center"
         sectionClassName="pb-6"
       />
-      <main className="pb-16 flex items-start justify-center px-4 -mt-2">
+      <main className="pb-16 pt-8 md:pt-10 flex items-start justify-center px-4">
         <Card className="w-full max-w-md bg-card border-border">
           <CardHeader className="text-center pb-2">
             <img src={logo} alt="DATAEEL" className="h-10 mx-auto mb-2" />

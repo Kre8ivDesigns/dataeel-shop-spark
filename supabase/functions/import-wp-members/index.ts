@@ -4,6 +4,8 @@ import { WP_MEMBERS_IMPORT_PAYLOAD, type WpMemberImportMember } from "../_shared
 
 type AuthUser = {
   id: string;
+  email?: string;
+  user_metadata?: Record<string, unknown>;
 };
 
 type ImportError = {
@@ -18,6 +20,7 @@ type ImportSummary = {
   createdAuthUsers: number;
   wouldCreateAuthUsers: number;
   skippedExistingOriginalEmails: number;
+  syncedExistingImportedUsers: number;
   upsertedPublicMembers: number;
   insertedCreditLedgerRows: number;
   errors: ImportError[];
@@ -34,6 +37,16 @@ function normalizeUserId(value: unknown): string | null {
 
 function lowerEmail(email: string): string {
   return email.trim().toLowerCase();
+}
+
+function wpUserIdFor(user: AuthUser): string | null {
+  const value = user.user_metadata?.wp_user_id;
+  if (value == null) return null;
+  return String(value);
+}
+
+function isMatchingImportedUser(user: AuthUser, member: WpMemberImportMember): boolean {
+  return wpUserIdFor(user) === String(member.old_wp_user_id);
 }
 
 function randomPassword(): string {
@@ -121,6 +134,32 @@ async function createAuthUser(
   return data.user as AuthUser;
 }
 
+async function updateAuthMetadata(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  user: AuthUser,
+  member: WpMemberImportMember,
+): Promise<void> {
+  const { error } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
+    user_metadata: { ...(user.user_metadata ?? {}), ...memberMetadata(member) },
+  });
+  if (error) throw new Error(`Auth metadata update failed: ${error.message}`);
+}
+
+async function loadExistingAuthUsersByEmail(
+  supabaseAdmin: ReturnType<typeof createClient>,
+): Promise<Map<string, AuthUser>> {
+  const users = new Map<string, AuthUser>();
+  for (let page = 1; page < 100; page += 1) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) throw new Error(`Auth users lookup failed: ${error.message}`);
+    for (const user of data.users as AuthUser[]) {
+      if (user.email) users.set(lowerEmail(user.email), user);
+    }
+    if (data.users.length < 1000) break;
+  }
+  return users;
+}
+
 async function upsertPublicMember(
   supabaseAdmin: ReturnType<typeof createClient>,
   userId: string,
@@ -202,6 +241,7 @@ function createSummary(dryRun: boolean): ImportSummary {
     createdAuthUsers: 0,
     wouldCreateAuthUsers: 0,
     skippedExistingOriginalEmails: 0,
+    syncedExistingImportedUsers: 0,
     upsertedPublicMembers: 0,
     insertedCreditLedgerRows: 0,
     errors: [],
@@ -244,6 +284,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({})) as { dryRun?: boolean };
     const dryRun = body.dryRun === true;
     const summary = createSummary(dryRun);
+    const existingUsersByEmail = dryRun ? new Map<string, AuthUser>() : await loadExistingAuthUsersByEmail(supabaseAdmin);
 
     for (const member of WP_MEMBERS_IMPORT_PAYLOAD.members) {
       const email = lowerEmail(member.email);
@@ -254,8 +295,19 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        const user = await createAuthUser(supabaseAdmin, member);
-        summary.createdAuthUsers += 1;
+        let user = existingUsersByEmail.get(email) ?? null;
+        if (user) {
+          if (!isMatchingImportedUser(user, member)) {
+            summary.skippedExistingOriginalEmails += 1;
+            continue;
+          }
+          await updateAuthMetadata(supabaseAdmin, user, member);
+          summary.syncedExistingImportedUsers += 1;
+        } else {
+          user = await createAuthUser(supabaseAdmin, member);
+          summary.createdAuthUsers += 1;
+          existingUsersByEmail.set(email, user);
+        }
 
         if (!user?.id) throw new Error("No Auth user id available for public table import");
 
@@ -265,6 +317,15 @@ Deno.serve(async (req) => {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         if (isExistingAuthUserError(message)) {
+          const user = existingUsersByEmail.get(email) ?? null;
+          if (user && isMatchingImportedUser(user, member)) {
+            await updateAuthMetadata(supabaseAdmin, user, member);
+            const result = await upsertPublicMember(supabaseAdmin, user.id, member);
+            summary.syncedExistingImportedUsers += 1;
+            summary.upsertedPublicMembers += 1;
+            if (result.ledgerInserted) summary.insertedCreditLedgerRows += 1;
+            continue;
+          }
           summary.skippedExistingOriginalEmails += 1;
           continue;
         }
