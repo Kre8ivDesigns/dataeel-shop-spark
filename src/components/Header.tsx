@@ -86,11 +86,9 @@ export const Header = () => {
       <div className="container mx-auto px-4 flex items-center justify-between">
         <Link to="/" className="flex flex-col items-start gap-1">
           <img src={logo} alt="DATAEEL®" className="h-10 w-auto" />
-          <span className="relative pl-3 text-[11px] font-semibold tracking-wide text-primary leading-tight">
-            <span className="absolute -left-0.5 -top-1 text-[9px] leading-none" aria-hidden>
-              ®
-            </span>
+          <span className="text-[11px] font-semibold tracking-wide text-primary leading-tight">
             Horse Racing simplified
+            <sup className="ml-0.5 text-[8px] leading-none">®</sup>
           </span>
         </Link>
 
