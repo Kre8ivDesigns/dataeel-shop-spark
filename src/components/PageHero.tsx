@@ -81,7 +81,7 @@ export function PageHero({
 
   return (
     <section
-      className={`pt-24 pb-6 md:pb-8 relative overflow-hidden lg:pt-[5.5rem] lg:pb-6 ${sectionClassName}`.trim()}
+      className={`mt-[var(--header-height)] pt-4 pb-6 md:pt-6 md:pb-8 relative overflow-hidden lg:pb-6 ${sectionClassName}`.trim()}
       style={{ background: HERO_GRADIENT }}
     >
       <PageHeroAmbientOrbs />
