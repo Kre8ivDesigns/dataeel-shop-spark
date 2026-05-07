@@ -205,17 +205,31 @@ Deno.serve(async (req) => {
       }
 
       let hardDelete = true;
+      let directDelete = false;
       const { error: delErr } = await supabaseAdmin.auth.admin.deleteUser(userId);
       if (delErr) {
         console.error("admin-manage-user delete_user: auth.admin.deleteUser hard delete failed", delErr.message);
         const { error: softDelErr } = await supabaseAdmin.auth.admin.deleteUser(userId, true);
         if (softDelErr) {
           console.error("admin-manage-user delete_user: auth.admin.deleteUser soft delete failed", softDelErr.message);
-          return respond({
-            error: `App data was removed, but Supabase Auth delete failed: ${softDelErr.message}`,
-          }, 500);
+          const { data: forceDeleted, error: forceErr } = await supabaseAdmin.rpc("admin_force_delete_auth_user", {
+            _user_id: userId,
+          });
+          if (forceErr) {
+            console.error("admin-manage-user delete_user: direct auth delete failed", forceErr.message);
+            return respond({
+              error: `App data was removed, but Supabase Auth delete failed: ${forceErr.message}`,
+            }, 500);
+          }
+          if (!forceDeleted) {
+            return respond({
+              error: "App data was removed, but Supabase Auth user could not be found for deletion.",
+            }, 500);
+          }
+          directDelete = true;
+        } else {
+          hardDelete = false;
         }
-        hardDelete = false;
       }
 
       await supabaseAdmin.from("audit_log").insert({
@@ -223,9 +237,9 @@ Deno.serve(async (req) => {
         action: "admin.user.delete",
         resource: "auth.users",
         resource_id: userId,
-        detail: { email: profileRow?.email ?? null, hard_delete: hardDelete },
+        detail: { email: profileRow?.email ?? null, hard_delete: hardDelete, direct_delete: directDelete },
       });
-      return respond({ ok: true, hard_delete: hardDelete });
+      return respond({ ok: true, hard_delete: hardDelete, direct_delete: directDelete });
     }
 
     return respond({ error: "Unknown action" }, 400);

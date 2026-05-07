@@ -80,8 +80,10 @@ verify_jwt = true
 [functions.generate-upload-url]
 verify_jwt = true
 
+# Allows Supabase pg_cron/AWS event calls with CRON_SECRET; the function still
+# validates either that secret or an admin user JWT internally.
 [functions.sync-s3-racecards]
-verify_jwt = true
+verify_jwt = false
 
 # Cron/admin-triggered race results ingestion (requires CRON_SECRET or admin JWT)
 [functions.ingest-race-results]
