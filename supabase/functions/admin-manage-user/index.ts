@@ -13,6 +13,26 @@ function normalizeUserId(value: unknown): string | null {
   return s;
 }
 
+async function deleteFromTable(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  table: string,
+  column: string,
+  userId: string,
+) {
+  const { error } = await supabaseAdmin.from(table).delete().eq(column, userId);
+  if (error) throw new Error(`${table} cleanup failed: ${error.message}`);
+}
+
+async function setNullInTable(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  table: string,
+  column: string,
+  userId: string,
+) {
+  const { error } = await supabaseAdmin.from(table).update({ [column]: null }).eq(column, userId);
+  if (error) throw new Error(`${table} cleanup failed: ${error.message}`);
+}
+
 Deno.serve(async (req) => {
   const cors = getCorsHeaders(req);
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
@@ -166,16 +186,36 @@ Deno.serve(async (req) => {
 
       const { data: profileRow } = await supabaseAdmin.from("profiles").select("email").eq("user_id", userId).maybeSingle();
 
-      const { error: rcErr } = await supabaseAdmin.from("racecards").update({ uploaded_by: null }).eq("uploaded_by", userId);
-      if (rcErr) {
-        console.error("admin-manage-user delete_user: racecards uploaded_by clear failed", rcErr.message);
-        return respond({ error: rcErr.message }, 500);
+      try {
+        await setNullInTable(supabaseAdmin, "racecards", "uploaded_by", userId);
+        await setNullInTable(supabaseAdmin, "contact_submissions", "user_id", userId);
+        await setNullInTable(supabaseAdmin, "audit_log", "actor_id", userId);
+
+        await deleteFromTable(supabaseAdmin, "racecard_downloads", "user_id", userId);
+        await deleteFromTable(supabaseAdmin, "ai_usage_daily", "user_id", userId);
+        await deleteFromTable(supabaseAdmin, "transactions", "user_id", userId);
+        await deleteFromTable(supabaseAdmin, "credit_ledger", "user_id", userId);
+        await deleteFromTable(supabaseAdmin, "credit_balances", "user_id", userId);
+        await deleteFromTable(supabaseAdmin, "user_roles", "user_id", userId);
+        await deleteFromTable(supabaseAdmin, "profiles", "user_id", userId);
+      } catch (cleanupErr) {
+        const message = cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr);
+        console.error("admin-manage-user delete_user: app data cleanup failed", message);
+        return respond({ error: message }, 500);
       }
 
+      let hardDelete = true;
       const { error: delErr } = await supabaseAdmin.auth.admin.deleteUser(userId);
       if (delErr) {
-        console.error("admin-manage-user delete_user: auth.admin.deleteUser failed", delErr.message);
-        return respond({ error: delErr.message }, 500);
+        console.error("admin-manage-user delete_user: auth.admin.deleteUser hard delete failed", delErr.message);
+        const { error: softDelErr } = await supabaseAdmin.auth.admin.deleteUser(userId, true);
+        if (softDelErr) {
+          console.error("admin-manage-user delete_user: auth.admin.deleteUser soft delete failed", softDelErr.message);
+          return respond({
+            error: `App data was removed, but Supabase Auth delete failed: ${softDelErr.message}`,
+          }, 500);
+        }
+        hardDelete = false;
       }
 
       await supabaseAdmin.from("audit_log").insert({
@@ -183,9 +223,9 @@ Deno.serve(async (req) => {
         action: "admin.user.delete",
         resource: "auth.users",
         resource_id: userId,
-        detail: { email: profileRow?.email ?? null, hard_delete: true },
+        detail: { email: profileRow?.email ?? null, hard_delete: hardDelete },
       });
-      return respond({ ok: true });
+      return respond({ ok: true, hard_delete: hardDelete });
     }
 
     return respond({ error: "Unknown action" }, 400);

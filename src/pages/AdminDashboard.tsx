@@ -279,8 +279,11 @@ const AdminDashboard = () => {
       return;
     }
     toast({
-      title: "User deleted",
-      description: `${deleteConfirmCustomer.email} was permanently removed from auth and related rows (cascaded).`,
+      title: data?.hard_delete === false ? "User deactivated" : "User deleted",
+      description:
+        data?.hard_delete === false
+          ? `${deleteConfirmCustomer.email} was removed from app data and soft-deleted in Supabase Auth.`
+          : `${deleteConfirmCustomer.email} was permanently removed from auth and related rows.`,
     });
     if (detailCustomer?.user_id === deleteConfirmCustomer.user_id) {
       setDetailOpen(false);
