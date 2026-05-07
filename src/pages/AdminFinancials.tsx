@@ -157,7 +157,7 @@ const AdminFinancials = () => {
   const revenueByPackage = useMemo(() => sumByPackage(filtered), [filtered]);
 
   const handleExport = () => {
-    const csv = exportTransactionsCsv(filtered);
+    const csv = exportTransactionsCsv(completedInRange);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -195,7 +195,7 @@ const AdminFinancials = () => {
               <Button
                 variant="outline"
                 className="border-border"
-                disabled={loading || filtered.length === 0}
+                disabled={loading || completedInRange.length === 0}
                 onClick={handleExport}
               >
                 <Download className="h-4 w-4 mr-2" />
@@ -217,13 +217,6 @@ const AdminFinancials = () => {
                 transactions and credit balances.
               </AlertDescription>
             </Alert>
-          )}
-
-          {!loading && !queryError && transactions.length === 0 && (
-            <p className="text-sm text-muted-foreground mb-6">
-              No transaction rows in the database yet. Completed checkouts will appear here; open devtools (development
-              builds log query counts to the console).
-            </p>
           )}
 
           {loading ? (
@@ -360,7 +353,7 @@ const AdminFinancials = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filtered.map((t) => (
+                      {completedInRange.map((t) => (
                         <TableRow key={t.id}>
                           <TableCell className="text-muted-foreground whitespace-nowrap">
                             {new Date(t.created_at).toLocaleString()}
@@ -384,7 +377,7 @@ const AdminFinancials = () => {
                           </TableCell>
                         </TableRow>
                       ))}
-                      {filtered.length === 0 && (
+                      {completedInRange.length === 0 && (
                         <TableRow>
                           <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
                             No transactions in this range

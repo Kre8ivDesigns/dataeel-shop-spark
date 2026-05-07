@@ -120,16 +120,77 @@ export function AdminCustomersTab({
 type TransactionsProps = {
   transactions: AdminTransaction[];
   emailByUserId: Record<string, string>;
+  deletingOldTransactions: boolean;
+  onDeleteBeforeToday: () => void;
 };
 
-export function AdminTransactionsTab({ transactions, emailByUserId }: TransactionsProps) {
+export function AdminTransactionsTab({
+  transactions,
+  emailByUserId,
+  deletingOldTransactions,
+  onDeleteBeforeToday,
+}: TransactionsProps) {
+  const [confirmDeleteOldOpen, setConfirmDeleteOldOpen] = useState(false);
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const oldTransactionCount = transactions.filter(
+    (t) => new Date(t.created_at).getTime() < startOfToday.getTime(),
+  ).length;
+
   return (
     <Card className="bg-card border-border">
       <CardHeader>
-        <CardTitle className="text-foreground">Transactions</CardTitle>
-        <p className="text-xs text-muted-foreground">Stripe purchases and credit packages (newest first).</p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <CardTitle className="text-foreground">Transactions</CardTitle>
+            <p className="text-xs text-muted-foreground">Stripe purchases and credit packages (newest first).</p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="border-destructive/40 text-destructive hover:bg-destructive/10"
+            disabled={oldTransactionCount === 0 || deletingOldTransactions}
+            onClick={() => setConfirmDeleteOldOpen(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete before today
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="overflow-x-auto">
+        <Dialog open={confirmDeleteOldOpen} onOpenChange={setConfirmDeleteOldOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete transactions before today?</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              This will permanently delete {oldTransactionCount} transaction row
+              {oldTransactionCount === 1 ? "" : "s"} created before today.
+            </p>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={deletingOldTransactions}
+                onClick={() => setConfirmDeleteOldOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={deletingOldTransactions || oldTransactionCount === 0}
+                onClick={() => {
+                  onDeleteBeforeToday();
+                  setConfirmDeleteOldOpen(false);
+                }}
+              >
+                {deletingOldTransactions ? "Deleting…" : "Delete old transactions"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         <Table>
           <TableHeader>
             <TableRow>
@@ -398,6 +459,8 @@ type MainTabsProps = {
   onRequestDeleteUser: (c: AdminCustomer) => void;
   transactions: AdminTransaction[];
   emailByUserId: Record<string, string>;
+  deletingOldTransactions: boolean;
+  onDeleteTransactionsBeforeToday: () => void;
   racecards: AdminRacecard[];
   uploading: boolean;
   syncing: boolean;
@@ -428,7 +491,12 @@ export function AdminDashboardMainTabs(props: MainTabsProps) {
         />
       </TabsContent>
       <TabsContent value="transactions">
-        <AdminTransactionsTab transactions={props.transactions} emailByUserId={props.emailByUserId} />
+        <AdminTransactionsTab
+          transactions={props.transactions}
+          emailByUserId={props.emailByUserId}
+          deletingOldTransactions={props.deletingOldTransactions}
+          onDeleteBeforeToday={props.onDeleteTransactionsBeforeToday}
+        />
       </TabsContent>
       <TabsContent value="racecards">
         <AdminRacecardsTab

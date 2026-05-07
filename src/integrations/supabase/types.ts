@@ -402,6 +402,10 @@ export type Database = {
       }
     }
     Functions: {
+      admin_delete_transactions_before: {
+        Args: { _cutoff: string }
+        Returns: number
+      }
       admin_add_credits: {
         Args: {
           _user_id: string

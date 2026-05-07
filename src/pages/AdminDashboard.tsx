@@ -11,7 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Users,
-  CreditCard,
   FileText,
   RefreshCw,
   DollarSign,
@@ -19,7 +18,6 @@ import {
   Settings,
   Package,
   FileEdit,
-  TrendingUp,
   Inbox,
   Table2,
   LayoutList,
@@ -65,6 +63,7 @@ const AdminDashboard = () => {
   const [detailOpen, setDetailOpen] = useState(false);
   const [deleteConfirmCustomer, setDeleteConfirmCustomer] = useState<AdminCustomer | null>(null);
   const [deletingUser, setDeletingUser] = useState(false);
+  const [deletingOldTransactions, setDeletingOldTransactions] = useState(false);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -100,11 +99,6 @@ const AdminDashboard = () => {
   const emailByUserId = useMemo(
     () => Object.fromEntries(customers.map((c) => [c.user_id, c.email])),
     [customers],
-  );
-
-  const totalRevenue = useMemo(
-    () => transactions.reduce((sum, t) => sum + Number(t.amount), 0),
-    [transactions],
   );
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -295,6 +289,26 @@ const AdminDashboard = () => {
     fetchData();
   };
 
+  const handleDeleteTransactionsBeforeToday = async () => {
+    const cutoff = new Date();
+    cutoff.setHours(0, 0, 0, 0);
+    setDeletingOldTransactions(true);
+    const { data, error } = await supabase.rpc("admin_delete_transactions_before", {
+      _cutoff: cutoff.toISOString(),
+    });
+    setDeletingOldTransactions(false);
+    if (error) {
+      toast({
+        title: "Could not delete old transactions",
+        description: sanitizeError(error),
+        variant: "destructive",
+      });
+      return;
+    }
+    toast({ title: `Deleted ${data ?? 0} old transaction row(s)` });
+    fetchData();
+  };
+
   const filteredCustomers = customers.filter(
     (c) =>
       c.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -305,13 +319,7 @@ const AdminDashboard = () => {
 
   const stats = [
     { label: "Customers", value: customers.length, icon: Users },
-    { label: "Purchases", value: transactions.length, icon: CreditCard },
     { label: "Racecards", value: racecards.length, icon: FileText },
-    {
-      label: "Revenue",
-      value: new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(totalRevenue),
-      icon: TrendingUp,
-    },
   ];
 
   const adminLinks = [
@@ -358,7 +366,7 @@ const AdminDashboard = () => {
               Admin <span className="text-neon">Dashboard</span>
             </>
           }
-          subtitle="Customers, purchases, racecards, and operations."
+          subtitle="Customers, racecards, and operations."
           align="left"
           aside={
             <Button variant="outline" size="sm" onClick={() => fetchData()} disabled={loading} className="shrink-0 gap-2 lg:mt-6">
@@ -369,7 +377,7 @@ const AdminDashboard = () => {
           asideGridClassName="lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start gap-6"
           sectionClassName="pb-8"
         />
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 pt-8">
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             {stats.map((s, i) => (
               <motion.div key={s.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
@@ -469,6 +477,8 @@ const AdminDashboard = () => {
             onRequestDeleteUser={(c) => setDeleteConfirmCustomer(c)}
             transactions={transactions}
             emailByUserId={emailByUserId}
+            deletingOldTransactions={deletingOldTransactions}
+            onDeleteTransactionsBeforeToday={handleDeleteTransactionsBeforeToday}
             racecards={racecards}
             uploading={uploading}
             syncing={syncing}
