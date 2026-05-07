@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Users,
+  CreditCard,
   FileText,
   RefreshCw,
   DollarSign,
@@ -18,6 +19,7 @@ import {
   Settings,
   Package,
   FileEdit,
+  TrendingUp,
   Inbox,
   Table2,
   LayoutList,
@@ -100,6 +102,16 @@ const AdminDashboard = () => {
   const emailByUserId = useMemo(
     () => Object.fromEntries(customers.map((c) => [c.user_id, c.email])),
     [customers],
+  );
+
+  const completedTransactions = useMemo(
+    () => transactions.filter((t) => t.status === "completed"),
+    [transactions],
+  );
+
+  const totalRevenue = useMemo(
+    () => completedTransactions.reduce((sum, t) => sum + Number(t.amount), 0),
+    [completedTransactions],
   );
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -345,7 +357,13 @@ const AdminDashboard = () => {
 
   const stats = [
     { label: "Customers", value: customers.length, icon: Users },
+    { label: "Purchases", value: completedTransactions.length, icon: CreditCard },
     { label: "Racecards", value: racecards.length, icon: FileText },
+    {
+      label: "Revenue",
+      value: new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(totalRevenue),
+      icon: TrendingUp,
+    },
   ];
 
   const adminLinks = [
@@ -392,7 +410,7 @@ const AdminDashboard = () => {
               Admin <span className="text-neon">Dashboard</span>
             </>
           }
-          subtitle="Customers, racecards, and operations."
+          subtitle="Customers, purchases, racecards, and operations."
           align="left"
           aside={
             <Button variant="outline" size="sm" onClick={() => fetchData()} disabled={loading} className="shrink-0 gap-2 lg:mt-6">
