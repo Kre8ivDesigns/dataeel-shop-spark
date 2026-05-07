@@ -9,6 +9,15 @@ export function filterSince<T extends { created_at: string }>(rows: T[], days: n
   return rows.filter((r) => new Date(r.created_at).getTime() >= cutoff);
 }
 
+export function filterFromToday<T extends { created_at: string }>(
+  rows: T[],
+  now = new Date(),
+): T[] {
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  return rows.filter((r) => new Date(r.created_at).getTime() >= start.getTime());
+}
+
 export function sumByDayAmount(
   rows: { created_at: string; amount: number; status: string }[],
 ): { date: string; amount: number }[] {
@@ -59,9 +68,10 @@ export function exportTransactionsCsv(
     amount: number;
     status: string;
     user_id: string;
+    user_display_name?: string;
   }[],
 ): string {
-  const header = ["id", "created_at", "package_name", "credits", "amount", "status", "user_id"];
+  const header = ["id", "created_at", "package_name", "credits", "amount", "status", "user", "user_id"];
   const lines = [header.join(",")];
   for (const r of rows) {
     lines.push(
@@ -72,6 +82,7 @@ export function exportTransactionsCsv(
         r.credits,
         r.amount,
         r.status,
+        JSON.stringify(r.user_display_name ?? r.user_id),
         r.user_id,
       ].join(","),
     );

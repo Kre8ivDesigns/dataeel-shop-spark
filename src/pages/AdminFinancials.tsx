@@ -34,6 +34,7 @@ import {
   YAxis,
 } from "recharts";
 import {
+  filterFromToday,
   filterSince,
   sumByDayAmount,
   sumByPackage,
@@ -48,6 +49,13 @@ type Tx = {
   amount: number;
   status: string;
   user_id: string;
+  user_display_name?: string;
+};
+
+type Profile = {
+  user_id: string;
+  email: string;
+  full_name: string | null;
 };
 
 const PERIODS = [
@@ -82,14 +90,40 @@ const AdminFinancials = () => {
         setTransactions([]);
         setCreditsOutstanding(null);
       } else {
-        setTransactions((txRes.data as Tx[]) ?? []);
-        const rows = balRes.data ?? [];
-        setCreditsOutstanding(rows.reduce((s, r) => s + (r.credits ?? 0), 0));
+        const txRows = ((txRes.data as Tx[]) ?? []);
+        const userIds = Array.from(new Set(txRows.map((row) => row.user_id)));
+        const profilesRes =
+          userIds.length > 0
+            ? await supabase.from("profiles").select("user_id, email, full_name").in("user_id", userIds)
+            : { data: [], error: null };
+
+        if (profilesRes.error) {
+          setQueryError(profilesRes.error.message);
+          setTransactions([]);
+          setCreditsOutstanding(null);
+          return;
+        }
+
+        const profileByUserId = new Map(
+          ((profilesRes.data as Profile[]) ?? []).map((profile) => [
+            profile.user_id,
+            profile.full_name?.trim() || profile.email,
+          ]),
+        );
+
+        const transactionsWithUsers = txRows.map((row) => ({
+          ...row,
+          user_display_name: profileByUserId.get(row.user_id) ?? row.user_id,
+        }));
+
+        setTransactions(filterFromToday(transactionsWithUsers));
+        const balanceRows = balRes.data ?? [];
+        setCreditsOutstanding(balanceRows.reduce((s, r) => s + (r.credits ?? 0), 0));
       }
       if (import.meta.env.DEV) {
         console.debug(
-          "[AdminFinancials] transactions:",
-          txRes.data?.length ?? 0,
+          "[AdminFinancials] transactions today:",
+          filterFromToday((txRes.data as Tx[]) ?? []).length,
           "balances rows:",
           balRes.data?.length ?? 0,
           txRes.error ?? balRes.error ?? "",
@@ -322,7 +356,7 @@ const AdminFinancials = () => {
                         <TableHead>Credits</TableHead>
                         <TableHead>Amount</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead className="font-mono text-xs">User</TableHead>
+                        <TableHead>User</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -345,8 +379,8 @@ const AdminFinancials = () => {
                               {t.status}
                             </span>
                           </TableCell>
-                          <TableCell className="font-mono text-xs text-muted-foreground max-w-[120px] truncate">
-                            {t.user_id}
+                          <TableCell className="text-muted-foreground max-w-[220px] truncate" title={t.user_id}>
+                            {t.user_display_name ?? t.user_id}
                           </TableCell>
                         </TableRow>
                       ))}
