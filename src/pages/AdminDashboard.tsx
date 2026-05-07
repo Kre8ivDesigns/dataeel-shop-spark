@@ -64,6 +64,7 @@ const AdminDashboard = () => {
   const [deleteConfirmCustomer, setDeleteConfirmCustomer] = useState<AdminCustomer | null>(null);
   const [deletingUser, setDeletingUser] = useState(false);
   const [deletingOldTransactions, setDeletingOldTransactions] = useState(false);
+  const [deletingFakeUsers, setDeletingFakeUsers] = useState(false);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -309,6 +310,31 @@ const AdminDashboard = () => {
     fetchData();
   };
 
+  const handleDeleteFakeZeroCreditUsers = async () => {
+    setDeletingFakeUsers(true);
+    const { data, error } = await supabase.functions.invoke("admin-manage-user", {
+      body: { action: "delete_fake_zero_credit_users" },
+    });
+    setDeletingFakeUsers(false);
+    if (error || data?.error) {
+      const description = await getInvokeErrorMessage("admin-manage-user", error, data);
+      toast({
+        title: "Fake user cleanup failed",
+        description,
+        variant: "destructive",
+      });
+      return;
+    }
+    const deletedCount = Number(data?.deleted_count ?? 0);
+    const failedCount = Array.isArray(data?.failed) ? data.failed.length : 0;
+    toast({
+      title: `Deleted ${deletedCount} fake zero-credit user(s)`,
+      description: failedCount > 0 ? `${failedCount} user(s) could not be fully removed.` : undefined,
+      variant: failedCount > 0 ? "destructive" : undefined,
+    });
+    fetchData();
+  };
+
   const filteredCustomers = customers.filter(
     (c) =>
       c.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -475,6 +501,8 @@ const AdminDashboard = () => {
             }}
             currentUserId={user?.id}
             onRequestDeleteUser={(c) => setDeleteConfirmCustomer(c)}
+            deletingFakeUsers={deletingFakeUsers}
+            onDeleteFakeZeroCreditUsers={handleDeleteFakeZeroCreditUsers}
             transactions={transactions}
             emailByUserId={emailByUserId}
             deletingOldTransactions={deletingOldTransactions}

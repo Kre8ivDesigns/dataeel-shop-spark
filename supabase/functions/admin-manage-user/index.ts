@@ -1,16 +1,27 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
-type Action = "ban" | "unban" | "send_password_recovery" | "update_profile" | "delete_user";
+type Action =
+  | "ban"
+  | "unban"
+  | "send_password_recovery"
+  | "update_profile"
+  | "delete_user"
+  | "delete_fake_zero_credit_users";
 
 /** auth-js validateUUID() only accepts lowercase hex; DB/PostgREST may return mixed case. */
 const UUID_STRING_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const RANDOM_TWO_TOKEN_NAME_RE = /^[A-Za-z]{16,32}\s+[A-Za-z]{16,32}$/;
 
 function normalizeUserId(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const s = value.trim().toLowerCase();
   if (!UUID_STRING_RE.test(s)) return null;
   return s;
+}
+
+function looksLikeRandomTwoTokenName(value: unknown): boolean {
+  return typeof value === "string" && RANDOM_TWO_TOKEN_NAME_RE.test(value.trim());
 }
 
 async function deleteFromTable(
@@ -74,7 +85,7 @@ Deno.serve(async (req) => {
     const { action } = body;
     const userId = normalizeUserId(body.userId);
 
-    if (!userId) {
+    if (action !== "delete_fake_zero_credit_users" && !userId) {
       return respond({ error: "userId must be a valid UUID string" }, 400);
     }
 
@@ -157,7 +168,108 @@ Deno.serve(async (req) => {
       return respond({ ok: true });
     }
 
+    if (action === "delete_fake_zero_credit_users") {
+      const { data: profiles, error: profilesErr } = await supabaseAdmin
+        .from("profiles")
+        .select("user_id, email, full_name");
+      if (profilesErr) return respond({ error: profilesErr.message }, 500);
+
+      const { data: balances, error: balancesErr } = await supabaseAdmin
+        .from("credit_balances")
+        .select("user_id, credits, unlimited_credits");
+      if (balancesErr) return respond({ error: balancesErr.message }, 500);
+
+      const { data: roles, error: rolesErr } = await supabaseAdmin
+        .from("user_roles")
+        .select("user_id, role");
+      if (rolesErr) return respond({ error: rolesErr.message }, 500);
+
+      const balanceByUserId = new Map(
+        (balances ?? []).map((row) => [
+          normalizeUserId(row.user_id),
+          { credits: Number(row.credits ?? 0), unlimited: row.unlimited_credits === true },
+        ]),
+      );
+      const adminUserIds = new Set(
+        (roles ?? [])
+          .filter((row) => row.role === "admin")
+          .map((row) => normalizeUserId(row.user_id))
+          .filter((id): id is string => Boolean(id)),
+      );
+      const candidates = (profiles ?? [])
+        .map((profile) => ({
+          user_id: normalizeUserId(profile.user_id),
+          email: profile.email as string | null,
+          full_name: profile.full_name as string | null,
+        }))
+        .filter((profile) => {
+          if (!profile.user_id || profile.user_id === actorId || adminUserIds.has(profile.user_id)) return false;
+          const balance = balanceByUserId.get(profile.user_id);
+          return (
+            looksLikeRandomTwoTokenName(profile.full_name) &&
+            (balance?.credits ?? 0) === 0 &&
+            balance?.unlimited !== true
+          );
+        });
+
+      const deleted: string[] = [];
+      const failed: { user_id: string; email: string | null; error: string }[] = [];
+
+      for (const candidate of candidates) {
+        if (!candidate.user_id) continue;
+        try {
+          await setNullInTable(supabaseAdmin, "racecards", "uploaded_by", candidate.user_id);
+          await setNullInTable(supabaseAdmin, "contact_submissions", "user_id", candidate.user_id);
+          await setNullInTable(supabaseAdmin, "audit_log", "actor_id", candidate.user_id);
+
+          await deleteFromTable(supabaseAdmin, "racecard_downloads", "user_id", candidate.user_id);
+          await deleteFromTable(supabaseAdmin, "ai_usage_daily", "user_id", candidate.user_id);
+          await deleteFromTable(supabaseAdmin, "transactions", "user_id", candidate.user_id);
+          await deleteFromTable(supabaseAdmin, "credit_ledger", "user_id", candidate.user_id);
+          await deleteFromTable(supabaseAdmin, "credit_balances", "user_id", candidate.user_id);
+          await deleteFromTable(supabaseAdmin, "user_roles", "user_id", candidate.user_id);
+          await deleteFromTable(supabaseAdmin, "profiles", "user_id", candidate.user_id);
+
+          const { error: delErr } = await supabaseAdmin.auth.admin.deleteUser(candidate.user_id);
+          if (delErr) {
+            const { error: softDelErr } = await supabaseAdmin.auth.admin.deleteUser(candidate.user_id, true);
+            if (softDelErr) {
+              const { data: forceDeleted, error: forceErr } = await supabaseAdmin.rpc("admin_force_delete_auth_user", {
+                _user_id: candidate.user_id,
+              });
+              if (forceErr || !forceDeleted) {
+                throw new Error(forceErr?.message ?? "Auth user could not be deleted");
+              }
+            }
+          }
+          deleted.push(candidate.user_id);
+        } catch (e) {
+          failed.push({
+            user_id: candidate.user_id,
+            email: candidate.email,
+            error: e instanceof Error ? e.message : String(e),
+          });
+        }
+      }
+
+      await supabaseAdmin.from("audit_log").insert({
+        actor_id: actorId,
+        action: "admin.user.bulk_delete_fake_zero_credit",
+        resource: "auth.users",
+        resource_id: null,
+        detail: {
+          deleted_count: deleted.length,
+          failed_count: failed.length,
+        },
+      });
+
+      return respond({ ok: failed.length === 0, deleted_count: deleted.length, failed });
+    }
+
     if (action === "delete_user") {
+      if (!userId) {
+        return respond({ error: "userId must be a valid UUID string" }, 400);
+      }
       if (userId === actorId) {
         return respond({ error: "Cannot delete your own account" }, 400);
       }

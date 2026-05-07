@@ -16,6 +16,16 @@ import type { Json } from "@/integrations/supabase/types";
 import type { AdminCustomer, AdminRacecard, AdminTransaction } from "@/lib/adminDashboardTypes";
 import { racecardPublicKeys } from "@/lib/queryKeys";
 
+const RANDOM_TWO_TOKEN_NAME_RE = /^[A-Za-z]{16,32}\s+[A-Za-z]{16,32}$/;
+
+function isFakeZeroCreditCustomer(customer: AdminCustomer): boolean {
+  return (
+    !customer.unlimitedCredits &&
+    customer.credits === 0 &&
+    RANDOM_TWO_TOKEN_NAME_RE.test((customer.full_name ?? "").trim())
+  );
+}
+
 type CustomersProps = {
   searchQuery: string;
   onSearchChange: (q: string) => void;
@@ -25,6 +35,8 @@ type CustomersProps = {
   onViewCustomer: (c: AdminCustomer) => void;
   currentUserId?: string;
   onRequestDeleteUser: (c: AdminCustomer) => void;
+  deletingFakeUsers: boolean;
+  onDeleteFakeZeroCreditUsers: () => void;
 };
 
 export function AdminCustomersTab({
@@ -36,7 +48,12 @@ export function AdminCustomersTab({
   onViewCustomer,
   currentUserId,
   onRequestDeleteUser,
+  deletingFakeUsers,
+  onDeleteFakeZeroCreditUsers,
 }: CustomersProps) {
+  const [confirmFakeCleanupOpen, setConfirmFakeCleanupOpen] = useState(false);
+  const fakeZeroCreditCount = filteredCustomers.filter(isFakeZeroCreditCustomer).length;
+
   return (
     <Card className="bg-card border-border">
       <CardHeader>
@@ -55,10 +72,52 @@ export function AdminCustomersTab({
             <Button onClick={onCreateUser} className="shrink-0">
               Create User
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="shrink-0 border-destructive/40 text-destructive hover:bg-destructive/10"
+              disabled={fakeZeroCreditCount === 0 || deletingFakeUsers}
+              onClick={() => setConfirmFakeCleanupOpen(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete fake 0-credit users
+            </Button>
           </div>
         </div>
       </CardHeader>
       <CardContent className="overflow-x-auto">
+        <Dialog open={confirmFakeCleanupOpen} onOpenChange={setConfirmFakeCleanupOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete fake zero-credit users?</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              This removes {fakeZeroCreditCount} user account{fakeZeroCreditCount === 1 ? "" : "s"} whose names look like
+              random two-part strings and whose credit balance is zero. Auth users and associated app rows will be removed.
+            </p>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={deletingFakeUsers}
+                onClick={() => setConfirmFakeCleanupOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={deletingFakeUsers || fakeZeroCreditCount === 0}
+                onClick={() => {
+                  onDeleteFakeZeroCreditUsers();
+                  setConfirmFakeCleanupOpen(false);
+                }}
+              >
+                {deletingFakeUsers ? "Deleting…" : "Delete fake users"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         <Table>
           <TableHeader>
             <TableRow>
@@ -457,6 +516,8 @@ type MainTabsProps = {
   onViewCustomer: (c: AdminCustomer) => void;
   currentUserId?: string;
   onRequestDeleteUser: (c: AdminCustomer) => void;
+  deletingFakeUsers: boolean;
+  onDeleteFakeZeroCreditUsers: () => void;
   transactions: AdminTransaction[];
   emailByUserId: Record<string, string>;
   deletingOldTransactions: boolean;
@@ -488,6 +549,8 @@ export function AdminDashboardMainTabs(props: MainTabsProps) {
           onViewCustomer={props.onViewCustomer}
           currentUserId={props.currentUserId}
           onRequestDeleteUser={props.onRequestDeleteUser}
+          deletingFakeUsers={props.deletingFakeUsers}
+          onDeleteFakeZeroCreditUsers={props.onDeleteFakeZeroCreditUsers}
         />
       </TabsContent>
       <TabsContent value="transactions">
