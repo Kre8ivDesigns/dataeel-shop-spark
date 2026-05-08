@@ -21,6 +21,36 @@ async function decryptValue(b64: string, keyHex: string): Promise<string> {
   return new TextDecoder().decode(decrypted);
 }
 
+/** Fetch all non-empty emails from profiles in pages of 1000. Service role bypasses RLS. */
+async function getAllProfileEmails(
+  supabaseAdmin: ReturnType<typeof createClient>,
+): Promise<{ emails: string[]; error: string | null }> {
+  const emails: string[] = [];
+  const PAGE = 1000;
+  let from = 0;
+
+  while (true) {
+    const { data, error } = await supabaseAdmin
+      .from("profiles")
+      .select("email")
+      .not("email", "is", null)
+      .neq("email", "")
+      .range(from, from + PAGE - 1)
+      .order("id");
+
+    if (error) return { emails: [], error: error.message };
+
+    for (const row of data ?? []) {
+      if (row.email && typeof row.email === "string") emails.push(row.email);
+    }
+
+    if (!data || data.length < PAGE) break;
+    from += PAGE;
+  }
+
+  return { emails, error: null };
+}
+
 // ── Handler ───────────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
@@ -59,12 +89,17 @@ Deno.serve(async (req) => {
 
     // ── preview: return recipient count without sending ─────────────────────
     if (body.action === "preview") {
-      const { data: usersPage, error: listErr } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1 });
-      if (listErr) return respond({ error: listErr.message }, 500);
-      return respond({ count: usersPage.total ?? 0 });
+      const { count, error: countErr } = await supabaseAdmin
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .not("email", "is", null)
+        .neq("email", "");
+
+      if (countErr) return respond({ error: countErr.message }, 500);
+      return respond({ count: count ?? 0 });
     }
 
-    // ── send: broadcast email to all confirmed users ────────────────────────
+    // ── send: broadcast email to all users ───────────────────────────────────
     if (body.action === "send") {
       const { subject, text_body } = body as { subject?: string; text_body?: string };
 
@@ -99,27 +134,15 @@ Deno.serve(async (req) => {
       if (!cfg.smtp_password) return respond({ error: "SMTP not configured: smtp_password missing" }, 400);
       if (!cfg.smtp_from) return respond({ error: "SMTP not configured: smtp_from missing" }, 400);
 
-      // Collect all user emails (paginated, max 10 000 users)
-      const emails: string[] = [];
-      let page = 1;
-      while (true) {
-        const { data: batch, error: batchErr } = await supabaseAdmin.auth.admin.listUsers({
-          page,
-          perPage: 1000,
-        });
-        if (batchErr) return respond({ error: `Failed to list users: ${batchErr.message}` }, 500);
-        for (const u of batch.users) {
-          if (u.email && u.email_confirmed_at) emails.push(u.email);
-        }
-        if (batch.users.length < 1000) break;
-        page++;
-      }
+      // Collect all user emails from profiles table (service role bypasses RLS)
+      const { emails, error: listErr } = await getAllProfileEmails(supabaseAdmin);
+      if (listErr) return respond({ error: `Failed to list users: ${listErr}` }, 500);
 
       if (emails.length === 0) {
-        return respond({ error: "No confirmed users found" }, 400);
+        return respond({ error: "No users found" }, 400);
       }
 
-      // Send one email per recipient (sequential to respect SMTP rate limits)
+      // Send one email per recipient sequentially to respect SMTP rate limits
       let sent = 0;
       const failures: { email: string; error: string }[] = [];
 
