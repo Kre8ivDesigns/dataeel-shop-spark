@@ -207,7 +207,7 @@ const AdminFinancials = () => {
           containerClassName="max-w-[1400px]"
           sectionClassName="pb-8"
         />
-        <div className="container mx-auto px-4 max-w-[1400px]">
+        <div className="container mx-auto px-4 pt-[25px] max-w-[1400px]">
           {queryError && (
             <Alert variant="destructive" className="mb-6">
               <AlertCircle className="h-4 w-4" />

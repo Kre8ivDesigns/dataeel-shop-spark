@@ -185,7 +185,7 @@ const RaceCardsBrowse = () => {
         sectionClassName="pb-6 md:pb-8"
       />
 
-      <main className="pb-16">
+      <main className="pt-[25px] pb-16">
         <div className="container mx-auto px-4">
           {!user && (
             <motion.div

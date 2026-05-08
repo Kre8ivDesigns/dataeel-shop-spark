@@ -103,7 +103,7 @@ export const Header = () => {
       <div className="container mx-auto px-4 flex items-center justify-between">
         <Link to="/" onClick={scrollHomeToTop} className="flex flex-col items-start gap-1">
           <img src={logo} alt="DATAEEL®" className="h-10 w-auto" />
-          <span className="text-[11px] font-semibold tracking-wide text-primary leading-tight">
+          <span className="text-[11px] font-semibold tracking-wide text-white leading-tight">
             Horse Racing simplified
             <sup className="ml-0.5 text-[8px] leading-none">®</sup>
           </span>
