@@ -34,6 +34,7 @@ race cards/
 
 # Local database dumps / one-off migration artifacts
 database/
+data/*.sql
 
 # Local AI/dev tooling state — not project source
 .ijfw/
