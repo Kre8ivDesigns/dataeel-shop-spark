@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef, type MouseEvent } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Menu,
@@ -38,6 +38,7 @@ export const Header = () => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const { user, isAdmin, signOut } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
   const { data: creditBalance, isLoading: creditsLoading } = useCreditBalance(user?.id);
   const creditSnap = creditBalance ?? EMPTY_CREDIT_SNAPSHOT;
@@ -65,13 +66,29 @@ export const Header = () => {
     navigate("/");
   };
 
+  const scrollHomeToTop = (event: MouseEvent<HTMLAnchorElement>) => {
+    setIsMobileMenuOpen(false);
+    if (location.pathname !== "/") return;
+
+    event.preventDefault();
+    navigate("/");
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  };
+
   const renderNavLink = (item: { label: string; href: string }, mobile = false) => {
     const cls = mobile
       ? "block text-foreground font-medium py-2 hover:text-primary transition-colors"
       : "nav-link";
 
     return (
-      <Link key={item.label} to={item.href} onClick={() => setIsMobileMenuOpen(false)} className={cls}>
+      <Link
+        key={item.label}
+        to={item.href}
+        onClick={item.href === "/" ? scrollHomeToTop : () => setIsMobileMenuOpen(false)}
+        className={cls}
+      >
         {item.label}
       </Link>
     );
@@ -84,7 +101,7 @@ export const Header = () => {
       }`}
     >
       <div className="container mx-auto px-4 flex items-center justify-between">
-        <Link to="/" className="flex flex-col items-start gap-1">
+        <Link to="/" onClick={scrollHomeToTop} className="flex flex-col items-start gap-1">
           <img src={logo} alt="DATAEEL®" className="h-10 w-auto" />
           <span className="text-[11px] font-semibold tracking-wide text-primary leading-tight">
             Horse Racing simplified
