@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AdminAiSettingsPanel } from "@/components/admin/AdminAiSettingsPanel";
 import { AdminSmtpSettingsPanel } from "@/components/admin/AdminSmtpSettingsPanel";
+import { AdminBroadcastEmailPanel } from "@/components/admin/AdminBroadcastEmailPanel";
 import {
   EMPTY_SETTINGS_FORM,
   SMTP_PROVIDER_PRESETS,
@@ -281,6 +282,7 @@ const AdminSettings = () => {
             <TabsList className="mb-4 flex flex-wrap h-auto gap-1">
               <TabsTrigger value="ai">AI providers</TabsTrigger>
               <TabsTrigger value="smtp">SMTP</TabsTrigger>
+              <TabsTrigger value="broadcast">Broadcast email</TabsTrigger>
               <TabsTrigger value="captcha">CAPTCHA</TabsTrigger>
               <TabsTrigger value="stripe">Stripe</TabsTrigger>
               <TabsTrigger value="analytics">Analytics &amp; site</TabsTrigger>
@@ -338,6 +340,11 @@ const AdminSettings = () => {
                 }
               />
 
+            </TabsContent>
+
+            {/* ── Broadcast email ── */}
+            <TabsContent value="broadcast">
+              <AdminBroadcastEmailPanel />
             </TabsContent>
 
             {/* ── CAPTCHA ── */}
