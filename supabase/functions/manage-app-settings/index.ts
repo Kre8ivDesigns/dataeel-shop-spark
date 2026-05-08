@@ -79,7 +79,16 @@ Deno.serve(async (req) => {
       if (fetchErr) return respond({ error: fetchErr.message }, 500);
 
       /** Non-secret keys returned in full so admins can edit accurate values (still encrypted at rest). */
-      const READABLE_FULL_KEYS = new Set(["ai_daily_cost_cap_usd"]);
+      const READABLE_FULL_KEYS = new Set([
+        "ai_chat_provider",
+        "ai_daily_cost_cap_usd",
+        "smtp_provider",
+        "captcha_provider",
+        "stripe_mode",
+        "google_analytics_measurement_id",
+        "plausible_domain",
+        "site_public_url",
+      ]);
 
       const settings: Record<
         string,
@@ -214,4 +223,3 @@ Deno.serve(async (req) => {
     return respond({ error: "Internal server error" }, 500);
   }
 });
-

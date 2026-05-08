@@ -26,6 +26,16 @@ import {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const STRIPE_WEBHOOK_PATH = "/functions/v1/stripe-webhook";
+const READABLE_SETTINGS_KEYS: (keyof SettingsForm)[] = [
+  "ai_chat_provider",
+  "ai_daily_cost_cap_usd",
+  "smtp_provider",
+  "captcha_provider",
+  "stripe_mode",
+  "google_analytics_measurement_id",
+  "plausible_domain",
+  "site_public_url",
+];
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
@@ -150,10 +160,14 @@ const AdminSettings = () => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setStatus(data.settings ?? {});
-      const capReadable = data.settings?.ai_daily_cost_cap_usd?.readable;
-      if (typeof capReadable === "string") {
-        setForm((f) => ({ ...f, ai_daily_cost_cap_usd: capReadable }));
-      }
+      setForm((f) => {
+        const next = { ...f };
+        for (const key of READABLE_SETTINGS_KEYS) {
+          const readable = data.settings?.[key]?.readable;
+          if (typeof readable === "string") next[key] = readable;
+        }
+        return next;
+      });
     } catch (err: unknown) {
       toast.error(getErrorMessage(err, "Failed to load settings"));
     } finally {
