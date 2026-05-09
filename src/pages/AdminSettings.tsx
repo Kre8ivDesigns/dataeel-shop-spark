@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { AdminAiSettingsPanel } from "@/components/admin/AdminAiSettingsPanel";
 import { AdminSmtpSettingsPanel } from "@/components/admin/AdminSmtpSettingsPanel";
 import { AdminBroadcastEmailPanel } from "@/components/admin/AdminBroadcastEmailPanel";
+import { AdminBreakingNewsPanel } from "@/components/admin/AdminBreakingNewsPanel";
 import {
   EMPTY_SETTINGS_FORM,
   SMTP_PROVIDER_PRESETS,
@@ -300,6 +301,7 @@ const AdminSettings = () => {
               <TabsTrigger value="captcha">CAPTCHA</TabsTrigger>
               <TabsTrigger value="stripe">Stripe</TabsTrigger>
               <TabsTrigger value="analytics">Analytics &amp; site</TabsTrigger>
+              <TabsTrigger value="ticker">Breaking news ticker</TabsTrigger>
             </TabsList>
 
             <TabsContent value="ai">
@@ -688,6 +690,9 @@ const AdminSettings = () => {
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
+            <TabsContent value="ticker">
+              <AdminBreakingNewsPanel />
             </TabsContent>
           </Tabs>
         </div>

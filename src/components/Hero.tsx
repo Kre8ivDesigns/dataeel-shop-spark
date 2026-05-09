@@ -1,10 +1,12 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Play, MapPin, Sparkles, Infinity as InfinityIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-racing.jpg";
+import { supabase } from "@/integrations/supabase/client";
 
-const breakingNews = [
+const FALLBACK_NEWS = [
   "Concert algorithm picks Winner in race#1, race#2, race#3, race#6, race#7; Belmont At Big A May1, 2026",
   "Concert algorithm picks Winner in race#1, race#2, race#3, race#6, race#7; Belmont At Big A May1, 2026",
   "Concert algorithm hits PICK 3 in race#3; Belmont At Big A May1, 2026",
@@ -60,6 +62,22 @@ const trustBadges = [
 ];
 
 export const Hero = () => {
+  const [tickerItems, setTickerItems] = useState<string[]>(FALLBACK_NEWS);
+
+  useEffect(() => {
+    supabase
+      .from("breaking_news_items")
+      .select("text")
+      .eq("active", true)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setTickerItems(data.map((r) => r.text));
+        }
+      });
+  }, []);
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background */}
@@ -85,7 +103,7 @@ export const Hero = () => {
           </div>
           <div className="overflow-hidden flex-1 min-w-0">
             <div className="flex w-max min-w-full whitespace-nowrap animate-ticker-scroll will-change-transform motion-reduce:animate-none">
-              {[...breakingNews, ...breakingNews].map((news, i) => (
+              {[...tickerItems, ...tickerItems].map((news, i) => (
                 <span key={i} className="inline-flex items-center text-sm text-foreground/80 mx-8 shrink-0">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary mr-3 flex-shrink-0" />
                   {news}
