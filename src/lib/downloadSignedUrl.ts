@@ -5,7 +5,7 @@
  */
 
 export type DownloadSignedUrlResult =
-  | { status: "downloaded"; method: "blob" | "iframe" }
+  | { status: "downloaded"; method: "blob" }
   | { status: "failed"; error: string }
   /** Last resort: same-tab navigation works everywhere for GET; caller should toast then `location.assign(url)`. */
   | { status: "navigate_same_tab"; url: string };
@@ -43,21 +43,9 @@ function triggerBlobDownload(objectUrl: string, downloadName: string): void {
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
 }
 
-function triggerIframeNav(url: string): void {
-  const iframe = document.createElement("iframe");
-  iframe.style.cssText = "position:fixed;left:-9999px;width:1px;height:1px;border:none;";
-  iframe.setAttribute("aria-hidden", "true");
-  document.body.appendChild(iframe);
-  iframe.src = url;
-  window.setTimeout(() => {
-    iframe.remove();
-  }, 120_000);
-}
-
 /**
  * Prefer blob download (needs CORS on the storage origin for `fetch`).
- * If fetch fails (typical: no CORS), hidden iframe (no full-page navigation; tradeoff: some browsers show PDF inside iframe or still download).
- * If iframe setup fails, caller uses same-tab navigation via `status: "navigate_same_tab"` (tradeoff: leaves SPA until Back).
+ * If fetch fails (typical: no CORS), caller uses same-tab navigation via `status: "navigate_same_tab"`.
  */
 export async function downloadFromSignedUrl(signedUrl: string, preferredFileName: string): Promise<DownloadSignedUrlResult> {
   const safeName = sanitizeDownloadFileName(preferredFileName);
@@ -87,11 +75,6 @@ export async function downloadFromSignedUrl(signedUrl: string, preferredFileName
     }
     return { status: "downloaded", method: "blob" };
   } catch {
-    try {
-      triggerIframeNav(signedUrl);
-      return { status: "downloaded", method: "iframe" };
-    } catch {
-      return { status: "navigate_same_tab", url: signedUrl };
-    }
+    return { status: "navigate_same_tab", url: signedUrl };
   }
 }
