@@ -29,6 +29,9 @@ content_path = "./supabase/templates/magic-link.html"
 [functions.notify-admin-new-signup]
 verify_jwt = false
 
+[functions.notify-admin-contact-submission]
+verify_jwt = true
+
 # stripe-webhook is called server-to-server by Stripe — no JWT
 [functions.stripe-webhook]
 verify_jwt = false

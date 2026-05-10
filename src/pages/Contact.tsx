@@ -72,6 +72,35 @@ const categoryLabels: Record<string, string> = {
   general: "General Inquiry",
 };
 
+function createSubmissionId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) => {
+    const randomByte =
+      typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function"
+        ? crypto.getRandomValues(new Uint8Array(1))[0]
+        : Math.floor(Math.random() * 256);
+    return (Number(c) ^ (randomByte & (15 >> (Number(c) / 4)))).toString(16);
+  });
+}
+
+async function notifyAdminOfContactSubmission(submissionId: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke("notify-admin-contact-submission", {
+    body: { submissionId },
+  });
+
+  if (error) {
+    console.error("Contact notification failed:", sanitizeError(error));
+    return;
+  }
+
+  if (data && typeof data === "object" && "notified" in data && data.notified !== true) {
+    console.warn("Contact notification was not sent:", data);
+  }
+}
+
 const ContactPage = () => {
   const { user } = useAuth();
   const [formState, setFormState] = useState<"idle" | "submitting" | "success">("idle");
@@ -89,7 +118,9 @@ const ContactPage = () => {
     }
     setFormError(null);
     setFormState("submitting");
+    const submissionId = createSubmissionId();
     const { error } = await supabase.from("contact_submissions").insert({
+      id: submissionId,
       name: name.trim(),
       email: email.trim(),
       category: subject,
@@ -102,6 +133,7 @@ const ContactPage = () => {
       setFormError(sanitizeError(error));
       return;
     }
+    await notifyAdminOfContactSubmission(submissionId);
     setFormState("success");
     setName("");
     setEmail("");

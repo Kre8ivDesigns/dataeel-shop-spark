@@ -6,7 +6,7 @@ import { Footer } from "@/components/Footer";
 import { PageHero } from "@/components/PageHero";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import racecardExampleImage from "@/assets/racecard-guide/racecard-guide-page-02.webp";
+import racecardExampleImage from "@/assets/racecard-guide/racecard-guide-page-02-cropped.png";
 import racecardColumnsImage from "@/assets/racecard-guide/racecard-guide-page-03.webp";
 import racecardFormatImage from "@/assets/racecard-guide/racecard-guide-page-04.webp";
 import racecardAlgorithmsImage from "@/assets/racecard-guide/racecard-guide-page-05.webp";
@@ -298,23 +298,25 @@ const HowToReadRacecard = () => {
 
       <Dialog open={Boolean(expandedImage)} onOpenChange={(open) => !open && setExpandedImage(null)}>
         <DialogContent
-          className="max-h-[92vh] max-w-[96vw] border-border bg-card p-4 sm:max-w-5xl"
+          className="flex max-h-[96vh] max-w-[98vw] flex-col border-border bg-card p-3 sm:max-w-[min(1180px,98vw)]"
           aria-label={expandedImage ? `Expanded image: ${expandedImage.alt}` : "Expanded image"}
         >
           {expandedImage && (
-            <div className="space-y-3">
+            <div className="flex min-h-0 flex-1 flex-col gap-3">
               <DialogHeader className="sr-only">
                 <DialogTitle>{expandedImage.alt}</DialogTitle>
                 <DialogDescription>{expandedImage.caption}</DialogDescription>
               </DialogHeader>
-              <img
-                src={expandedImage.src}
-                alt={expandedImage.alt}
-                className="max-h-[78vh] w-full rounded-md object-contain"
-                loading="eager"
-                decoding="async"
-              />
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-md bg-black/30">
+                <img
+                  src={expandedImage.src}
+                  alt={expandedImage.alt}
+                  className="max-h-[84vh] w-auto max-w-full object-contain"
+                  loading="eager"
+                  decoding="async"
+                />
+              </div>
+              <div className="flex shrink-0 items-center justify-between gap-3">
                 <p className="text-sm text-muted-foreground">{expandedImage.caption}</p>
                 <DialogClose asChild>
                   <Button type="button" variant="outline">
