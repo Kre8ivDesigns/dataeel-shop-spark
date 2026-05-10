@@ -1,0 +1,6 @@
+{
+  "type": "module",
+  "dependencies": {
+    "@aws-sdk/client-textract": "^3.953.0"
+  }
+}

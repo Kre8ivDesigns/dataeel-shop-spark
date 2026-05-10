@@ -218,6 +218,7 @@ async function handleRequest(req: Request): Promise<Response> {
       track_code: string;
       track_name: string;
       race_date: string;
+      digitization_status: string;
       uploaded_by: string | null;
     }>;
 
@@ -235,6 +236,7 @@ async function handleRequest(req: Request): Promise<Response> {
         track_code: trackCode,
         track_name: getRacetrackLabel(trackCode),
         race_date: raceDate,
+        digitization_status: "queued",
         uploaded_by: actingUserId,
       });
     }

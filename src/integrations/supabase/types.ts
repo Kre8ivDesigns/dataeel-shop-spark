@@ -151,6 +151,10 @@ export type Database = {
       racecards: {
         Row: {
           created_at: string
+          digitization_error: string | null
+          digitization_status: string
+          digitization_updated_at: string | null
+          digitized_at: string | null
           file_name: string
           file_url: string
           id: string
@@ -160,11 +164,16 @@ export type Database = {
           race_date: string
           track_code: string
           track_name: string
+          textract_job_id: string | null
           updated_at: string
           uploaded_by: string | null
         }
         Insert: {
           created_at?: string
+          digitization_error?: string | null
+          digitization_status?: string
+          digitization_updated_at?: string | null
+          digitized_at?: string | null
           file_name: string
           file_url: string
           id?: string
@@ -174,11 +183,16 @@ export type Database = {
           race_date: string
           track_code: string
           track_name: string
+          textract_job_id?: string | null
           updated_at?: string
           uploaded_by?: string | null
         }
         Update: {
           created_at?: string
+          digitization_error?: string | null
+          digitization_status?: string
+          digitization_updated_at?: string | null
+          digitized_at?: string | null
           file_name?: string
           file_url?: string
           id?: string
@@ -188,10 +202,64 @@ export type Database = {
           race_date?: string
           track_code?: string
           track_name?: string
+          textract_job_id?: string | null
           updated_at?: string
           uploaded_by?: string | null
         }
         Relationships: []
+      }
+      racecard_predictions: {
+        Row: {
+          algorithm: string
+          created_at: string
+          horse_name: string
+          horse_number: string | null
+          id: string
+          ocr_confidence: number | null
+          odds: string | null
+          race_number: number
+          racecard_id: string
+          rank: number
+          raw_text: string | null
+          score: number | null
+        }
+        Insert: {
+          algorithm: string
+          created_at?: string
+          horse_name: string
+          horse_number?: string | null
+          id?: string
+          ocr_confidence?: number | null
+          odds?: string | null
+          race_number: number
+          racecard_id: string
+          rank: number
+          raw_text?: string | null
+          score?: number | null
+        }
+        Update: {
+          algorithm?: string
+          created_at?: string
+          horse_name?: string
+          horse_number?: string | null
+          id?: string
+          ocr_confidence?: number | null
+          odds?: string | null
+          race_number?: number
+          racecard_id?: string
+          rank?: number
+          raw_text?: string | null
+          score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "racecard_predictions_racecard_id_fkey"
+            columns: ["racecard_id"]
+            isOneToOne: false
+            referencedRelation: "racecards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       transactions: {
         Row: {

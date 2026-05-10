@@ -12,6 +12,10 @@ import {
   Sparkles,
   ArrowRight,
   MapPin,
+  CalendarDays,
+  ChevronDown,
+  ExternalLink,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -19,7 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { format, addDays } from "date-fns";
-import { metadataListingLine, parseRacecardMetadata } from "@/lib/raceMetadata";
+import { metadataListingLine, parseRacecardMetadata, type RacecardDisplayMetadata } from "@/lib/raceMetadata";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCreditBalance } from "@/lib/queries/creditBalance";
 import { EMPTY_CREDIT_SNAPSHOT } from "@/lib/creditDisplay";
@@ -33,7 +37,7 @@ import { getInvokeErrorMessage } from "@/lib/edgeFunctionErrors";
 import { downloadFromSignedUrl } from "@/lib/downloadSignedUrl";
 import { TrackCardHeroImage } from "@/components/TrackCardHeroImage";
 import { PageHero } from "@/components/PageHero";
-import { extractCanonicalTrackCode, getRacetrackLabel, getRacetrackLocation } from "@/lib/racetracks";
+import { extractCanonicalTrackCode, getRacetrackLabel, getRacetrackLocation, getRacetrackWebsite } from "@/lib/racetracks";
 
 const RACECARD_DOWNLOAD_TZ =
   import.meta.env.VITE_RACECARD_DOWNLOAD_TZ ?? DEFAULT_RACECARD_DOWNLOAD_TZ;
@@ -41,12 +45,25 @@ const RACECARD_DOWNLOAD_TZ =
 const RACE_AUTH_REDIRECT = `/auth?redirect=${encodeURIComponent("/racecards")}`;
 const RACE_JOIN_REDIRECT = `/auth?mode=signup&redirect=${encodeURIComponent("/racecards")}`;
 
+function buildRaceRows(meta: RacecardDisplayMetadata, numRaces: number | null) {
+  if (meta.races && meta.races.length > 0) {
+    return meta.races
+      .filter((race) => typeof race.number === "number")
+      .sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
+  }
+
+  const count = Math.max(0, Math.min(numRaces ?? 0, 30));
+  return Array.from({ length: count }, (_, index) => ({ number: index + 1 }));
+}
+
 const RaceCardsBrowse = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [viewingDigitalCard, setViewingDigitalCard] = useState<string | null>(null);
+  const [expandedCardIds, setExpandedCardIds] = useState<Set<string>>(() => new Set());
   const [selectedDateIndex, setSelectedDateIndex] = useState(0);
 
   const dayTabs = useMemo(() => {
@@ -131,6 +148,62 @@ const RaceCardsBrowse = () => {
     } finally {
       setDownloading(null);
     }
+  };
+
+  const handleViewDigitalCard = async (racecardId: string) => {
+    if (!user) {
+      toast({
+        title: "Please sign in",
+        description: "Free registration lets you view available RaceCards and open the digital card.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const previewWindow = window.open("about:blank", "_blank");
+    if (previewWindow) previewWindow.opener = null;
+    setViewingDigitalCard(racecardId);
+    try {
+      const { data, error, response: invokeResponse } = await supabase.functions.invoke("download-racecard", {
+        body: { racecardId, disposition: "inline" },
+      });
+
+      if (error || !data?.signedUrl) {
+        previewWindow?.close();
+        const msg = await getInvokeErrorMessage("download-racecard", error, data, invokeResponse);
+        toast({ title: "Digital card unavailable", description: msg || "Could not open the digital card.", variant: "destructive" });
+        return;
+      }
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["credit-balance", user.id] }),
+        queryClient.invalidateQueries({ queryKey: racecardDownloadKeys.byUser(user.id) }),
+        queryClient.invalidateQueries({ queryKey: userDashboardKeys.detail(user.id) }),
+      ]);
+
+      if (previewWindow) {
+        previewWindow.location.href = data.signedUrl;
+      } else {
+        window.location.assign(data.signedUrl);
+      }
+    } catch {
+      previewWindow?.close();
+      toast({ title: "Error", description: "Something went wrong.", variant: "destructive" });
+    } finally {
+      setViewingDigitalCard(null);
+    }
+  };
+
+  const toggleExpandedCard = (racecardId: string) => {
+    setExpandedCardIds((current) => {
+      const next = new Set(current);
+      if (next.has(racecardId)) {
+        next.delete(racecardId);
+      } else {
+        next.add(racecardId);
+      }
+      return next;
+    });
   };
 
   const q = searchQuery.toLowerCase();
@@ -270,7 +343,11 @@ const RaceCardsBrowse = () => {
               {filtered.map((card, i) => {
                 const owned = isOwned(card.id);
                 const isDownloading = downloading === card.id;
-                const metaLine = metadataListingLine(parseRacecardMetadata(card.metadata));
+                const isViewingDigitalCard = viewingDigitalCard === card.id;
+                const expanded = expandedCardIds.has(card.id);
+                const meta = parseRacecardMetadata(card.metadata);
+                const metaLine = metadataListingLine(meta);
+                const raceRows = buildRaceRows(meta, card.num_races);
                 const dlBlock = getRacecardDownloadUiBlock(
                   card.race_date,
                   RACECARD_DOWNLOAD_TZ,
@@ -278,6 +355,7 @@ const RaceCardsBrowse = () => {
                 );
                 const downloadDisabled = dlBlock.blocked;
                 const location = getRacetrackLocation(card.track_code);
+                const trackWebsite = getRacetrackWebsite(card.track_code);
 
                 return (
                   <motion.div
@@ -332,6 +410,72 @@ const RaceCardsBrowse = () => {
                       <span className="text-info font-medium">Aptitude™</span>
                     </div>
 
+                    <div className="mb-4 space-y-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-9 justify-between border-border text-xs"
+                          onClick={() => toggleExpandedCard(card.id)}
+                        >
+                          <span className="inline-flex items-center gap-1.5">
+                            <CalendarDays className="h-3.5 w-3.5" />
+                            {expanded ? "Hide races" : "View races"}
+                          </span>
+                          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} />
+                        </Button>
+                        {trackWebsite && (
+                          <Button
+                            asChild
+                            variant="outline"
+                            className="h-9 justify-center border-border text-xs"
+                          >
+                            <a href={trackWebsite} target="_blank" rel="noopener noreferrer">
+                              Track website
+                              <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
+                            </a>
+                          </Button>
+                        )}
+                      </div>
+
+                      {expanded && (
+                        <div className="rounded-lg border border-border bg-background/35 p-3">
+                          {raceRows.length > 0 ? (
+                            <div className="space-y-2">
+                              {raceRows.map((race) => (
+                                <div
+                                  key={race.number}
+                                  className="flex items-center justify-between gap-3 rounded-md bg-muted/35 px-3 py-2 text-xs"
+                                >
+                                  <div className="min-w-0">
+                                    <div className="font-semibold text-foreground">Race {race.number}</div>
+                                    <div className="truncate text-muted-foreground">
+                                      {[race.post_time_display, race.type, race.distance].filter(Boolean).join(" · ") || "Details posted with the RaceCard"}
+                                    </div>
+                                  </div>
+                                  {trackWebsite && (
+                                    <a
+                                      href={trackWebsite}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="shrink-0 text-primary hover:text-neon"
+                                      aria-label={`Open official track website for race ${race.number}`}
+                                    >
+                                      <ExternalLink className="h-3.5 w-3.5" />
+                                    </a>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">
+                              Race details are not posted yet. Check the official track website for the latest schedule.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
                     <div className="flex flex-col gap-1.5">
                       {!user ? (
                         <Button
@@ -345,6 +489,25 @@ const RaceCardsBrowse = () => {
                         </Button>
                       ) : (
                         <>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="flex-1 border-primary/60 text-primary hover:bg-primary/10 font-semibold text-sm h-10"
+                            onClick={() => void handleViewDigitalCard(card.id)}
+                            disabled={isViewingDigitalCard || downloadDisabled}
+                            title={
+                              downloadDisabled
+                                ? "Digital cards close after the race day in the configured timezone."
+                                : undefined
+                            }
+                          >
+                            {isViewingDigitalCard ? (
+                              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Eye className="mr-1.5 h-4 w-4" />
+                            )}
+                            View digital card
+                          </Button>
                           <Button
                             className="flex-1 bg-primary text-primary-foreground hover:brightness-110 font-semibold text-sm h-10 shadow-neon"
                             onClick={() => void handleDownload(card.id)}

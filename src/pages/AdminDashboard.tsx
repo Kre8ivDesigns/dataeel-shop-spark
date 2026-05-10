@@ -164,6 +164,7 @@ const AdminDashboard = () => {
         track_code: trackCode,
         track_name: getRacetrackLabel(trackCode),
         race_date: raceDate,
+        digitization_status: "queued",
         uploaded_by: user.id,
       });
 

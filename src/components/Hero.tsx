@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect, useMemo, useRef, type CSSProperties } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, FileText, Play, MapPin, Sparkles, Infinity as InfinityIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -64,9 +64,28 @@ const trustBadges = [
 
 export const Hero = () => {
   const [tickerItems, setTickerItems] = useState<string[]>(FALLBACK_NEWS);
-  const tickerLoopItems = buildTickerLoopItems(tickerItems);
-  const renderedTickerItems = [...tickerLoopItems, ...tickerLoopItems];
-  const tickerDuration = tickerDurationSeconds(tickerLoopItems);
+  const [tickerDistance, setTickerDistance] = useState<number | null>(null);
+  const tickerGroupRef = useRef<HTMLDivElement | null>(null);
+  const tickerLoopItems = useMemo(() => buildTickerLoopItems(tickerItems), [tickerItems]);
+  const tickerDuration = useMemo(() => tickerDurationSeconds(tickerLoopItems), [tickerLoopItems]);
+
+  useLayoutEffect(() => {
+    const group = tickerGroupRef.current;
+    if (!group) return;
+
+    const updateDistance = () => {
+      setTickerDistance(Math.ceil(group.scrollWidth));
+    };
+
+    updateDistance();
+    const observer = new ResizeObserver(updateDistance);
+    observer.observe(group);
+    if (document.fonts) {
+      void document.fonts.ready.then(updateDistance);
+    }
+
+    return () => observer.disconnect();
+  }, [tickerLoopItems]);
 
   useEffect(() => {
     supabase
@@ -107,15 +126,28 @@ export const Hero = () => {
           </div>
           <div className="overflow-hidden flex-1 min-w-0">
             <div
-              className="flex w-max min-w-full whitespace-nowrap animate-ticker-scroll will-change-transform motion-reduce:animate-none"
-              style={{ animationDuration: `${tickerDuration}s` }}
+              className="flex w-max whitespace-nowrap animate-ticker-scroll will-change-transform motion-reduce:animate-none"
+              style={{
+                animationDuration: `${tickerDuration}s`,
+                "--ticker-distance": tickerDistance ? `${tickerDistance}px` : "50%",
+              } as CSSProperties}
             >
-              {renderedTickerItems.map((news, i) => (
-                <span key={i} className="inline-flex items-center text-sm text-foreground/80 mx-8 shrink-0">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary mr-3 flex-shrink-0" />
-                  {news}
-                </span>
-              ))}
+              <div ref={tickerGroupRef} className="flex shrink-0 whitespace-nowrap">
+                {tickerLoopItems.map((news, i) => (
+                  <span key={`a-${i}`} className="inline-flex items-center text-sm text-foreground/80 mx-8 shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary mr-3 flex-shrink-0" />
+                    {news}
+                  </span>
+                ))}
+              </div>
+              <div className="flex shrink-0 whitespace-nowrap" aria-hidden="true">
+                {tickerLoopItems.map((news, i) => (
+                  <span key={`b-${i}`} className="inline-flex items-center text-sm text-foreground/80 mx-8 shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary mr-3 flex-shrink-0" />
+                    {news}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         </div>

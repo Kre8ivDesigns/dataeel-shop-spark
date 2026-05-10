@@ -104,10 +104,10 @@ export default {
           "0%, 100%": { boxShadow: "0 0 20px hsl(67 100% 50% / 0.3)" },
           "50%": { boxShadow: "0 0 40px hsl(67 100% 50% / 0.6)" },
         },
-        /** Seamless loop: content duplicated; -50% = one copy width */
+        /** Seamless loop: JS measures one full copy and writes --ticker-distance */
         "ticker-scroll": {
           from: { transform: "translateX(0)" },
-          to: { transform: "translateX(-50%)" },
+          to: { transform: "translate3d(calc(var(--ticker-distance, 50%) * -1), 0, 0)" },
         },
       },
       animation: {

@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Search, RefreshCw, Upload, Trash2, Pencil, Info } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Json } from "@/integrations/supabase/types";
@@ -317,6 +318,39 @@ const METADATA_EXAMPLE = `{
   "listing_status": "available"
 }`;
 
+function digitizationLabel(status: string | null | undefined): string {
+  switch (status) {
+    case "queued":
+      return "Queued";
+    case "processing":
+      return "Processing";
+    case "digitized":
+      return "Digitized";
+    case "needs_review":
+      return "Needs review";
+    case "failed":
+      return "Failed";
+    default:
+      return "Not started";
+  }
+}
+
+function digitizationBadgeClass(status: string | null | undefined): string {
+  switch (status) {
+    case "digitized":
+      return "border-emerald-400/40 bg-emerald-400/10 text-emerald-200";
+    case "processing":
+    case "queued":
+      return "border-primary/40 bg-primary/10 text-primary";
+    case "needs_review":
+      return "border-amber-400/40 bg-amber-400/10 text-amber-200";
+    case "failed":
+      return "border-destructive/40 bg-destructive/10 text-destructive";
+    default:
+      return "border-border bg-muted text-muted-foreground";
+  }
+}
+
 export function AdminRacecardsTab({
   racecards,
   uploading,
@@ -429,6 +463,7 @@ export function AdminRacecardsTab({
               <TableHead>Track</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Races</TableHead>
+              <TableHead>Digitization</TableHead>
               <TableHead className="w-24 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -439,6 +474,15 @@ export function AdminRacecardsTab({
                 <TableCell className="text-foreground">{rc.track_name}</TableCell>
                 <TableCell className="text-muted-foreground">{rc.race_date}</TableCell>
                 <TableCell className="font-mono-data text-foreground">{rc.num_races ?? "—"}</TableCell>
+                <TableCell>
+                  <Badge
+                    variant="outline"
+                    className={digitizationBadgeClass(rc.digitization_status)}
+                    title={rc.digitization_error ?? undefined}
+                  >
+                    {digitizationLabel(rc.digitization_status)}
+                  </Badge>
+                </TableCell>
                 <TableCell className="text-right">
                   <Button
                     variant="ghost"
@@ -463,7 +507,7 @@ export function AdminRacecardsTab({
             ))}
             {racecards.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                   No racecards uploaded yet
                 </TableCell>
               </TableRow>

@@ -150,3 +150,46 @@ export function getRacetrackLocation(trackCode: string | null | undefined): Race
   const key = extractCanonicalTrackCode(trackCode);
   return RACETRACK_LOCATION_BY_CODE[key] ?? null;
 }
+
+export const RACETRACK_WEBSITE_BY_CODE: Record<string, string> = {
+  AQU: "https://www.nyra.com/aqueduct/",
+  ASD: "https://www.asdowns.com/",
+  BAQ: "https://www.nyra.com/belmont-at-the-big-a/",
+  BEL: "https://www.nyra.com/belmont/",
+  BTP: "https://www.belterrapark.com/racing",
+  CD: "https://www.churchilldowns.com/",
+  CMR: "https://hipodromocamarero.com/",
+  CT: "https://www.hollywoodcasinocharlestown.com/racing",
+  DED: "https://www.deltadownsracing.com/",
+  DMR: "https://www.dmtc.com/",
+  ELP: "https://ellisparkracing.com/",
+  FE: "https://www.forterieracing.com/",
+  FG: "https://www.fairgroundsracecourse.com/",
+  FL: "https://www.fingerlakesgaming.com/racing",
+  GP: "https://www.gulfstreampark.com/",
+  HAW: "https://www.hawthorneracecourse.com/",
+  HOU: "https://www.shrp.com/",
+  KD: "https://www.kentuckydowns.com/",
+  KEE: "https://www.keeneland.com/",
+  LA: "https://www.losalamitos.com/",
+  LAD: "https://www.ladowns.com/",
+  LRL: "https://www.laurelpark.com/",
+  MED: "https://playmeadowlands.com/",
+  MNR: "https://www.cnty.com/mountaineer/racing/",
+  MTH: "https://www.monmouthpark.com/",
+  MVR: "https://www.hollywoodmahoningvalley.com/racing",
+  OP: "https://www.oaklawn.com/racing/",
+  PEN: "https://www.hollywoodpnrc.com/racing",
+  PIM: "https://www.pimlico.com/",
+  PRM: "https://www.prairiemeadows.com/racing",
+  PRX: "https://www.parxracing.com/",
+  SA: "https://www.santaanita.com/",
+  SAR: "https://www.nyra.com/saratoga/",
+  TAM: "https://www.tampabaydowns.com/",
+  WO: "https://woodbine.com/",
+};
+
+export function getRacetrackWebsite(trackCode: string | null | undefined): string | null {
+  const key = extractCanonicalTrackCode(trackCode);
+  return RACETRACK_WEBSITE_BY_CODE[key] ?? null;
+}

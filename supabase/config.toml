@@ -32,6 +32,10 @@ verify_jwt = false
 [functions.notify-admin-contact-submission]
 verify_jwt = true
 
+# AWS Lambda/Textract calls this with a shared secret header.
+[functions.racecard-digitization-webhook]
+verify_jwt = false
+
 # stripe-webhook is called server-to-server by Stripe — no JWT
 [functions.stripe-webhook]
 verify_jwt = false

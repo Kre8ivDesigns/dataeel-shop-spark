@@ -13,24 +13,24 @@ const stats = [
 
 const cardHighlights = [
   {
-    track: "Every card",
-    date: "—",
-    algorithm: "Concert",
-    results: "Live-performance emphasis — trips, energy, finishing patterns under race-day pressure.",
+    track: "Official charts",
+    date: "After races",
+    algorithm: "Equibase",
+    results: "Race results are checked against published Equibase Full Charts by track, date, and race number.",
     type: "multiple",
   },
   {
-    track: "Every card",
-    date: "—",
-    algorithm: "Aptitude",
-    results: "Ability & suitability — class, distance/surface fit, pace matchup, stamina context.",
+    track: "Result matchups",
+    date: "Track/date",
+    algorithm: "DATAEEL",
+    results: "Concert™ and Aptitude™ picks can be compared with the official winner once the chart is posted.",
     type: "multiple",
   },
   {
-    track: "Browse",
-    date: "Your date",
+    track: "Browse cards",
+    date: "Your race day",
     algorithm: "EEL",
-    results: "Pick a track and calendar day in RaceCards; availability follows the live racing schedule.",
+    results: "Pick a RaceCard, then review how the algorithms performed when official results are available.",
     type: "winner",
   },
 ];
@@ -58,9 +58,9 @@ export const Results = () => {
             <span className="text-neon">In Action</span>
           </h2>
           <p className="section-subtitle">
-            Our algorithms provide insight for picking winners and help in making more complex selections for
-            exotic bets like TRIFECTAS, EXACTAS, DAILY DOUBLES, PICK 3s, 4s, etc. across all major tracks.
-            Illustrations below are for education — not guarantees for future races; see our{" "}
+            Our algorithms provide insight for picking winners and more complex selections across major tracks.
+            We are connecting RaceCards to official result charts so you can compare how Concert™ and Aptitude™
+            performed after races are final. Results are informational — not guarantees for future races; see our{" "}
             <Link to="/disclaimer" className="text-primary underline underline-offset-2 hover:text-neon">
               Disclaimer
             </Link>
@@ -107,7 +107,7 @@ export const Results = () => {
         >
           <h3 className="text-xl font-semibold text-foreground mb-6 flex items-center gap-2 font-heading">
             <TrendingUp className="h-5 w-5 text-primary" />
-            Recent Algorithm Wins
+            RaceCard Results Check
           </h3>
 
           <div className="space-y-4">
@@ -146,6 +146,12 @@ export const Results = () => {
           </div>
 
           <div className="text-center mt-8">
+            <p className="mb-4 text-xs text-muted-foreground">
+              Official result checks use Equibase Full Charts. Data provided by Equibase Company LLC.
+            </p>
+            <p className="mb-4 text-sm text-foreground/70">
+              Registration is FREE and gives you access to see which racetracks are running with EEL RaceCards this week.
+            </p>
             <Button
               variant="outline"
               className="border-border text-foreground hover:bg-muted hover:border-primary/30"

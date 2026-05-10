@@ -59,12 +59,6 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Invalid submission id" }, 400);
   }
 
-  const adminTo = Deno.env.get("ADMIN_NOTIFICATION_EMAIL")?.trim();
-  if (!adminTo || !EMAIL_RE.test(adminTo)) {
-    console.error("notify-admin-contact-submission: ADMIN_NOTIFICATION_EMAIL is missing or invalid");
-    return jsonResponse({ ok: true, skipped: "admin_email_not_configured" }, 200);
-  }
-
   const encryptionKey = Deno.env.get("APP_SETTINGS_ENCRYPTION_KEY");
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -110,6 +104,12 @@ Deno.serve(async (req) => {
   if (!cfg.smtp_host || !cfg.smtp_user || !cfg.smtp_password || !cfg.smtp_from) {
     console.error("notify-admin-contact-submission: SMTP not fully configured in app_settings");
     return jsonResponse({ ok: true, skipped: "smtp_not_configured" }, 200);
+  }
+
+  const adminTo = Deno.env.get("ADMIN_NOTIFICATION_EMAIL")?.trim() || cfg.smtp_reply_to || cfg.smtp_from;
+  if (!EMAIL_RE.test(adminTo)) {
+    console.error("notify-admin-contact-submission: no valid admin notification recipient");
+    return jsonResponse({ ok: true, skipped: "admin_email_not_configured" }, 200);
   }
 
   const submittedAt = new Date(submission.created_at).toLocaleString("en-US", {
