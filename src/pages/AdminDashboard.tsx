@@ -38,7 +38,6 @@ import { AdminDashboardMainTabs } from "@/components/admin/AdminDashboardTables"
 import { AdminUserDetailSheet } from "@/components/admin/AdminUserDetailSheet";
 import { getRacetrackLabel } from "@/lib/racetracks";
 import { PageHero } from "@/components/PageHero";
-import { WordPressMemberImportCard } from "@/components/admin/WordPressMemberImportCard";
 import { AdminDeleteUserDialog } from "@/components/admin/AdminDeleteUserDialog";
 
 const AdminDashboard = () => {
@@ -457,8 +456,6 @@ const AdminDashboard = () => {
               </Link>
             ))}
           </div>
-
-          <WordPressMemberImportCard onImported={() => void fetchData()} />
 
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogContent>
