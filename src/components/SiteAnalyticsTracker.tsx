@@ -16,6 +16,7 @@ export function SiteAnalyticsTracker() {
   const location = useLocation();
   const { user } = useAuth();
   const initialPath = useRef(location.pathname);
+  const scrollDepthsTracked = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     void trackSiteEvent("session_start", { path: initialPath.current }, user?.id);
@@ -24,6 +25,35 @@ export function SiteAnalyticsTracker() {
   useEffect(() => {
     void trackSiteEvent("page_view", { path: location.pathname, search: location.search }, user?.id);
   }, [location.pathname, location.search, user?.id]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void trackSiteEvent("engaged_session_10s", { path: location.pathname }, user?.id);
+    }, 10_000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [location.pathname, user?.id]);
+
+  useEffect(() => {
+    scrollDepthsTracked.current.clear();
+
+    const onScroll = () => {
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      if (scrollable <= 0) return;
+
+      const depth = Math.min(100, Math.round((window.scrollY / scrollable) * 100));
+      for (const threshold of [25, 50, 75, 100]) {
+        if (depth >= threshold && !scrollDepthsTracked.current.has(threshold)) {
+          scrollDepthsTracked.current.add(threshold);
+          void trackSiteEvent("scroll_depth", { depth: threshold, path: location.pathname }, user?.id);
+        }
+      }
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [location.pathname, user?.id]);
 
   useEffect(() => {
     const onClick = (event: MouseEvent) => {
@@ -44,6 +74,18 @@ export function SiteAnalyticsTracker() {
         },
         user?.id,
       );
+
+      if ((href ?? "").includes("/how-to-read-racecard")) {
+        void trackSiteEvent(
+          "racecard_preview_opened",
+          {
+            href,
+            label,
+            location: "site_click",
+          },
+          user?.id,
+        );
+      }
     };
 
     document.addEventListener("click", onClick);

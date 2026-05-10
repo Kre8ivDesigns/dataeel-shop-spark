@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, Play, MapPin, Sparkles, Infinity as InfinityIcon } from "lucide-react";
+import { ArrowRight, FileText, Play, MapPin, Sparkles, Infinity as InfinityIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-racing.jpg";
@@ -183,6 +183,16 @@ export const Hero = () => {
               <Play className="mr-2 h-5 w-5" />
               How It Works
             </Button>
+            <Link to="/how-to-read-racecard">
+              <Button
+                size="lg"
+                variant="outline"
+                className="btn-ghost-light text-lg px-10 py-6 h-auto"
+              >
+                <FileText className="mr-2 h-5 w-5" />
+                View Sample RaceCard
+              </Button>
+            </Link>
           </motion.div>
 
           {/* Trust Badges */}

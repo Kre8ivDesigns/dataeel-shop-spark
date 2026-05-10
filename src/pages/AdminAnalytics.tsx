@@ -246,8 +246,8 @@ const AdminAnalytics = () => {
           containerClassName="max-w-[1400px]"
           sectionClassName="pb-8"
         />
-        <div className="container mx-auto px-4 max-w-[1400px]" style="padding-top: 25px;">
-         {loading ? (
+        <div className="container mx-auto max-w-[1400px] px-4 pt-6 md:pt-8">
+          {loading ? (
             <div className="flex justify-center py-24">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>

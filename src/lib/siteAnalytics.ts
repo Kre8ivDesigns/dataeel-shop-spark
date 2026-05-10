@@ -3,7 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 export type SiteAnalyticsEventName =
   | "session_start"
   | "page_view"
+  | "scroll_depth"
+  | "engaged_session_10s"
   | "cta_clicked"
+  | "racecard_preview_opened"
+  | "popup_viewed"
+  | "popup_dismissed"
+  | "popup_converted"
   | "checkout_started"
   | "checkout_redirected"
   | "checkout_failed";
@@ -264,6 +270,20 @@ function withinDays(createdAt: string, days: number, now: Date): boolean {
   return new Date(createdAt).getTime() >= cutoff;
 }
 
+function hasMeaningfulEngagement(rows: SiteAnalyticsEventRow[]): boolean {
+  return rows.some((row) =>
+    [
+      "cta_clicked",
+      "scroll_depth",
+      "engaged_session_10s",
+      "racecard_preview_opened",
+      "popup_converted",
+      "checkout_started",
+      "checkout_redirected",
+    ].includes(row.event_name),
+  );
+}
+
 export function summarizeSiteAnalytics(
   events: SiteAnalyticsEventRow[],
   transactions: TransactionAnalyticsRow[],
@@ -303,7 +323,7 @@ export function summarizeSiteAnalytics(
   for (const sessionRows of sessionMap.values()) {
     const ordered = [...sessionRows].sort((a, b) => a.created_at.localeCompare(b.created_at));
     const sessionPageViews = ordered.filter((row) => row.event_name === "page_view");
-    if (sessionPageViews.length <= 1) bounces += 1;
+    if (sessionPageViews.length <= 1 && !hasMeaningfulEngagement(ordered)) bounces += 1;
     const lastPage = [...ordered].reverse().find((row) => row.path)?.path;
     if (lastPage && !ordered.some((row) => row.event_name === "checkout_started")) {
       exitPageCounts.set(lastPage, (exitPageCounts.get(lastPage) ?? 0) + 1);
@@ -341,7 +361,12 @@ export function summarizeSiteAnalytics(
   for (const [key, item] of sourceMap) {
     for (const sessionId of item.sessions) {
       const sessionRows = sessionMap.get(sessionId) ?? [];
-      if (sessionRows.filter((row) => row.event_name === "page_view").length <= 1) item.bounces += 1;
+      if (
+        sessionRows.filter((row) => row.event_name === "page_view").length <= 1 &&
+        !hasMeaningfulEngagement(sessionRows)
+      ) {
+        item.bounces += 1;
+      }
     }
     sourceMap.set(key, item);
   }
@@ -393,7 +418,7 @@ function buildAnalyticsIssues(summary: Omit<AnalyticsSummary, "issues">): Analyt
     issues.push({
       severity: "high",
       title: "Bounce rate is above the healthy range",
-      detail: `${summary.bounceRate}% of sessions only view one page. Tighten the first screen offer and make the RaceCard purchase path visible before users scroll.`,
+      detail: `${summary.bounceRate}% of sessions leave without a second page or meaningful engagement. Tighten the first screen offer and make the RaceCard sample and purchase path visible before users scroll.`,
     });
   }
 
