@@ -37,6 +37,7 @@ import { AdminUserDetailSheet } from "@/components/admin/AdminUserDetailSheet";
 import { getRacetrackLabel } from "@/lib/racetracks";
 import { PageHero } from "@/components/PageHero";
 import { AdminDeleteUserDialog } from "@/components/admin/AdminDeleteUserDialog";
+import { filterLiveStripeRevenueTransactions } from "@/lib/adminCharts";
 
 const AdminDashboard = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
@@ -102,7 +103,7 @@ const AdminDashboard = () => {
   );
 
   const completedTransactions = useMemo(
-    () => transactions.filter((t) => t.status === "completed"),
+    () => filterLiveStripeRevenueTransactions(transactions),
     [transactions],
   );
 

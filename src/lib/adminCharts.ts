@@ -18,12 +18,25 @@ export function filterFromToday<T extends { created_at: string }>(
   return rows.filter((r) => new Date(r.created_at).getTime() >= start.getTime());
 }
 
+type RevenueTransaction = {
+  amount: number;
+  status: string;
+  stripe_session_id?: string | null;
+};
+
+export function isLiveStripeRevenueTransaction(row: RevenueTransaction): boolean {
+  return row.status === "completed" && Number(row.amount) > 0 && row.stripe_session_id?.startsWith("cs_live_") === true;
+}
+
+export function filterLiveStripeRevenueTransactions<T extends RevenueTransaction>(rows: T[]): T[] {
+  return rows.filter(isLiveStripeRevenueTransaction);
+}
+
 export function sumByDayAmount(
-  rows: { created_at: string; amount: number; status: string }[],
+  rows: { created_at: string; amount: number; status: string; stripe_session_id?: string | null }[],
 ): { date: string; amount: number }[] {
   const map = new Map<string, number>();
-  for (const r of rows) {
-    if (r.status !== "completed") continue;
+  for (const r of filterLiveStripeRevenueTransactions(rows)) {
     const d = toDateKey(r.created_at);
     map.set(d, (map.get(d) ?? 0) + Number(r.amount));
   }
@@ -44,11 +57,10 @@ export function countByDay(rows: { created_at: string }[]): { date: string; coun
 }
 
 export function sumByPackage(
-  rows: { package_name: string; amount: number; status: string }[],
+  rows: { package_name: string; amount: number; status: string; stripe_session_id?: string | null }[],
 ): { name: string; amount: number; count: number }[] {
   const map = new Map<string, { amount: number; count: number }>();
-  for (const r of rows) {
-    if (r.status !== "completed") continue;
+  for (const r of filterLiveStripeRevenueTransactions(rows)) {
     const cur = map.get(r.package_name) ?? { amount: 0, count: 0 };
     cur.amount += Number(r.amount);
     cur.count += 1;

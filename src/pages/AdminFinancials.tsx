@@ -34,6 +34,7 @@ import {
   YAxis,
 } from "recharts";
 import {
+  filterLiveStripeRevenueTransactions,
   filterFromToday,
   filterSince,
   sumByDayAmount,
@@ -48,6 +49,7 @@ type Tx = {
   credits: number;
   amount: number;
   status: string;
+  stripe_session_id: string | null;
   user_id: string;
   user_display_name?: string;
 };
@@ -141,7 +143,7 @@ const AdminFinancials = () => {
   const filtered = useMemo(() => filterSince(transactions, days), [transactions, days]);
 
   const completedInRange = useMemo(
-    () => filtered.filter((t) => t.status === "completed"),
+    () => filterLiveStripeRevenueTransactions(filtered),
     [filtered],
   );
 

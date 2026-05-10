@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { exportTransactionsCsv, filterFromToday } from "./adminCharts";
+import {
+  exportTransactionsCsv,
+  filterFromToday,
+  filterLiveStripeRevenueTransactions,
+  sumByDayAmount,
+  sumByPackage,
+} from "./adminCharts";
 
 describe("filterFromToday", () => {
   it("keeps rows from the current local day and excludes older rows", () => {
@@ -31,5 +37,23 @@ describe("exportTransactionsCsv", () => {
 
     expect(csv).toContain("user,user_id");
     expect(csv).toContain('"Ada Lovelace",user-1');
+  });
+});
+
+describe("filterLiveStripeRevenueTransactions", () => {
+  const rows = [
+    { id: "live", created_at: "2026-05-07T12:00:00.000Z", package_name: "Single", amount: 5, status: "completed", stripe_session_id: "cs_live_123" },
+    { id: "test", created_at: "2026-05-07T12:00:00.000Z", package_name: "Single", amount: 5, status: "completed", stripe_session_id: "cs_test_123" },
+    { id: "missing-session", created_at: "2026-05-07T12:00:00.000Z", package_name: "Single", amount: 5, status: "completed", stripe_session_id: null },
+    { id: "pending", created_at: "2026-05-07T12:00:00.000Z", package_name: "Single", amount: 5, status: "pending", stripe_session_id: "cs_live_456" },
+  ];
+
+  it("counts only completed live Stripe checkout sessions as revenue", () => {
+    expect(filterLiveStripeRevenueTransactions(rows).map((row) => row.id)).toEqual(["live"]);
+  });
+
+  it("uses the same live Stripe filter for revenue charts", () => {
+    expect(sumByDayAmount(rows)).toEqual([{ date: "2026-05-07", amount: 5 }]);
+    expect(sumByPackage(rows)).toEqual([{ name: "Single", amount: 5, count: 1 }]);
   });
 });
