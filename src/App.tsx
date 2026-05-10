@@ -30,13 +30,10 @@ import { DataeelAiAssistant } from "./components/DataeelAiAssistant";
 import { SiteAnalyticsTracker } from "./components/SiteAnalyticsTracker";
 import { NewVisitorRacecardOffer } from "./components/NewVisitorRacecardOffer";
 
-const PageEditor = lazy(() => import("./pages/PageEditor"));
 const AdminFinancials = lazy(() => import("./pages/AdminFinancials"));
 const AdminAnalytics = lazy(() => import("./pages/AdminAnalytics"));
 const AdminSupport = lazy(() => import("./pages/AdminSupport"));
 const AdminReports = lazy(() => import("./pages/AdminReports"));
-const AdminPages = lazy(() => import("./pages/AdminPages"));
-const PublicPage = lazy(() => import("./pages/PublicPage"));
 
 const adminChartFallback = (
   <div className="min-h-screen flex items-center justify-center bg-background">
@@ -177,34 +174,8 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/admin/pages"
-                element={
-                  <ProtectedRoute requireAdmin>
-                    <Suspense fallback={adminChartFallback}>
-                      <AdminPages />
-                    </Suspense>
-                  </ProtectedRoute>
-                }
-              />
               <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
               <Route path="/account-settings" element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />
-              <Route path="/admin/page-editor" element={
-                <ProtectedRoute requireAdmin>
-                  <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-background"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>}>
-                    <PageEditor />
-                  </Suspense>
-                </ProtectedRoute>
-              } />
-              {/* Public pages edited via /admin/page-editor render here. */}
-              <Route
-                path="/p/:slug"
-                element={
-                  <Suspense fallback={adminChartFallback}>
-                    <PublicPage />
-                  </Suspense>
-                }
-              />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

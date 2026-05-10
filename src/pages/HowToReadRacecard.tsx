@@ -13,9 +13,25 @@ import racecardAlgorithmsImage from "@/assets/racecard-guide/racecard-guide-page
 import racecardNoDataImage from "@/assets/racecard-guide/racecard-guide-page-07.webp";
 import { useState } from "react";
 
-const INTRO_VIDEO_URL =
-  import.meta.env.VITE_DATAEEL_INTRO_VIDEO_URL?.trim() ||
-  "https://youtu.be/_W9FDrVAVrY";
+const DEFAULT_INTRO_VIDEO_ID = "_W9FDrVAVrY";
+
+function extractYouTubeVideoId(value: string | undefined): string {
+  const trimmed = value?.trim();
+  if (!trimmed) return DEFAULT_INTRO_VIDEO_ID;
+
+  try {
+    const url = new URL(trimmed);
+    if (url.hostname === "youtu.be") return url.pathname.replace("/", "") || DEFAULT_INTRO_VIDEO_ID;
+    if (url.pathname.startsWith("/embed/")) return url.pathname.split("/")[2] || DEFAULT_INTRO_VIDEO_ID;
+    return url.searchParams.get("v") || DEFAULT_INTRO_VIDEO_ID;
+  } catch {
+    return trimmed;
+  }
+}
+
+const INTRO_VIDEO_ID = extractYouTubeVideoId(import.meta.env.VITE_DATAEEL_INTRO_VIDEO_URL);
+const INTRO_VIDEO_EMBED_URL = `https://www.youtube-nocookie.com/embed/${INTRO_VIDEO_ID}?autoplay=1&rel=0&modestbranding=1`;
+const INTRO_VIDEO_COVER_IMAGE = `https://img.youtube.com/vi/${INTRO_VIDEO_ID}/hqdefault.jpg`;
 
 /**
  * Educational content adapted from DATAEEL RaceCard instructions (Nov 2024).
@@ -128,6 +144,7 @@ const HowToReadRacecard = () => {
     alt: string;
     caption: string;
   } | null>(null);
+  const [videoOpen, setVideoOpen] = useState(false);
 
   const openImage = (image: { src: string; alt: string; caption: string }) => {
     setExpandedImage(image);
@@ -158,22 +175,29 @@ const HowToReadRacecard = () => {
         }
         aside={
           <div className="grid w-full max-w-2xl gap-4 sm:grid-cols-2 lg:max-w-none">
-            <a
-              href={INTRO_VIDEO_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex flex-col overflow-hidden rounded-xl border border-white/15 bg-black/80 shadow-xl transition hover:border-primary/40 hover:shadow-neon/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            <button
+              type="button"
+              onClick={() => setVideoOpen(true)}
+              className="group flex flex-col overflow-hidden rounded-xl border border-white/15 bg-black/80 text-left shadow-xl transition hover:border-primary/40 hover:shadow-neon/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
-              <div className="flex items-center justify-between gap-3 px-4 py-3">
-                <span className="text-sm font-semibold text-primary">see our product</span>
-                <span className="inline-flex h-11 w-14 shrink-0 items-center justify-center rounded-md bg-red-600/95">
+              <div className="relative aspect-video overflow-hidden bg-black">
+                <img
+                  src={INTRO_VIDEO_COVER_IMAGE}
+                  alt="DATAEEL RaceCard video cover"
+                  className="h-full w-full object-cover opacity-85 transition duration-300 group-hover:scale-[1.03] group-hover:opacity-100"
+                  loading="eager"
+                  decoding="async"
+                />
+                <span className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent" />
+                <span className="absolute left-1/2 top-1/2 inline-flex h-14 w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-xl bg-red-600/95 shadow-lg transition group-hover:scale-105">
                   <Play className="h-6 w-6 fill-white text-white" aria-hidden />
                 </span>
+                <span className="absolute bottom-3 left-4 text-sm font-semibold text-white">See our product</span>
               </div>
               <div className="border-t border-white/10 px-3 py-2 text-center">
                 <p className="text-xs font-semibold uppercase tracking-wide text-red-400">A Complete Introduction</p>
               </div>
-            </a>
+            </button>
 
             <figure className="flex flex-col overflow-hidden rounded-xl border border-white/10 bg-card/90 shadow-2xl">
               <figcaption className="px-3 py-2 text-center text-xs font-medium text-foreground sm:text-sm">
@@ -300,6 +324,28 @@ const HowToReadRacecard = () => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={videoOpen} onOpenChange={setVideoOpen}>
+        <DialogContent className="max-w-[96vw] border-border bg-card p-4 sm:max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>A Complete Introduction to DATAEEL</DialogTitle>
+            <DialogDescription>
+              Watch the RaceCard walkthrough without leaving this page.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="aspect-video overflow-hidden rounded-lg border border-border bg-black">
+            {videoOpen && (
+              <iframe
+                title="A Complete Introduction to DATAEEL"
+                src={INTRO_VIDEO_EMBED_URL}
+                className="h-full w-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 

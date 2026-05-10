@@ -18,11 +18,9 @@ import {
   BarChart3,
   Settings,
   Package,
-  FileEdit,
   TrendingUp,
   Inbox,
   Table2,
-  LayoutList,
 } from "lucide-react";
 import { sanitizeError } from "@/lib/errorHandler";
 import {
@@ -370,10 +368,8 @@ const AdminDashboard = () => {
     { to: "/admin/reports", title: "Reports", subtitle: "Downloads, credit ledger", icon: Table2 },
     { to: "/admin/financials", title: "Financial dashboard", subtitle: "Revenue, charts, CSV", icon: DollarSign },
     { to: "/admin/analytics", title: "Site analytics", subtitle: "Signups, downloads, audit log", icon: BarChart3 },
-    { to: "/admin/pages", title: "Pages", subtitle: "CMS list & publish", icon: LayoutList },
     { to: "/admin/settings", title: "Settings", subtitle: "Stripe, site, integrations", icon: Settings },
     { to: "/admin/credit-packages", title: "Credit packages", subtitle: "Pricing tiers", icon: Package },
-    { to: "/admin/page-editor", title: "Page editor", subtitle: "Visual editor", icon: FileEdit },
   ] as const;
 
   return (
