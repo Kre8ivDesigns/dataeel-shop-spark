@@ -442,16 +442,18 @@ const RaceCardsBrowse = () => {
                         </Button>
                       ) : (
                         <>
-                          <Button
-                            asChild
-                            variant="outline"
-                            className="flex-1 border-primary/60 text-primary hover:bg-primary/10 font-semibold text-sm h-10"
-                          >
-                            <Link to={`/racecards/${card.id}`}>
-                              <Eye className="mr-1.5 h-4 w-4" />
-                              View digital card
-                            </Link>
-                          </Button>
+                          {owned && (
+                            <Button
+                              asChild
+                              variant="outline"
+                              className="flex-1 border-primary/60 text-primary hover:bg-primary/10 font-semibold text-sm h-10"
+                            >
+                              <Link to={`/racecards/${card.id}`}>
+                                <Eye className="mr-1.5 h-4 w-4" />
+                                View digital card
+                              </Link>
+                            </Button>
+                          )}
                           <Button
                             className="flex-1 bg-primary text-primary-foreground hover:brightness-110 font-semibold text-sm h-10 shadow-neon"
                             onClick={() => void handleDownload(card.id)}
