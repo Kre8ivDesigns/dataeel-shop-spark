@@ -168,7 +168,7 @@ const DigitalRaceCard = () => {
       if (error) throw error;
       return (data ?? []) as unknown as RaceResult[];
     },
-    enabled: !!racecard && !!canonicalTrackCode && unlocked,
+    enabled: !!user && !!racecard && !!canonicalTrackCode,
   });
 
   const digitalRacecard = protectedRacecard ?? racecard;
@@ -176,7 +176,12 @@ const DigitalRaceCard = () => {
   const predictionGroups = useMemo(() => groupPredictions(predictions), [predictions]);
   const resultGroups = useMemo(() => groupResults(raceResults), [raceResults]);
   const raceRows = useMemo(() => {
-    if (!unlocked) return [];
+    if (!unlocked) {
+      const resultRaceNumbers = Array.from(
+        new Set(raceResults.map((result) => result.race_number).filter((raceNumber) => raceNumber > 0)),
+      ).sort((a, b) => a - b);
+      return resultRaceNumbers.map((number) => ({ number }));
+    }
 
     const metadataRows = buildRaceRows(meta, digitalRacecard?.num_races ?? null);
     if (metadataRows.length > 0) return metadataRows;
