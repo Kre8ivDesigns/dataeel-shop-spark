@@ -35,6 +35,14 @@ type RaceResult = {
   result_description: string | null;
   source_url: string;
 };
+type OfficialFinisher = { horseNumber: string | null; horseName: string };
+type PickNotification = {
+  key: string;
+  raceNumber: number;
+  algorithm: string;
+  hitType: "Winner" | "Exacta" | "Trifecta";
+  horses: OfficialFinisher[];
+};
 
 function publicRacecardToRacecard(row: {
   id: string;
@@ -92,19 +100,14 @@ function normalizeHorseName(value: string | null | undefined): string {
     .trim();
 }
 
-function parseOfficialWinner(result: RaceResult): { horseNumber: string | null; horseName: string } | null {
-  const source = result.result_summary || result.result_description || "";
-  const match = /\b1st:\s*([^;\n]+)/i.exec(source);
-  if (!match) return null;
-
-  const winnerText = match[1]
+function parseFinisherText(value: string): OfficialFinisher | null {
+  const finisherText = value
     .replace(/\$[\d,.]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-  const parsed = /^([A-Z0-9]+)\s+(.+)$/i.exec(winnerText);
+  const parsed = /^([A-Z0-9]+)\s+(.+)$/i.exec(finisherText);
   if (!parsed) {
-    const horseName = winnerText.trim();
-    return horseName ? { horseNumber: null, horseName } : null;
+    return finisherText ? { horseNumber: null, horseName: finisherText } : null;
   }
 
   return {
@@ -113,38 +116,66 @@ function parseOfficialWinner(result: RaceResult): { horseNumber: string | null; 
   };
 }
 
-function didPickWin(pick: Prediction, winner: { horseNumber: string | null; horseName: string }): boolean {
-  const pickNumber = normalizeProgramNumber(pick.horse_number);
-  if (winner.horseNumber && pickNumber && winner.horseNumber === pickNumber) return true;
-  return normalizeHorseName(pick.horse_name) === normalizeHorseName(winner.horseName);
+function parseOfficialFinishers(result: RaceResult): OfficialFinisher[] {
+  const source = result.result_summary || result.result_description || "";
+  const finishers: OfficialFinisher[] = [];
+  const re = /\b(1st|2nd|3rd):\s*([^;\n]+)/gi;
+  for (const match of source.matchAll(re)) {
+    const finisher = parseFinisherText(match[2]);
+    if (finisher) finishers.push(finisher);
+  }
+  return finishers;
 }
 
-function findWinningPickNotifications(predictions: Prediction[], results: RaceResult[]) {
+function didPickMatch(pick: Prediction, finisher: OfficialFinisher): boolean {
+  const pickNumber = normalizeProgramNumber(pick.horse_number);
+  if (finisher.horseNumber && pickNumber && finisher.horseNumber === pickNumber) return true;
+  return normalizeHorseName(pick.horse_name) === normalizeHorseName(finisher.horseName);
+}
+
+function didPicksMatchFinishOrder(picks: Prediction[], finishers: OfficialFinisher[], count: number): boolean {
+  if (picks.length < count || finishers.length < count) return false;
+  return Array.from({ length: count }, (_, idx) => didPickMatch(picks[idx], finishers[idx])).every(Boolean);
+}
+
+function findPickNotifications(predictions: Prediction[], results: RaceResult[]): PickNotification[] {
   const predictionsByRace = groupPredictions(predictions);
   const resultsByRace = groupResults(results);
-  const hits: Array<{ key: string; raceNumber: number; algorithm: string; horseName: string; horseNumber: string | null }> = [];
+  const hits: PickNotification[] = [];
+  const hitTypes: Array<{ label: PickNotification["hitType"]; count: number }> = [
+    { label: "Winner", count: 1 },
+    { label: "Exacta", count: 2 },
+    { label: "Trifecta", count: 3 },
+  ];
 
   for (const [raceNumberText, raceResults] of Object.entries(resultsByRace)) {
     const raceNumber = Number(raceNumberText);
-    const winner = raceResults.map(parseOfficialWinner).find((value): value is NonNullable<typeof value> => value !== null);
-    if (!winner) continue;
+    const finishers = raceResults.map(parseOfficialFinishers).find((value) => value.length > 0) ?? [];
+    if (finishers.length === 0) continue;
 
     const byAlgorithm = predictionsByRace[raceNumber] ?? {};
     for (const algorithm of ["Concert", "Aptitude"]) {
-      const topPick = (byAlgorithm[algorithm] ?? []).find((pick) => pick.rank === 1);
-      if (topPick && didPickWin(topPick, winner)) {
-        hits.push({
-          key: `${raceNumber}-${algorithm}-${topPick.id}`,
-          raceNumber,
-          algorithm,
-          horseName: topPick.horse_name,
-          horseNumber: topPick.horse_number ? normalizeProgramNumber(topPick.horse_number) : winner.horseNumber,
-        });
+      const rankedPicks = [...(byAlgorithm[algorithm] ?? [])].sort((a, b) => a.rank - b.rank);
+      for (const hitType of hitTypes) {
+        if (didPicksMatchFinishOrder(rankedPicks, finishers, hitType.count)) {
+          hits.push({
+            key: `${raceNumber}-${algorithm}-${hitType.label}`,
+            raceNumber,
+            algorithm,
+            hitType: hitType.label,
+            horses: finishers.slice(0, hitType.count),
+          });
+        }
       }
     }
   }
 
-  return hits.sort((a, b) => a.raceNumber - b.raceNumber || a.algorithm.localeCompare(b.algorithm));
+  return hits.sort(
+    (a, b) =>
+      a.raceNumber - b.raceNumber ||
+      a.algorithm.localeCompare(b.algorithm) ||
+      a.horses.length - b.horses.length,
+  );
 }
 
 function formatRaceDate(value: string | null | undefined): string {
@@ -247,8 +278,8 @@ const DigitalRaceCard = () => {
   const meta = useMemo(() => parseRacecardMetadata(digitalRacecard?.metadata), [digitalRacecard?.metadata]);
   const predictionGroups = useMemo(() => groupPredictions(predictions), [predictions]);
   const resultGroups = useMemo(() => groupResults(raceResults), [raceResults]);
-  const winningPickNotifications = useMemo(
-    () => (unlocked ? findWinningPickNotifications(predictions, raceResults) : []),
+  const pickNotifications = useMemo(
+    () => (unlocked ? findPickNotifications(predictions, raceResults) : []),
     [predictions, raceResults, unlocked],
   );
   const raceRows = useMemo(() => {
@@ -362,7 +393,7 @@ const DigitalRaceCard = () => {
                 <TrackWeatherBadge trackCode={racecard.track_code} profile={trackProfile} />
               </section>
 
-              {winningPickNotifications.length > 0 && (
+              {pickNotifications.length > 0 && (
                 <section className="rounded-xl border border-primary/45 bg-primary/10 p-5 shadow-[0_0_28px_hsl(var(--primary)/0.12)]">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="flex gap-3">
@@ -371,26 +402,27 @@ const DigitalRaceCard = () => {
                       </div>
                       <div>
                         <div className="text-sm font-semibold uppercase tracking-wide text-primary">
-                          Winner notification
+                          Winning results
                         </div>
                         <h2 className="mt-1 font-heading text-xl font-bold text-foreground">
-                          DATAEEL top pick matched the official winner
+                          DATAEEL picks matched official payouts
                         </h2>
                         <p className="mt-1 text-sm text-muted-foreground">
-                          Official results are posted for this card and these rank 1 selections finished first.
+                          Official results are posted for this card and these selections matched the finish order.
                         </p>
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-2 lg:max-w-[55%] lg:justify-end">
-                      {winningPickNotifications.map((hit) => (
+                      {pickNotifications.map((hit) => (
                         <div
                           key={hit.key}
                           className="rounded-full border border-primary/35 bg-background/70 px-3 py-1.5 text-sm font-semibold text-foreground"
                         >
-                          {hit.algorithm} Race {hit.raceNumber}:{" "}
+                          {hit.algorithm} {hit.hitType} Race {hit.raceNumber}:{" "}
                           <span className="text-primary">
-                            {hit.horseNumber ? `${hit.horseNumber} ` : ""}
-                            {hit.horseName}
+                            {hit.horses
+                              .map((horse) => `${horse.horseNumber ? `${horse.horseNumber} ` : ""}${horse.horseName}`)
+                              .join(" / ")}
                           </span>
                         </div>
                       ))}
