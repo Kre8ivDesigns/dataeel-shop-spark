@@ -90,18 +90,19 @@ const DigitalRaceCard = () => {
   });
 
   const { data: hasDownload = false, isLoading: ownershipLoading } = useQuery({
-    queryKey: ["racecard-ownership", user?.id, racecardId],
+    queryKey: ["racecard-ownership", user?.id, canonicalTrackCode, racecard?.race_date],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("racecard_downloads")
-        .select("id")
+        .select("id, racecards!inner(track_code, race_date)")
         .eq("user_id", user!.id)
-        .eq("racecard_id", racecardId!)
+        .eq("racecards.track_code", canonicalTrackCode)
+        .eq("racecards.race_date", racecard!.race_date)
         .limit(1);
       if (error) throw error;
       return (data ?? []).length > 0;
     },
-    enabled: !!user && !!racecardId,
+    enabled: !!user && !!canonicalTrackCode && !!racecard?.race_date,
   });
 
   const unlocked = isAdmin || hasDownload;
@@ -136,13 +137,15 @@ const DigitalRaceCard = () => {
       if (error) throw error;
       return (data ?? []) as unknown as RaceResult[];
     },
-    enabled: !!racecard && !!canonicalTrackCode,
+    enabled: !!racecard && !!canonicalTrackCode && unlocked,
   });
 
   const meta = useMemo(() => parseRacecardMetadata(racecard?.metadata), [racecard?.metadata]);
   const predictionGroups = useMemo(() => groupPredictions(predictions), [predictions]);
   const resultGroups = useMemo(() => groupResults(raceResults), [raceResults]);
   const raceRows = useMemo(() => {
+    if (!unlocked) return [];
+
     const metadataRows = buildRaceRows(meta, racecard?.num_races ?? null);
     if (metadataRows.length > 0) return metadataRows;
 
@@ -153,7 +156,7 @@ const DigitalRaceCard = () => {
       ].filter((raceNumber) => raceNumber > 0)),
     ).sort((a, b) => a - b);
     return predictionRaceNumbers.map((number) => ({ number }));
-  }, [meta, predictions, raceResults, racecard?.num_races]);
+  }, [meta, predictions, raceResults, racecard?.num_races, unlocked]);
   const trackProfile = canonicalTrackCode ? profileByCode[canonicalTrackCode] ?? null : null;
   const trackWebsite = trackProfile?.official_url ?? getRacetrackWebsite(racecard?.track_code);
   const location = getRacetrackLocation(racecard?.track_code);
