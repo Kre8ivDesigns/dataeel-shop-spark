@@ -75,6 +75,78 @@ function groupResults(results: RaceResult[]) {
   }, {});
 }
 
+function normalizeProgramNumber(value: string | null | undefined): string {
+  return String(value ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
+}
+
+function normalizeHorseName(value: string | null | undefined): string {
+  return String(value ?? "")
+    .toUpperCase()
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/\b(?:FR|GB|IRE|JPN|ARG|BRZ|CHI|AUS|CAN)\b/g, " ")
+    .replace(/[^A-Z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function parseOfficialWinner(result: RaceResult): { horseNumber: string | null; horseName: string } | null {
+  const source = result.result_summary || result.result_description || "";
+  const match = /\b1st:\s*([^;\n]+)/i.exec(source);
+  if (!match) return null;
+
+  const winnerText = match[1]
+    .replace(/\$[\d,.]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const parsed = /^([A-Z0-9]+)\s+(.+)$/i.exec(winnerText);
+  if (!parsed) {
+    const horseName = winnerText.trim();
+    return horseName ? { horseNumber: null, horseName } : null;
+  }
+
+  return {
+    horseNumber: normalizeProgramNumber(parsed[1]) || null,
+    horseName: parsed[2].trim(),
+  };
+}
+
+function didPickWin(pick: Prediction, winner: { horseNumber: string | null; horseName: string }): boolean {
+  const pickNumber = normalizeProgramNumber(pick.horse_number);
+  if (winner.horseNumber && pickNumber && winner.horseNumber === pickNumber) return true;
+  return normalizeHorseName(pick.horse_name) === normalizeHorseName(winner.horseName);
+}
+
+function findWinningPickNotifications(predictions: Prediction[], results: RaceResult[]) {
+  const predictionsByRace = groupPredictions(predictions);
+  const resultsByRace = groupResults(results);
+  const hits: Array<{ key: string; raceNumber: number; algorithm: string; horseName: string; horseNumber: string | null }> = [];
+
+  for (const [raceNumberText, raceResults] of Object.entries(resultsByRace)) {
+    const raceNumber = Number(raceNumberText);
+    const winner = raceResults.map(parseOfficialWinner).find((value): value is NonNullable<typeof value> => value !== null);
+    if (!winner) continue;
+
+    const byAlgorithm = predictionsByRace[raceNumber] ?? {};
+    for (const algorithm of ["Concert", "Aptitude"]) {
+      const topPick = (byAlgorithm[algorithm] ?? []).find((pick) => pick.rank === 1);
+      if (topPick && didPickWin(topPick, winner)) {
+        hits.push({
+          key: `${raceNumber}-${algorithm}-${topPick.id}`,
+          raceNumber,
+          algorithm,
+          horseName: topPick.horse_name,
+          horseNumber: topPick.horse_number ? normalizeProgramNumber(topPick.horse_number) : winner.horseNumber,
+        });
+      }
+    }
+  }
+
+  return hits.sort((a, b) => a.raceNumber - b.raceNumber || a.algorithm.localeCompare(b.algorithm));
+}
+
 function formatRaceDate(value: string | null | undefined): string {
   if (!value) return "Race date unavailable";
   try {
@@ -175,6 +247,10 @@ const DigitalRaceCard = () => {
   const meta = useMemo(() => parseRacecardMetadata(digitalRacecard?.metadata), [digitalRacecard?.metadata]);
   const predictionGroups = useMemo(() => groupPredictions(predictions), [predictions]);
   const resultGroups = useMemo(() => groupResults(raceResults), [raceResults]);
+  const winningPickNotifications = useMemo(
+    () => (unlocked ? findWinningPickNotifications(predictions, raceResults) : []),
+    [predictions, raceResults, unlocked],
+  );
   const raceRows = useMemo(() => {
     if (!unlocked) {
       const resultRaceNumbers = Array.from(
@@ -285,6 +361,43 @@ const DigitalRaceCard = () => {
                 </div>
                 <TrackWeatherBadge trackCode={racecard.track_code} profile={trackProfile} />
               </section>
+
+              {winningPickNotifications.length > 0 && (
+                <section className="rounded-xl border border-primary/45 bg-primary/10 p-5 shadow-[0_0_28px_hsl(var(--primary)/0.12)]">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="flex gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                        <Trophy className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold uppercase tracking-wide text-primary">
+                          Winner notification
+                        </div>
+                        <h2 className="mt-1 font-heading text-xl font-bold text-foreground">
+                          DATAEEL top pick matched the official winner
+                        </h2>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Official results are posted for this card and these rank 1 selections finished first.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2 lg:max-w-[55%] lg:justify-end">
+                      {winningPickNotifications.map((hit) => (
+                        <div
+                          key={hit.key}
+                          className="rounded-full border border-primary/35 bg-background/70 px-3 py-1.5 text-sm font-semibold text-foreground"
+                        >
+                          {hit.algorithm} Race {hit.raceNumber}:{" "}
+                          <span className="text-primary">
+                            {hit.horseNumber ? `${hit.horseNumber} ` : ""}
+                            {hit.horseName}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </section>
+              )}
 
               <section className="space-y-3">
                 {raceRows.length === 0 ? (
