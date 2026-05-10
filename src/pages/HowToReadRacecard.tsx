@@ -15,7 +15,7 @@ import { useState } from "react";
 
 const INTRO_VIDEO_URL =
   import.meta.env.VITE_DATAEEL_INTRO_VIDEO_URL?.trim() ||
-  "https://www.youtube.com/results?search_query=DATAEEL+complete+introduction";
+  "https://youtu.be/_W9FDrVAVrY";
 
 /**
  * Educational content adapted from DATAEEL RaceCard instructions (Nov 2024).
