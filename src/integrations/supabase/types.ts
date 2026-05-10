@@ -361,6 +361,72 @@ export type Database = {
         }
         Relationships: []
       }
+      site_analytics_events: {
+        Row: {
+          id: string
+          created_at: string
+          event_name: string
+          visitor_id: string
+          session_id: string
+          user_id: string | null
+          path: string | null
+          page_title: string | null
+          referrer: string | null
+          referrer_host: string | null
+          source: string
+          medium: string
+          campaign: string | null
+          content: string | null
+          term: string | null
+          device_type: "desktop" | "tablet" | "mobile"
+          is_new_visitor: boolean
+          first_seen_at: string
+          properties: Json
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          event_name: string
+          visitor_id: string
+          session_id: string
+          user_id?: string | null
+          path?: string | null
+          page_title?: string | null
+          referrer?: string | null
+          referrer_host?: string | null
+          source?: string
+          medium?: string
+          campaign?: string | null
+          content?: string | null
+          term?: string | null
+          device_type?: "desktop" | "tablet" | "mobile"
+          is_new_visitor?: boolean
+          first_seen_at?: string
+          properties?: Json
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          event_name?: string
+          visitor_id?: string
+          session_id?: string
+          user_id?: string | null
+          path?: string | null
+          page_title?: string | null
+          referrer?: string | null
+          referrer_host?: string | null
+          source?: string
+          medium?: string
+          campaign?: string | null
+          content?: string | null
+          term?: string | null
+          device_type?: "desktop" | "tablet" | "mobile"
+          is_new_visitor?: boolean
+          first_seen_at?: string
+          properties?: Json
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

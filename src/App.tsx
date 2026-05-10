@@ -27,6 +27,7 @@ import HowToReadRacecard from "./pages/HowToReadRacecard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { HomeSectionHashRedirect } from "./components/HomeSectionHashRedirect";
 import { DataeelAiAssistant } from "./components/DataeelAiAssistant";
+import { SiteAnalyticsTracker } from "./components/SiteAnalyticsTracker";
 
 const PageEditor = lazy(() => import("./pages/PageEditor"));
 const AdminFinancials = lazy(() => import("./pages/AdminFinancials"));
@@ -117,6 +118,7 @@ const App = () => (
           <ScrollToTop />
           <AuthProvider>
             <HomeSectionHashRedirect />
+            <SiteAnalyticsTracker />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/pricing" element={<Pricing />} />

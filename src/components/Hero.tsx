@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-racing.jpg";
 import { supabase } from "@/integrations/supabase/client";
+import { buildTickerLoopItems, tickerDurationSeconds } from "@/lib/breakingNewsTicker";
 
 const FALLBACK_NEWS = [
   "Concert algorithm picks Winner in race#1, race#2, race#3, race#6, race#7; Belmont At Big A May1, 2026",
@@ -63,6 +64,9 @@ const trustBadges = [
 
 export const Hero = () => {
   const [tickerItems, setTickerItems] = useState<string[]>(FALLBACK_NEWS);
+  const tickerLoopItems = buildTickerLoopItems(tickerItems);
+  const renderedTickerItems = [...tickerLoopItems, ...tickerLoopItems];
+  const tickerDuration = tickerDurationSeconds(tickerLoopItems);
 
   useEffect(() => {
     supabase
@@ -102,8 +106,11 @@ export const Hero = () => {
             Breaking News
           </div>
           <div className="overflow-hidden flex-1 min-w-0">
-            <div className="flex w-max min-w-full whitespace-nowrap animate-ticker-scroll will-change-transform motion-reduce:animate-none">
-              {[...tickerItems, ...tickerItems].map((news, i) => (
+            <div
+              className="flex w-max min-w-full whitespace-nowrap animate-ticker-scroll will-change-transform motion-reduce:animate-none"
+              style={{ animationDuration: `${tickerDuration}s` }}
+            >
+              {renderedTickerItems.map((news, i) => (
                 <span key={i} className="inline-flex items-center text-sm text-foreground/80 mx-8 shrink-0">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary mr-3 flex-shrink-0" />
                   {news}

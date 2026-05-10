@@ -23,6 +23,7 @@ import { useCreditPackages } from "@/lib/queries/creditPackages";
 import { EMPTY_CREDIT_SNAPSHOT } from "@/lib/creditDisplay";
 import { StripeTestModeDevBanner } from "@/components/StripeTestModeDevBanner";
 import { PageHero } from "@/components/PageHero";
+import { trackSiteEvent } from "@/lib/siteAnalytics";
 
 // Static display metadata keyed by package name (lowercase) for UI enrichment
 const PACKAGE_META: Record<string, { pricePerCredit?: number; savings?: number; popular?: boolean; description?: string; features?: string[] }> = {
@@ -100,6 +101,17 @@ const BuyCredits = () => {
       return;
     }
     setPurchasing(true);
+    void trackSiteEvent(
+      "checkout_started",
+      {
+        credits: selected.credits,
+        package_id: selected.id,
+        package_name: selected.name,
+        price: selected.price,
+        unlimited_credits: selected.unlimited_credits,
+      },
+      user.id,
+    );
     try {
       const { data, error, response: invokeResponse } = await supabase.functions.invoke("create-checkout-session", {
         body: { packageId: selected.id },
@@ -108,21 +120,26 @@ const BuyCredits = () => {
       if (error) {
         const msg = await getInvokeErrorMessage("create-checkout-session", error, data, invokeResponse);
         console.error("Purchase error:", error);
+        void trackSiteEvent("checkout_failed", { reason: "edge_function_error" }, user.id);
         toast.error(msg);
         return;
       }
       if (payload?.error) {
+        void trackSiteEvent("checkout_failed", { reason: "payload_error" }, user.id);
         toast.error(payload.error);
         return;
       }
       if (payload?.url) {
+        void trackSiteEvent("checkout_redirected", { package_id: selected.id }, user.id);
         window.location.href = payload.url;
         return;
       }
+      void trackSiteEvent("checkout_failed", { reason: "missing_checkout_url" }, user.id);
       toast.error("No checkout URL returned from the server.");
     } catch (err: unknown) {
       console.error("Purchase error:", err);
       const msg = await getInvokeErrorMessage("create-checkout-session", err, null);
+      void trackSiteEvent("checkout_failed", { reason: "unexpected_error" }, user.id);
       toast.error(msg);
     } finally {
       setPurchasing(false);
