@@ -51,6 +51,15 @@ function weatherCodeLabel(code: number | null): string {
   return WEATHER_CODE_LABELS[code] ?? "Current weather";
 }
 
+function parseCoordinate(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value.trim());
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
 export function formatTrackLocalTime(timezone: string | null | undefined, now = new Date()): string | null {
   if (!timezone) return null;
   try {
@@ -66,15 +75,12 @@ export function formatTrackLocalTime(timezone: string | null | undefined, now = 
 }
 
 function resolveWeatherLocation(trackCode: string, profile?: RacetrackProfile | null) {
-  if (
-    profile &&
-    typeof profile.latitude === "number" &&
-    typeof profile.longitude === "number" &&
-    profile.timezone
-  ) {
+  const latitude = parseCoordinate(profile?.latitude);
+  const longitude = parseCoordinate(profile?.longitude);
+  if (latitude !== null && longitude !== null && profile?.timezone) {
     return {
-      latitude: profile.latitude,
-      longitude: profile.longitude,
+      latitude,
+      longitude,
       timezone: profile.timezone,
     };
   }

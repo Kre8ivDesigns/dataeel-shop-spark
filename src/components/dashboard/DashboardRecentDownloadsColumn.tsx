@@ -2,7 +2,8 @@ import { useCallback, useState } from "react";
 import { motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow, isValid } from "date-fns";
-import { Download, FileText, Loader2 } from "lucide-react";
+import { Download, Eye, FileText, Loader2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -198,7 +199,21 @@ export function DashboardRecentDownloadsColumn({ loading, recentDownloads }: Pro
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-stretch sm:items-center shrink-0 w-full sm:w-auto sm:max-w-[14rem]">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center shrink-0 w-full sm:w-auto gap-2">
+                    {rc && (
+                      <Button
+                        asChild
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="w-full sm:w-auto border-primary/60 text-primary hover:bg-primary/10 text-xs min-h-9"
+                      >
+                        <Link to={`/racecards/${dl.racecard_id}`} aria-label={`View digital card for ${title}`}>
+                          <Eye className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                          Digital Card
+                        </Link>
+                      </Button>
+                    )}
                     <Button
                       type="button"
                       size="sm"

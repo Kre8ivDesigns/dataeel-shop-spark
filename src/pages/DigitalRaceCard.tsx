@@ -1,7 +1,8 @@
 import { useMemo } from "react";
+import { format, parseISO } from "date-fns";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, CalendarDays, ExternalLink, Lock, MapPin, Trophy } from "lucide-react";
+import { ArrowLeft, CalendarDays, CreditCard, ExternalLink, Lock, MapPin, Trophy } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { PageHero } from "@/components/PageHero";
@@ -35,6 +36,15 @@ function groupPredictions(predictions: Prediction[]) {
     acc[prediction.race_number] = raceGroup;
     return acc;
   }, {});
+}
+
+function formatRaceDate(value: string | null | undefined): string {
+  if (!value) return "Race date unavailable";
+  try {
+    return format(parseISO(value), "MMMM d, yyyy");
+  } catch {
+    return value;
+  }
 }
 
 const DigitalRaceCard = () => {
@@ -90,14 +100,23 @@ const DigitalRaceCard = () => {
     enabled: !!racecardId && unlocked,
   });
 
-  const meta = parseRacecardMetadata(racecard?.metadata);
-  const raceRows = buildRaceRows(meta, racecard?.num_races ?? null);
+  const meta = useMemo(() => parseRacecardMetadata(racecard?.metadata), [racecard?.metadata]);
   const predictionGroups = useMemo(() => groupPredictions(predictions), [predictions]);
+  const raceRows = useMemo(() => {
+    const metadataRows = buildRaceRows(meta, racecard?.num_races ?? null);
+    if (metadataRows.length > 0) return metadataRows;
+
+    const predictionRaceNumbers = Array.from(
+      new Set(predictions.map((prediction) => prediction.race_number).filter((raceNumber) => raceNumber > 0)),
+    ).sort((a, b) => a - b);
+    return predictionRaceNumbers.map((number) => ({ number }));
+  }, [meta, predictions, racecard?.num_races]);
   const canonicalTrackCode = extractCanonicalTrackCode(racecard?.track_code);
   const trackProfile = canonicalTrackCode ? profileByCode[canonicalTrackCode] ?? null : null;
   const trackWebsite = trackProfile?.official_url ?? getRacetrackWebsite(racecard?.track_code);
   const location = getRacetrackLocation(racecard?.track_code);
   const title = racecard ? (trackProfile?.display_name ?? getRacetrackLabel(racecard.track_code)) : "RaceCard";
+  const raceDateDisplay = formatRaceDate(racecard?.race_date);
   const loading = racecardLoading || ownershipLoading;
 
   return (
@@ -113,7 +132,7 @@ const DigitalRaceCard = () => {
               {title} <span className="text-neon">{canonicalTrackCode}</span>
             </>
           }
-          subtitle={racecard ? `${racecard.race_date}${metadataListingLine(meta) ? ` · ${metadataListingLine(meta)}` : ""}` : "Loading RaceCard"}
+          subtitle={racecard ? `${raceDateDisplay}${metadataListingLine(meta) ? ` · ${metadataListingLine(meta)}` : ""}` : "Loading RaceCard"}
           align="left"
           aside={
             trackWebsite ? (
@@ -150,7 +169,7 @@ const DigitalRaceCard = () => {
                     <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                       <span className="inline-flex items-center gap-1.5">
                         <CalendarDays className="h-4 w-4 text-primary" />
-                        {racecard.race_date}
+                        {raceDateDisplay}
                       </span>
                       {location && (
                         <span className="inline-flex items-center gap-1.5">
@@ -173,6 +192,12 @@ const DigitalRaceCard = () => {
                       <p className="mt-1 text-xs text-muted-foreground">
                         DATAEEL Concert and Aptitude selections unlock after this card is purchased.
                       </p>
+                      <Button asChild className="mt-3 bg-primary text-primary-foreground font-semibold">
+                        <Link to="/racecards">
+                          <CreditCard className="mr-2 h-4 w-4" />
+                          Purchase RaceCard
+                        </Link>
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -182,7 +207,11 @@ const DigitalRaceCard = () => {
               <section className="space-y-3">
                 {raceRows.length === 0 ? (
                   <div className="card-dark p-6 text-sm text-muted-foreground">
-                    Race details are not posted yet. Check the official track website for the latest schedule.
+                    {unlocked && predictionsLoading
+                      ? "Loading DATAEEL selections..."
+                      : unlocked
+                      ? "Digital selections are not posted for this RaceCard yet."
+                      : "Race details are not posted yet. Check the official track website for the latest schedule."}
                   </div>
                 ) : (
                   raceRows.map((race) => {

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { extractCanonicalTrackCode, getRacetrackLabel, normalizeTrackCode } from "./racetracks";
+import {
+  RACETRACK_BY_CODE,
+  extractCanonicalTrackCode,
+  getRacetrackLabel,
+  getRacetrackWeatherLocation,
+  normalizeTrackCode,
+} from "./racetracks";
 
 describe("getRacetrackLabel", () => {
   const churchill = "Churchill Downs";
@@ -33,5 +39,13 @@ describe("extractCanonicalTrackCode", () => {
   it("handles nullish without throwing", () => {
     expect(extractCanonicalTrackCode(null)).toBe("");
     expect(extractCanonicalTrackCode(undefined)).toBe("");
+  });
+});
+
+describe("getRacetrackWeatherLocation", () => {
+  it("has a weather fallback for every known racetrack code", () => {
+    Object.keys(RACETRACK_BY_CODE).forEach((trackCode) => {
+      expect(getRacetrackWeatherLocation(trackCode), trackCode).not.toBeNull();
+    });
   });
 });

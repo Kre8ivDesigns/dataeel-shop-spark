@@ -52,7 +52,7 @@ VALUES
   ('BEL', 'Belmont Park', 'https://www.nyra.com/belmont/', 40.7147, -73.7225, 'America/New_York'),
   ('BTP', 'Belterra Park', 'https://www.belterrapark.com/racing', 39.1006, -84.6114, 'America/New_York'),
   ('CD', 'Churchill Downs', 'https://www.churchilldowns.com/', 38.2029, -85.7714, 'America/Kentucky/Louisville'),
-  ('CMR', 'Camarero Race Track', 'https://hipodromocamarero.com/', 18.3894, -65.8761, 'America/Puerto_Rico'),
+  ('CMR', 'Camarero Race Track', 'https://www.hipodromo-camarero.com', 18.3894, -65.8761, 'America/Puerto_Rico'),
   ('CT', 'Charles Town', 'https://www.hollywoodcasinocharlestown.com/racing', 39.2967, -77.8606, 'America/New_York'),
   ('DED', 'Delta Downs', 'https://www.deltadownsracing.com/', 30.1956, -93.5813, 'America/Chicago'),
   ('DMR', 'Del Mar', 'https://www.dmtc.com/', 32.9753, -117.2606, 'America/Los_Angeles'),
