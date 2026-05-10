@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
     }
 
     // Get racecard info
-    const { data: racecard, error: rcError } = await supabaseUser
+    const { data: racecard, error: rcError } = await supabaseAdmin
       .from("racecards")
       .select("*")
       .eq("id", racecardId)

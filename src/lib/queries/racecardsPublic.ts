@@ -13,7 +13,7 @@ const RACE_LIST_GC_MS = 30 * 60 * 1000;
 
 export async function fetchRacecardsPublicByDate(raceDate: string): Promise<RacecardPublicRow[]> {
   const { data, error } = await supabase
-    .from("racecards")
+    .from("racecards_public")
     .select("id, track_name, track_code, race_date, num_races, metadata")
     .eq("race_date", raceDate)
     .order("track_name");

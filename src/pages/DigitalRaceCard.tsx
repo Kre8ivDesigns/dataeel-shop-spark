@@ -36,6 +36,21 @@ type RaceResult = {
   source_url: string;
 };
 
+function publicRacecardToRacecard(row: {
+  id: string;
+  track_name: string;
+  track_code: string;
+  race_date: string;
+  num_races: number | null;
+  metadata: Tables<"racecards">["metadata"];
+}): Racecard {
+  return {
+    ...row,
+    digitization_status: "not_started",
+    digitization_error: null,
+  };
+}
+
 function algorithmLabel(algorithm: string): string {
   const normalized = algorithm.trim().toLowerCase();
   if (normalized.includes("concert")) return "Concert";
@@ -79,12 +94,12 @@ const DigitalRaceCard = () => {
     queryKey: ["racecard-detail", racecardId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("racecards")
-        .select("id, track_name, track_code, race_date, num_races, metadata, digitization_status, digitization_error")
+        .from("racecards_public")
+        .select("id, track_name, track_code, race_date, num_races, metadata")
         .eq("id", racecardId!)
         .maybeSingle();
       if (error) throw error;
-      return data as Racecard | null;
+      return data ? publicRacecardToRacecard(data) : null;
     },
     enabled: !!racecardId,
   });
@@ -110,6 +125,20 @@ const DigitalRaceCard = () => {
   });
 
   const unlocked = isAdmin || hasDownload;
+
+  const { data: protectedRacecard } = useQuery({
+    queryKey: ["racecard-protected-detail", racecardId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("racecards")
+        .select("id, track_name, track_code, race_date, num_races, metadata, digitization_status, digitization_error")
+        .eq("id", racecardId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data as Racecard | null;
+    },
+    enabled: !!racecardId && unlocked,
+  });
 
   const { data: predictions = [], isLoading: predictionsLoading } = useQuery({
     queryKey: ["racecard-predictions", racecardId],
@@ -142,13 +171,14 @@ const DigitalRaceCard = () => {
     enabled: !!racecard && !!canonicalTrackCode && unlocked,
   });
 
-  const meta = useMemo(() => parseRacecardMetadata(racecard?.metadata), [racecard?.metadata]);
+  const digitalRacecard = protectedRacecard ?? racecard;
+  const meta = useMemo(() => parseRacecardMetadata(digitalRacecard?.metadata), [digitalRacecard?.metadata]);
   const predictionGroups = useMemo(() => groupPredictions(predictions), [predictions]);
   const resultGroups = useMemo(() => groupResults(raceResults), [raceResults]);
   const raceRows = useMemo(() => {
     if (!unlocked) return [];
 
-    const metadataRows = buildRaceRows(meta, racecard?.num_races ?? null);
+    const metadataRows = buildRaceRows(meta, digitalRacecard?.num_races ?? null);
     if (metadataRows.length > 0) return metadataRows;
 
     const predictionRaceNumbers = Array.from(
@@ -158,7 +188,7 @@ const DigitalRaceCard = () => {
       ].filter((raceNumber) => raceNumber > 0)),
     ).sort((a, b) => a - b);
     return predictionRaceNumbers.map((number) => ({ number }));
-  }, [meta, predictions, raceResults, racecard?.num_races, unlocked]);
+  }, [meta, predictions, raceResults, digitalRacecard?.num_races, unlocked]);
   const trackProfile = canonicalTrackCode ? profileByCode[canonicalTrackCode] ?? null : null;
   const trackWebsite = trackProfile?.official_url ?? getRacetrackWebsite(racecard?.track_code);
   const location = getRacetrackLocation(racecard?.track_code);

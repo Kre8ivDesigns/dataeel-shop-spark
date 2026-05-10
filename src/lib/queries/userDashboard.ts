@@ -104,7 +104,7 @@ export async function fetchUserDashboard(userId: string): Promise<UserDashboardD
       .order("created_at", { ascending: false })
       .limit(8),
     supabase
-      .from("racecards")
+      .from("racecards_public")
       .select("id, track_code, track_name, race_date, num_races")
       .gte("race_date", todayStr)
       .lte("race_date", endWindow)
@@ -119,7 +119,7 @@ export async function fetchUserDashboard(userId: string): Promise<UserDashboardD
       .order("created_at", { ascending: false })
       .limit(5),
     supabase
-      .from("racecards")
+      .from("racecards_public")
       .select("id", { count: "exact", head: true })
       .eq("race_date", todayStr),
   ]);
