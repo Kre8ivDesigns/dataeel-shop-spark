@@ -89,6 +89,8 @@ const DigitalRaceCard = () => {
     enabled: !!racecardId,
   });
 
+  const canonicalTrackCode = extractCanonicalTrackCode(racecard?.track_code);
+
   const { data: hasDownload = false, isLoading: ownershipLoading } = useQuery({
     queryKey: ["racecard-ownership", user?.id, canonicalTrackCode, racecard?.race_date],
     queryFn: async () => {
@@ -96,18 +98,18 @@ const DigitalRaceCard = () => {
         .from("racecard_downloads")
         .select("id, racecards!inner(track_code, race_date)")
         .eq("user_id", user!.id)
-        .eq("racecards.track_code", canonicalTrackCode)
         .eq("racecards.race_date", racecard!.race_date)
-        .limit(1);
+        .limit(50);
       if (error) throw error;
-      return (data ?? []).length > 0;
+      return (data ?? []).some((row) => {
+        const purchased = row.racecards as { track_code: string | null } | null;
+        return extractCanonicalTrackCode(purchased?.track_code) === canonicalTrackCode;
+      });
     },
     enabled: !!user && !!canonicalTrackCode && !!racecard?.race_date,
   });
 
   const unlocked = isAdmin || hasDownload;
-
-  const canonicalTrackCode = extractCanonicalTrackCode(racecard?.track_code);
 
   const { data: predictions = [], isLoading: predictionsLoading } = useQuery({
     queryKey: ["racecard-predictions", racecardId],
