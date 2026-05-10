@@ -193,3 +193,52 @@ export function getRacetrackWebsite(trackCode: string | null | undefined): strin
   const key = extractCanonicalTrackCode(trackCode);
   return RACETRACK_WEBSITE_BY_CODE[key] ?? null;
 }
+
+export type RacetrackWeatherLocation = {
+  latitude: number;
+  longitude: number;
+  timezone: string;
+};
+
+export const RACETRACK_WEATHER_BY_CODE: Record<string, RacetrackWeatherLocation> = {
+  AQU: { latitude: 40.6728, longitude: -73.8272, timezone: "America/New_York" },
+  ASD: { latitude: 49.8844, longitude: -97.3294, timezone: "America/Winnipeg" },
+  BAQ: { latitude: 40.6728, longitude: -73.8272, timezone: "America/New_York" },
+  BEL: { latitude: 40.7147, longitude: -73.7225, timezone: "America/New_York" },
+  BTP: { latitude: 39.1006, longitude: -84.6114, timezone: "America/New_York" },
+  CD: { latitude: 38.2029, longitude: -85.7714, timezone: "America/Kentucky/Louisville" },
+  CMR: { latitude: 18.3894, longitude: -65.8761, timezone: "America/Puerto_Rico" },
+  CT: { latitude: 39.2967, longitude: -77.8606, timezone: "America/New_York" },
+  DED: { latitude: 30.1956, longitude: -93.5813, timezone: "America/Chicago" },
+  DMR: { latitude: 32.9753, longitude: -117.2606, timezone: "America/Los_Angeles" },
+  ELP: { latitude: 37.8872, longitude: -87.5714, timezone: "America/Chicago" },
+  FE: { latitude: 42.9078, longitude: -78.9328, timezone: "America/Toronto" },
+  FG: { latitude: 29.9858, longitude: -90.0775, timezone: "America/Chicago" },
+  FL: { latitude: 42.9622, longitude: -77.3503, timezone: "America/New_York" },
+  GP: { latitude: 25.9786, longitude: -80.1394, timezone: "America/New_York" },
+  HAW: { latitude: 41.8294, longitude: -87.7447, timezone: "America/Chicago" },
+  HOU: { latitude: 29.9308, longitude: -95.5253, timezone: "America/Chicago" },
+  KD: { latitude: 36.6544, longitude: -86.5636, timezone: "America/Chicago" },
+  KEE: { latitude: 38.0469, longitude: -84.6086, timezone: "America/New_York" },
+  LA: { latitude: 33.8031, longitude: -118.0436, timezone: "America/Los_Angeles" },
+  LAD: { latitude: 32.5492, longitude: -93.6344, timezone: "America/Chicago" },
+  LRL: { latitude: 39.1047, longitude: -76.8311, timezone: "America/New_York" },
+  MED: { latitude: 40.8136, longitude: -74.0744, timezone: "America/New_York" },
+  MNR: { latitude: 40.5586, longitude: -80.6403, timezone: "America/New_York" },
+  MTH: { latitude: 40.3075, longitude: -74.0167, timezone: "America/New_York" },
+  MVR: { latitude: 41.1225, longitude: -80.7703, timezone: "America/New_York" },
+  OP: { latitude: 34.485, longitude: -93.0594, timezone: "America/Chicago" },
+  PEN: { latitude: 40.3972, longitude: -76.6503, timezone: "America/New_York" },
+  PIM: { latitude: 39.3514, longitude: -76.675, timezone: "America/New_York" },
+  PRM: { latitude: 41.6547, longitude: -93.4917, timezone: "America/Chicago" },
+  PRX: { latitude: 40.1233, longitude: -74.9567, timezone: "America/New_York" },
+  SA: { latitude: 34.1392, longitude: -118.0444, timezone: "America/Los_Angeles" },
+  SAR: { latitude: 43.0731, longitude: -73.7675, timezone: "America/New_York" },
+  TAM: { latitude: 28.0497, longitude: -82.6483, timezone: "America/New_York" },
+  WO: { latitude: 43.7122, longitude: -79.6044, timezone: "America/Toronto" },
+};
+
+export function getRacetrackWeatherLocation(trackCode: string | null | undefined): RacetrackWeatherLocation | null {
+  const key = extractCanonicalTrackCode(trackCode);
+  return RACETRACK_WEATHER_BY_CODE[key] ?? null;
+}

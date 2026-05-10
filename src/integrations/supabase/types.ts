@@ -261,6 +261,36 @@ export type Database = {
           },
         ]
       }
+      racetrack_profiles: {
+        Row: {
+          display_name: string
+          latitude: number | null
+          longitude: number | null
+          official_url: string | null
+          timezone: string | null
+          track_code: string
+          updated_at: string
+        }
+        Insert: {
+          display_name: string
+          latitude?: number | null
+          longitude?: number | null
+          official_url?: string | null
+          timezone?: string | null
+          track_code: string
+          updated_at?: string
+        }
+        Update: {
+          display_name?: string
+          latitude?: number | null
+          longitude?: number | null
+          official_url?: string | null
+          timezone?: string | null
+          track_code?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount: number

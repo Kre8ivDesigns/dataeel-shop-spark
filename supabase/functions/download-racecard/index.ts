@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { racecardId, disposition } = await req.json();
+    const { racecardId } = await req.json();
     if (!racecardId) {
       return new Response(JSON.stringify({ error: "Missing racecardId" }), {
         status: 400,
@@ -159,7 +159,7 @@ Deno.serve(async (req) => {
     const command = new GetObjectCommand({
       Bucket: aws.bucket,
       Key: racecard.file_url,
-      ResponseContentDisposition: `${disposition === "inline" ? "inline" : "attachment"}; filename="${racecard.file_name}"`,
+      ResponseContentDisposition: `attachment; filename="${racecard.file_name}"`,
       ResponseCacheControl: "private, no-store, max-age=0",
     });
 

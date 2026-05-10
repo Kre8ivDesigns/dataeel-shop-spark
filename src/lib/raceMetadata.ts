@@ -40,3 +40,14 @@ export function metadataListingLine(meta: RacecardDisplayMetadata): string | nul
   if (meta.track_condition) parts.push(meta.track_condition);
   return parts.length ? parts.join(" · ") : null;
 }
+
+export function buildRaceRows(meta: RacecardDisplayMetadata, numRaces: number | null) {
+  if (meta.races && meta.races.length > 0) {
+    return meta.races
+      .filter((race) => typeof race.number === "number")
+      .sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
+  }
+
+  const count = Math.max(0, Math.min(numRaces ?? 0, 30));
+  return Array.from({ length: count }, (_, index) => ({ number: index + 1 }));
+}

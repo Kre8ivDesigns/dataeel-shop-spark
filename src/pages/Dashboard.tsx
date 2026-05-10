@@ -309,7 +309,7 @@ const Dashboard = () => {
           align="left"
           sectionClassName="pb-8"
         />
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 pt-8 md:pt-10">
           <StripeTestModeDevBanner />
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] xl:grid-cols-[1.1fr_0.9fr] gap-8 lg:gap-10 items-start">
             {/* Left: Recent downloads first (top of page body) */}

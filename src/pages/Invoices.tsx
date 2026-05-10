@@ -107,7 +107,7 @@ const Invoices = () => {
           asideGridClassName="lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start gap-6"
           sectionClassName="pb-8"
         />
-        <div className="container mx-auto px-4 sm:px-6">
+        <div className="container mx-auto px-4 sm:px-6 pt-8 md:pt-10">
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />

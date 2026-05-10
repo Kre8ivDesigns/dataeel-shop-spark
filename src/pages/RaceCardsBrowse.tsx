@@ -23,7 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { format, addDays } from "date-fns";
-import { metadataListingLine, parseRacecardMetadata, type RacecardDisplayMetadata } from "@/lib/raceMetadata";
+import { buildRaceRows, metadataListingLine, parseRacecardMetadata } from "@/lib/raceMetadata";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCreditBalance } from "@/lib/queries/creditBalance";
 import { EMPTY_CREDIT_SNAPSHOT } from "@/lib/creditDisplay";
@@ -36,8 +36,10 @@ import {
 import { getInvokeErrorMessage } from "@/lib/edgeFunctionErrors";
 import { downloadFromSignedUrl } from "@/lib/downloadSignedUrl";
 import { TrackCardHeroImage } from "@/components/TrackCardHeroImage";
+import { TrackWeatherBadge } from "@/components/TrackWeatherBadge";
 import { PageHero } from "@/components/PageHero";
 import { extractCanonicalTrackCode, getRacetrackLabel, getRacetrackLocation, getRacetrackWebsite } from "@/lib/racetracks";
+import { profilesByTrackCode, useRacetrackProfiles } from "@/lib/queries/racetrackProfiles";
 
 const RACECARD_DOWNLOAD_TZ =
   import.meta.env.VITE_RACECARD_DOWNLOAD_TZ ?? DEFAULT_RACECARD_DOWNLOAD_TZ;
@@ -45,24 +47,12 @@ const RACECARD_DOWNLOAD_TZ =
 const RACE_AUTH_REDIRECT = `/auth?redirect=${encodeURIComponent("/racecards")}`;
 const RACE_JOIN_REDIRECT = `/auth?mode=signup&redirect=${encodeURIComponent("/racecards")}`;
 
-function buildRaceRows(meta: RacecardDisplayMetadata, numRaces: number | null) {
-  if (meta.races && meta.races.length > 0) {
-    return meta.races
-      .filter((race) => typeof race.number === "number")
-      .sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
-  }
-
-  const count = Math.max(0, Math.min(numRaces ?? 0, 30));
-  return Array.from({ length: count }, (_, index) => ({ number: index + 1 }));
-}
-
 const RaceCardsBrowse = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [downloading, setDownloading] = useState<string | null>(null);
-  const [viewingDigitalCard, setViewingDigitalCard] = useState<string | null>(null);
   const [expandedCardIds, setExpandedCardIds] = useState<Set<string>>(() => new Set());
   const [selectedDateIndex, setSelectedDateIndex] = useState(0);
 
@@ -77,6 +67,8 @@ const RaceCardsBrowse = () => {
 
   const selectedDate = dayTabs[selectedDateIndex].date;
   const { data: racecards = [], isLoading: cardsLoading } = useRacecardsPublicForDate(selectedDate);
+  const { data: racetrackProfiles = [] } = useRacetrackProfiles();
+  const profileByCode = useMemo(() => profilesByTrackCode(racetrackProfiles), [racetrackProfiles]);
 
   const { data: balanceData, isLoading: balanceLoading } = useCreditBalance(user?.id);
   const balanceSnap = balanceData ?? EMPTY_CREDIT_SNAPSHOT;
@@ -147,50 +139,6 @@ const RaceCardsBrowse = () => {
       toast({ title: "Error", description: "Something went wrong.", variant: "destructive" });
     } finally {
       setDownloading(null);
-    }
-  };
-
-  const handleViewDigitalCard = async (racecardId: string) => {
-    if (!user) {
-      toast({
-        title: "Please sign in",
-        description: "Free registration lets you view available RaceCards and open the digital card.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const previewWindow = window.open("about:blank", "_blank");
-    if (previewWindow) previewWindow.opener = null;
-    setViewingDigitalCard(racecardId);
-    try {
-      const { data, error, response: invokeResponse } = await supabase.functions.invoke("download-racecard", {
-        body: { racecardId, disposition: "inline" },
-      });
-
-      if (error || !data?.signedUrl) {
-        previewWindow?.close();
-        const msg = await getInvokeErrorMessage("download-racecard", error, data, invokeResponse);
-        toast({ title: "Digital card unavailable", description: msg || "Could not open the digital card.", variant: "destructive" });
-        return;
-      }
-
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["credit-balance", user.id] }),
-        queryClient.invalidateQueries({ queryKey: racecardDownloadKeys.byUser(user.id) }),
-        queryClient.invalidateQueries({ queryKey: userDashboardKeys.detail(user.id) }),
-      ]);
-
-      if (previewWindow) {
-        previewWindow.location.href = data.signedUrl;
-      } else {
-        window.location.assign(data.signedUrl);
-      }
-    } catch {
-      previewWindow?.close();
-      toast({ title: "Error", description: "Something went wrong.", variant: "destructive" });
-    } finally {
-      setViewingDigitalCard(null);
     }
   };
 
@@ -343,7 +291,6 @@ const RaceCardsBrowse = () => {
               {filtered.map((card, i) => {
                 const owned = isOwned(card.id);
                 const isDownloading = downloading === card.id;
-                const isViewingDigitalCard = viewingDigitalCard === card.id;
                 const expanded = expandedCardIds.has(card.id);
                 const meta = parseRacecardMetadata(card.metadata);
                 const metaLine = metadataListingLine(meta);
@@ -354,8 +301,10 @@ const RaceCardsBrowse = () => {
                   Date.now(),
                 );
                 const downloadDisabled = dlBlock.blocked;
+                const canonicalTrackCode = extractCanonicalTrackCode(card.track_code);
+                const trackProfile = profileByCode[canonicalTrackCode] ?? null;
                 const location = getRacetrackLocation(card.track_code);
-                const trackWebsite = getRacetrackWebsite(card.track_code);
+                const trackWebsite = trackProfile?.official_url ?? getRacetrackWebsite(card.track_code);
 
                 return (
                   <motion.div
@@ -383,7 +332,7 @@ const RaceCardsBrowse = () => {
                       </div>
                       <div className="min-w-0">
                         <h3 className="font-semibold text-foreground text-sm">
-                          {getRacetrackLabel(card.track_code)}
+                          {trackProfile?.display_name ?? getRacetrackLabel(card.track_code)}
                         </h3>
                         {location && (
                           <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
@@ -403,6 +352,10 @@ const RaceCardsBrowse = () => {
                           </div>
                         )}
                       </div>
+                    </div>
+
+                    <div className="mb-4">
+                      <TrackWeatherBadge trackCode={card.track_code} profile={trackProfile} compact />
                     </div>
 
                     <div className="mb-4 px-3 py-2 rounded-lg bg-muted/50 text-xs text-foreground/60">
@@ -490,23 +443,14 @@ const RaceCardsBrowse = () => {
                       ) : (
                         <>
                           <Button
-                            type="button"
+                            asChild
                             variant="outline"
                             className="flex-1 border-primary/60 text-primary hover:bg-primary/10 font-semibold text-sm h-10"
-                            onClick={() => void handleViewDigitalCard(card.id)}
-                            disabled={isViewingDigitalCard || downloadDisabled}
-                            title={
-                              downloadDisabled
-                                ? "Digital cards close after the race day in the configured timezone."
-                                : undefined
-                            }
                           >
-                            {isViewingDigitalCard ? (
-                              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                            ) : (
+                            <Link to={`/racecards/${card.id}`}>
                               <Eye className="mr-1.5 h-4 w-4" />
-                            )}
-                            View digital card
+                              View digital card
+                            </Link>
                           </Button>
                           <Button
                             className="flex-1 bg-primary text-primary-foreground hover:brightness-110 font-semibold text-sm h-10 shadow-neon"

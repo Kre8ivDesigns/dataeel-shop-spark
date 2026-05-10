@@ -259,7 +259,7 @@ const AccountSettings = () => {
           align="left"
           sectionClassName="pb-8"
         />
-        <div className="container mx-auto px-4 sm:px-6 space-y-6">
+        <div className="container mx-auto px-4 sm:px-6 pt-8 md:pt-10 space-y-6">
           {import.meta.env.DEV && !hasClientStripePublishableKey() && (
             <p className="text-xs text-muted-foreground max-w-2xl">
               Dev: add{" "}

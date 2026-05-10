@@ -12,6 +12,7 @@ import Contact from "./pages/Contact";
 import Dashboard from "./pages/Dashboard";
 import BuyCredits from "./pages/BuyCredits";
 import RaceCardsBrowse from "./pages/RaceCardsBrowse";
+import DigitalRaceCard from "./pages/DigitalRaceCard";
 import Auth from "./pages/Auth";
 import AdminDashboard from "./pages/AdminDashboard";
 import Invoices from "./pages/Invoices";
@@ -130,6 +131,7 @@ const App = () => (
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/buy-credits" element={<ProtectedRoute><BuyCredits /></ProtectedRoute>} />
               <Route path="/racecards" element={<RaceCardsBrowse />} />
+              <Route path="/racecards/:racecardId" element={<ProtectedRoute><DigitalRaceCard /></ProtectedRoute>} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
               <Route path="/admin/settings" element={<ProtectedRoute requireAdmin><AdminSettings /></ProtectedRoute>} />

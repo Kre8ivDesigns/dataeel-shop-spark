@@ -6,6 +6,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { PageHero } from "@/components/PageHero";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
 type SectionBlock = {
   id: string;
@@ -64,6 +65,16 @@ const sections: SectionBlock[] = [
 ];
 
 const BettingBasics = () => {
+  const { user } = useAuth();
+
+  const focusAssistantBubble = () => {
+    document
+      .querySelector<HTMLButtonElement>("[aria-label='Open DATAEEL assistant']")
+      ?.focus();
+  };
+
+  const openAssistantLabel = user ? "Use chat bubble" : "Log in to chat";
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -133,9 +144,15 @@ const BettingBasics = () => {
                 bet types, and how to think about a race — not for &quot;picks&quot; or guarantees.
               </p>
             </div>
-            <Button asChild variant="secondary" className="shrink-0">
-              <Link to="/auth?mode=login">Log in to chat</Link>
-            </Button>
+            {user ? (
+              <Button type="button" variant="secondary" className="shrink-0" onClick={focusAssistantBubble}>
+                {openAssistantLabel}
+              </Button>
+            ) : (
+              <Button asChild variant="secondary" className="shrink-0">
+                <Link to="/auth?mode=login">{openAssistantLabel}</Link>
+              </Button>
+            )}
           </motion.div>
         </div>
       </section>
