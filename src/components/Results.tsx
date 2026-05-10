@@ -1,8 +1,11 @@
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { motion } from "framer-motion";
 import { TrendingUp, Layers, MapPin, FileDown, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { HERO_GRADIENT, PageHeroAmbientOrbs } from "@/components/PageHero";
+import { supabase } from "@/integrations/supabase/client";
+import { buildTickerLoopItems, tickerDurationSeconds } from "@/lib/breakingNewsTicker";
 
 const stats = [
   { number: "2", label: "Algorithms", sublabel: "Concert™ & Aptitude™", icon: Layers },
@@ -35,7 +38,59 @@ const cardHighlights = [
   },
 ];
 
+const FALLBACK_WINNER_HITS = [
+  "Concert algorithm picks Winner in race#1, race#2, race#3, race#6, race#7; Belmont At Big A May1, 2026",
+  "Aptitude algorithm picks Winner in race#1, race#2, race#4, race#6; Parx Racing May1, 2026",
+  "Aptitude algorithm hits TRIFECTA in race#8; Laurel Park May1, 2026",
+  "Aptitude algorithm hits EXACTA in race#4 and in race#8; Laurel Park May1, 2026",
+  "Concert algorithm hits PICK 3 in race#8; Belterra Park May1, 2026",
+  "Concert algorithm hits TRIFECTA in race#4; Santa Anita Apr30, 2026",
+  "Concert algorithm hits SUPERFECTA in race#6; Tampa Bay Downs Apr29, 2026",
+  "Concert algorithm hits EXACTA in race#3 and in race#4; Gulfstream Park Apr25, 2026",
+  "Aptitude algorithm hits TRIFECTA in race#2; Churchill Downs Apr25, 2026",
+  "Concert algorithm picks Winner in race#1, race#3, race#4, race#7; Keeneland Apr24, 2026",
+];
+
 export const Results = () => {
+  const [winnerHits, setWinnerHits] = useState<string[]>(FALLBACK_WINNER_HITS);
+  const [tickerDistance, setTickerDistance] = useState<number | null>(null);
+  const tickerGroupRef = useRef<HTMLDivElement | null>(null);
+  const tickerLoopItems = useMemo(() => buildTickerLoopItems(winnerHits), [winnerHits]);
+  const tickerDuration = useMemo(() => tickerDurationSeconds(tickerLoopItems), [tickerLoopItems]);
+
+  useLayoutEffect(() => {
+    const group = tickerGroupRef.current;
+    if (!group) return;
+
+    const updateDistance = () => {
+      setTickerDistance(Math.ceil(group.scrollWidth));
+    };
+
+    updateDistance();
+    const observer = new ResizeObserver(updateDistance);
+    observer.observe(group);
+    if (document.fonts) {
+      void document.fonts.ready.then(updateDistance);
+    }
+
+    return () => observer.disconnect();
+  }, [tickerLoopItems]);
+
+  useEffect(() => {
+    supabase
+      .from("breaking_news_items")
+      .select("text")
+      .eq("active", true)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        const hits = (data ?? [])
+          .map((row) => row.text)
+          .filter((text) => /\b(?:winner|exacta|trifecta|superfecta|pick\s*3|daily double)\b/i.test(text));
+        if (hits.length > 0) setWinnerHits(hits);
+      });
+  }, []);
+
   return (
     <section
       id="results"
@@ -95,6 +150,51 @@ export const Results = () => {
               <div className="text-muted-foreground text-sm">{stat.sublabel}</div>
             </motion.div>
           ))}
+        </motion.div>
+
+        {/* Winners Scroll */}
+        <motion.div
+          initial={{ opacity: 0, y: 18 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.3 }}
+          className="mb-16 overflow-hidden rounded-2xl border border-primary/25 bg-card/70 shadow-[0_0_32px_hsl(var(--primary)/0.08)] backdrop-blur-sm"
+        >
+          <div className="flex flex-col border-b border-border/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2 font-heading text-lg font-semibold text-foreground">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              Recent DATAEEL Hits
+            </div>
+            <span className="mt-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:mt-0">
+              Winners • Exactas • Trifectas
+            </span>
+          </div>
+          <div className="overflow-hidden py-4">
+            <div
+              className="flex w-max whitespace-nowrap animate-ticker-scroll will-change-transform motion-reduce:animate-none"
+              style={{
+                animationDuration: `${tickerDuration}s`,
+                "--ticker-distance": tickerDistance ? `${tickerDistance}px` : "50%",
+              } as CSSProperties}
+            >
+              <div ref={tickerGroupRef} className="flex shrink-0 whitespace-nowrap">
+                {tickerLoopItems.map((hit, i) => (
+                  <span key={`results-a-${i}`} className="mx-4 inline-flex shrink-0 items-center gap-3 rounded-full border border-primary/20 bg-muted/45 px-4 py-2 text-sm font-medium text-foreground/85">
+                    <span className="h-2 w-2 rounded-full bg-primary" />
+                    {hit}
+                  </span>
+                ))}
+              </div>
+              <div className="flex shrink-0 whitespace-nowrap" aria-hidden="true">
+                {tickerLoopItems.map((hit, i) => (
+                  <span key={`results-b-${i}`} className="mx-4 inline-flex shrink-0 items-center gap-3 rounded-full border border-primary/20 bg-muted/45 px-4 py-2 text-sm font-medium text-foreground/85">
+                    <span className="h-2 w-2 rounded-full bg-primary" />
+                    {hit}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
         </motion.div>
 
         {/* Recent Wins Feed */}
