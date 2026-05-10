@@ -17,9 +17,24 @@ import { extractCanonicalTrackCode, getRacetrackLabel, getRacetrackLocation, get
 
 type Racecard = Pick<
   Tables<"racecards">,
-  "id" | "track_name" | "track_code" | "race_date" | "num_races" | "metadata"
+  | "id"
+  | "track_name"
+  | "track_code"
+  | "race_date"
+  | "num_races"
+  | "metadata"
+  | "digitization_status"
+  | "digitization_error"
 >;
 type Prediction = Tables<"racecard_predictions">;
+type RaceResult = {
+  id: string;
+  race_number: number;
+  result_title: string;
+  result_summary: string | null;
+  result_description: string | null;
+  source_url: string;
+};
 
 function algorithmLabel(algorithm: string): string {
   const normalized = algorithm.trim().toLowerCase();
@@ -34,6 +49,13 @@ function groupPredictions(predictions: Prediction[]) {
     const key = algorithmLabel(prediction.algorithm);
     raceGroup[key] = [...(raceGroup[key] ?? []), prediction].sort((a, b) => a.rank - b.rank);
     acc[prediction.race_number] = raceGroup;
+    return acc;
+  }, {});
+}
+
+function groupResults(results: RaceResult[]) {
+  return results.reduce<Record<number, RaceResult[]>>((acc, result) => {
+    acc[result.race_number] = [...(acc[result.race_number] ?? []), result];
     return acc;
   }, {});
 }
@@ -58,7 +80,7 @@ const DigitalRaceCard = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("racecards")
-        .select("id, track_name, track_code, race_date, num_races, metadata")
+        .select("id, track_name, track_code, race_date, num_races, metadata, digitization_status, digitization_error")
         .eq("id", racecardId!)
         .maybeSingle();
       if (error) throw error;
@@ -84,6 +106,8 @@ const DigitalRaceCard = () => {
 
   const unlocked = isAdmin || hasDownload;
 
+  const canonicalTrackCode = extractCanonicalTrackCode(racecard?.track_code);
+
   const { data: predictions = [], isLoading: predictionsLoading } = useQuery({
     queryKey: ["racecard-predictions", racecardId],
     queryFn: async () => {
@@ -100,18 +124,36 @@ const DigitalRaceCard = () => {
     enabled: !!racecardId && unlocked,
   });
 
+  const { data: raceResults = [], isLoading: resultsLoading } = useQuery({
+    queryKey: ["race-results", canonicalTrackCode, racecard?.race_date],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("race_results" as never)
+        .select("id, race_number, result_title, result_summary, result_description, source_url")
+        .eq("track_code", canonicalTrackCode)
+        .eq("race_date", racecard!.race_date)
+        .order("race_number", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as RaceResult[];
+    },
+    enabled: !!racecard && !!canonicalTrackCode,
+  });
+
   const meta = useMemo(() => parseRacecardMetadata(racecard?.metadata), [racecard?.metadata]);
   const predictionGroups = useMemo(() => groupPredictions(predictions), [predictions]);
+  const resultGroups = useMemo(() => groupResults(raceResults), [raceResults]);
   const raceRows = useMemo(() => {
     const metadataRows = buildRaceRows(meta, racecard?.num_races ?? null);
     if (metadataRows.length > 0) return metadataRows;
 
     const predictionRaceNumbers = Array.from(
-      new Set(predictions.map((prediction) => prediction.race_number).filter((raceNumber) => raceNumber > 0)),
+      new Set([
+        ...predictions.map((prediction) => prediction.race_number),
+        ...raceResults.map((result) => result.race_number),
+      ].filter((raceNumber) => raceNumber > 0)),
     ).sort((a, b) => a - b);
     return predictionRaceNumbers.map((number) => ({ number }));
-  }, [meta, predictions, racecard?.num_races]);
-  const canonicalTrackCode = extractCanonicalTrackCode(racecard?.track_code);
+  }, [meta, predictions, raceResults, racecard?.num_races]);
   const trackProfile = canonicalTrackCode ? profileByCode[canonicalTrackCode] ?? null : null;
   const trackWebsite = trackProfile?.official_url ?? getRacetrackWebsite(racecard?.track_code);
   const location = getRacetrackLocation(racecard?.track_code);
@@ -209,13 +251,20 @@ const DigitalRaceCard = () => {
                   <div className="card-dark p-6 text-sm text-muted-foreground">
                     {unlocked && predictionsLoading
                       ? "Loading DATAEEL selections..."
+                      : resultsLoading
+                      ? "Loading race results..."
                       : unlocked
-                      ? "Digital selections are not posted for this RaceCard yet."
+                      ? racecard.digitization_status === "not_started" || racecard.digitization_status === "queued"
+                        ? "This RaceCard has not been digitized yet. Results will appear here once they are posted."
+                        : racecard.digitization_status === "needs_review"
+                        ? "This RaceCard needs digitization review before digital selections can be shown."
+                        : "Digital selections and race results are not posted for this RaceCard yet."
                       : "Race details are not posted yet. Check the official track website for the latest schedule."}
                   </div>
                 ) : (
                   raceRows.map((race) => {
                     const byAlgorithm = predictionGroups[race.number ?? 0] ?? {};
+                    const resultsForRace = resultGroups[race.number ?? 0] ?? [];
                     return (
                       <article key={race.number} className="card-dark">
                         <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
@@ -281,6 +330,29 @@ const DigitalRaceCard = () => {
                                 </div>
                               );
                             })}
+                          </div>
+                        )}
+                        {resultsForRace.length > 0 && (
+                          <div className="mt-5 rounded-lg border border-primary/25 bg-primary/5 p-4">
+                            <div className="text-sm font-bold text-foreground">Official results</div>
+                            <div className="mt-3 space-y-2">
+                              {resultsForRace.map((result) => (
+                                <a
+                                  key={result.id}
+                                  href={result.source_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="block rounded-md bg-background/50 px-3 py-2 text-sm hover:bg-background/70"
+                                >
+                                  <div className="font-semibold text-foreground">{result.result_title}</div>
+                                  {(result.result_summary || result.result_description) && (
+                                    <div className="mt-1 text-xs text-muted-foreground">
+                                      {result.result_summary || result.result_description}
+                                    </div>
+                                  )}
+                                </a>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </article>
