@@ -16,6 +16,7 @@ import {
   Download,
   Globe2,
   Loader2,
+  MonitorSmartphone,
   MousePointerClick,
   Route,
   UserPlus,
@@ -38,7 +39,9 @@ import { countByDay, filterSince } from "@/lib/adminCharts";
 import {
   summarizeSiteAnalytics,
   type AnalyticsIssue,
+  type DeviceSummary,
   type SiteAnalyticsEventRow,
+  type SourceSummary,
   type TransactionAnalyticsRow,
 } from "@/lib/siteAnalytics";
 
@@ -114,6 +117,17 @@ function MetricCard({
       <CardContent className="text-xs text-muted-foreground">{detail}</CardContent>
     </Card>
   );
+}
+
+function formatSourceLabel(source: SourceSummary): string {
+  if (source.source === "direct") return "Direct";
+  return source.source;
+}
+
+function formatDeviceLabel(deviceType: DeviceSummary["deviceType"]): string {
+  if (deviceType === "desktop") return "Desktop";
+  if (deviceType === "tablet") return "Tablet";
+  return "Mobile";
 }
 
 const AdminAnalytics = () => {
@@ -269,6 +283,61 @@ const AdminAnalytics = () => {
                 <MetricCard icon={Route} label="Checkout starts" value={analytics.checkoutStarts} detail={`${formatPercent(analytics.checkoutStartRate)} of Buy Credits visitors`} />
                 <MetricCard icon={Download} label="Racecard downloads" value={dlFiltered.length} detail="In selected range" tone="primary" />
                 <MetricCard icon={AlertTriangle} label="Errors" value={errors.length} detail="From latest 80 audit rows" tone={errors.length > 0 ? "danger" : "default"} />
+              </div>
+
+              <div className="grid lg:grid-cols-2 gap-6 mb-8">
+                <Card className="bg-card border-border">
+                  <CardHeader>
+                    <CardTitle className="text-foreground text-lg flex items-center gap-2">
+                      <MonitorSmartphone className="h-5 w-5 text-primary" /> Platform mix
+                    </CardTitle>
+                    <CardDescription>What device platform visitors are using</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {analytics.deviceBreakdown.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No platform signal yet.</p>
+                    ) : (
+                      analytics.deviceBreakdown.map((device) => (
+                        <div key={device.deviceType} className="space-y-2">
+                          <div className="flex items-center justify-between gap-4 text-sm">
+                            <span className="font-medium text-foreground">{formatDeviceLabel(device.deviceType)}</span>
+                            <span className="font-mono-data text-muted-foreground">
+                              {device.visitors} visitors · {formatPercent(device.percentOfVisitors)}
+                            </span>
+                          </div>
+                          <Progress value={device.percentOfVisitors} className="h-2" />
+                        </div>
+                      ))
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-card border-border">
+                  <CardHeader>
+                    <CardTitle className="text-foreground text-lg flex items-center gap-2">
+                      <Globe2 className="h-5 w-5 text-primary" /> Where they came from
+                    </CardTitle>
+                    <CardDescription>Top acquisition sources from UTM and referrer data</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {analytics.topSources.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No source signal yet.</p>
+                    ) : (
+                      analytics.topSources.slice(0, 5).map((source) => (
+                        <div key={source.key} className="flex items-center justify-between gap-4 rounded-md bg-background/60 px-3 py-2">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-foreground">{formatSourceLabel(source)}</p>
+                            <p className="text-xs text-muted-foreground">{source.medium} · {formatPercent(source.bounceRate)} bounce</p>
+                          </div>
+                          <div className="text-right font-mono-data text-sm text-muted-foreground">
+                            <p className="text-foreground">{source.visitors}</p>
+                            <p className="text-xs">visitors</p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </CardContent>
+                </Card>
               </div>
 
               <div className="grid xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.8fr)] gap-6 mb-8">

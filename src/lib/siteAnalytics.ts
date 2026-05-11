@@ -72,6 +72,13 @@ export type SourceSummary = {
   checkoutStarts: number;
 };
 
+export type DeviceSummary = {
+  deviceType: SiteAnalyticsEventRow["device_type"];
+  visitors: number;
+  sessions: number;
+  percentOfVisitors: number;
+};
+
 export type AnalyticsSummary = {
   visitors: number;
   newVisitors: number;
@@ -88,6 +95,7 @@ export type AnalyticsSummary = {
   checkoutStartRate: number;
   checkoutCompletionRate: number;
   topSources: SourceSummary[];
+  deviceBreakdown: DeviceSummary[];
   topExitPages: { path: string; exits: number }[];
   issues: AnalyticsIssue[];
 };
@@ -371,6 +379,26 @@ export function summarizeSiteAnalytics(
     sourceMap.set(key, item);
   }
 
+  const deviceMap = new Map<
+    SiteAnalyticsEventRow["device_type"],
+    {
+      visitors: Set<string>;
+      sessions: Set<string>;
+    }
+  >();
+  for (const row of rows) {
+    const deviceType = row.device_type || "desktop";
+    const item =
+      deviceMap.get(deviceType) ??
+      {
+        visitors: new Set<string>(),
+        sessions: new Set<string>(),
+      };
+    item.visitors.add(row.visitor_id);
+    item.sessions.add(row.session_id);
+    deviceMap.set(deviceType, item);
+  }
+
   const topSources = Array.from(sourceMap.entries())
     .map(([key, item]) => ({
       key,
@@ -383,6 +411,15 @@ export function summarizeSiteAnalytics(
     }))
     .sort((a, b) => b.visitors - a.visitors)
     .slice(0, 8);
+
+  const deviceBreakdown = Array.from(deviceMap.entries())
+    .map(([deviceType, item]) => ({
+      deviceType,
+      visitors: item.visitors.size,
+      sessions: item.sessions.size,
+      percentOfVisitors: percent(item.visitors.size, visitorIds.size),
+    }))
+    .sort((a, b) => b.visitors - a.visitors);
 
   const summary: AnalyticsSummary = {
     visitors: visitorIds.size,
@@ -400,6 +437,7 @@ export function summarizeSiteAnalytics(
     checkoutStartRate: percent(checkoutStarts, buyVisitorIds.size),
     checkoutCompletionRate: percent(completedPurchases, checkoutStarts),
     topSources,
+    deviceBreakdown,
     topExitPages: Array.from(exitPageCounts.entries())
       .map(([path, exits]) => ({ path, exits }))
       .sort((a, b) => b.exits - a.exits)
