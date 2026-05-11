@@ -19,6 +19,7 @@ import {
   Settings,
   Package,
   TrendingUp,
+  HelpCircle,
   Inbox,
   Table2,
 } from "lucide-react";
@@ -372,6 +373,7 @@ const AdminDashboard = () => {
     { to: "/admin/analytics", title: "Site analytics", subtitle: "Signups, downloads, audit log", icon: BarChart3 },
     { to: "/admin/settings", title: "Settings", subtitle: "Stripe, site, integrations", icon: Settings },
     { to: "/admin/credit-packages", title: "Credit packages", subtitle: "Pricing tiers", icon: Package },
+    { to: "/admin/help", title: "Help", subtitle: "Admin documentation", icon: HelpCircle },
   ] as const;
 
   return (

@@ -35,6 +35,7 @@ const AdminFinancials = lazy(() => import("./pages/AdminFinancials"));
 const AdminAnalytics = lazy(() => import("./pages/AdminAnalytics"));
 const AdminSupport = lazy(() => import("./pages/AdminSupport"));
 const AdminReports = lazy(() => import("./pages/AdminReports"));
+const AdminHelp = lazy(() => import("./pages/AdminHelp"));
 
 const adminChartFallback = (
   <div className="min-h-screen flex items-center justify-center bg-background">
@@ -172,6 +173,16 @@ const App = () => (
                   <ProtectedRoute requireAdmin>
                     <Suspense fallback={adminChartFallback}>
                       <AdminReports />
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/help"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <Suspense fallback={adminChartFallback}>
+                      <AdminHelp />
                     </Suspense>
                   </ProtectedRoute>
                 }
