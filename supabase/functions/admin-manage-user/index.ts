@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getCorsHeaders } from "../_shared/cors.ts";
+import { getCorsHeaders, getValidatedOrigin } from "../_shared/cors.ts";
 
 type Action =
   | "ban"
@@ -22,6 +22,11 @@ function normalizeUserId(value: unknown): string | null {
 
 function looksLikeRandomTwoTokenName(value: unknown): boolean {
   return typeof value === "string" && RANDOM_TWO_TOKEN_NAME_RE.test(value.trim());
+}
+
+function getRecoveryRedirectTo(req: Request): string | undefined {
+  const origin = getValidatedOrigin(req);
+  return origin ? `${origin}/account-settings` : undefined;
 }
 
 async function deleteFromTable(
@@ -124,26 +129,61 @@ Deno.serve(async (req) => {
     }
 
     if (action === "send_password_recovery") {
+      const { data: authUserData, error: authUserErr } = await supabaseAdmin.auth.admin.getUserById(userId);
+      if (authUserErr) {
+        console.error("admin-manage-user send_password_recovery: auth user lookup failed", authUserErr.message);
+        return respond({ error: authUserErr.message }, 500);
+      }
+
       const { data: profile, error: pErr } = await supabaseAdmin
         .from("profiles")
         .select("email")
         .eq("user_id", userId)
         .maybeSingle();
-      if (pErr || !profile?.email) {
+      if (pErr) {
+        console.error("admin-manage-user send_password_recovery: profile lookup failed", pErr.message);
+        return respond({ error: pErr.message }, 500);
+      }
+
+      const email = authUserData.user?.email ?? profile?.email ?? null;
+      if (!email) {
         return respond({ error: "Could not resolve user email" }, 400);
       }
+
+      const redirectTo = getRecoveryRedirectTo(req);
       const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
         type: "recovery",
-        email: profile.email,
+        email,
+        options: redirectTo ? { redirectTo } : undefined,
       });
-      if (linkErr) return respond({ error: linkErr.message }, 500);
+
+      if (linkErr) {
+        console.error("admin-manage-user send_password_recovery: generateLink failed", linkErr.message);
+        const { error: resetErr } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
+          redirectTo,
+        });
+        if (resetErr) {
+          console.error("admin-manage-user send_password_recovery: resetPasswordForEmail failed", resetErr.message);
+          return respond({ error: resetErr.message }, 500);
+        }
+
+        await supabaseAdmin.from("audit_log").insert({
+          actor_id: actorId,
+          action: "admin.user.password_recovery_sent",
+          resource: "auth.users",
+          resource_id: userId,
+          detail: { email, delivery_method: "email", link_error: linkErr.message },
+        });
+        return respond({ ok: true, recovery_link: null, delivery_method: "email" });
+      }
+
       const recoveryLink = (linkData as { properties?: { action_link?: string } })?.properties?.action_link ?? null;
       await supabaseAdmin.from("audit_log").insert({
         actor_id: actorId,
         action: "admin.user.password_recovery_sent",
         resource: "auth.users",
         resource_id: userId,
-        detail: { email: profile.email },
+        detail: { email, delivery_method: recoveryLink ? "link" : "unknown" },
       });
       return respond({ ok: true, recovery_link: recoveryLink });
     }

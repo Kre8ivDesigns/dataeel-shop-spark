@@ -100,7 +100,7 @@ export function AdminUserDetailSheet({
       });
       return null;
     }
-    return data as { ok?: boolean; recovery_link?: string | null };
+    return data as { ok?: boolean; recovery_link?: string | null; delivery_method?: string | null };
   };
 
   const handleSaveProfile = async () => {
@@ -132,8 +132,11 @@ export function AdminUserDetailSheet({
         });
       } else {
         toast({
-          title: "Recovery flow started",
-          description: "No action link returned; ask the user to use Forgot password or check auth logs.",
+          title: res.delivery_method === "email" ? "Recovery email sent" : "Recovery flow started",
+          description:
+            res.delivery_method === "email"
+              ? "Supabase sent the reset email directly because no recovery link was returned."
+              : "No action link returned; ask the user to use Forgot password or check auth logs.",
         });
       }
     }
