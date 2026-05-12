@@ -177,7 +177,7 @@ export const Hero = () => {
                 variant="outline"
                 className="btn-ghost-light text-lg px-10 py-6 h-auto"
               >
-                Get Today's Cards
+                Today Races
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
