@@ -21,6 +21,10 @@ function normalizeUserId(value: unknown): string | null {
   return s;
 }
 
+function resolveBodyUserId(body: { userId?: unknown; user_id?: unknown; id?: unknown }): string | null {
+  return normalizeUserId(body.userId) ?? normalizeUserId(body.user_id) ?? normalizeUserId(body.id);
+}
+
 function looksLikeRandomTwoTokenName(value: unknown): boolean {
   return typeof value === "string" && RANDOM_TWO_TOKEN_NAME_RE.test(value.trim());
 }
@@ -85,15 +89,17 @@ Deno.serve(async (req) => {
 
     const body = await req.json() as {
       action: Action;
-      userId?: string;
+      userId?: unknown;
+      user_id?: unknown;
+      id?: unknown;
       full_name?: string;
       unlimited?: boolean;
     };
     const { action } = body;
-    const userId = normalizeUserId(body.userId);
+    const userId = resolveBodyUserId(body);
 
     if (action !== "delete_fake_zero_credit_users" && !userId) {
-      return respond({ error: "userId must be a valid UUID string" }, 400);
+      return respond({ error: "userId must be a valid UUID string", detail: "Expected userId, user_id, or id." }, 400);
     }
 
     if (userId === actorId && (action === "ban" || action === "unban")) {
