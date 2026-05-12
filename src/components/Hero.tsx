@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useLayoutEffect, useMemo, useRef, type CSSProperties } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, FileText, MapPin, Sparkles, Infinity as InfinityIcon, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-racing.jpg";
 import racecardPreview from "@/assets/racecard-guide/racecard-guide-page-02-cropped.png";
 import { supabase } from "@/integrations/supabase/client";
+import { buildTickerLoopItems, tickerDurationSeconds } from "@/lib/breakingNewsTicker";
 
 const FALLBACK_NEWS = [
   "Concert algorithm picks Winner in race#1, race#2, race#3, race#6, race#7; Belmont At Big A May1, 2026",
@@ -68,6 +69,10 @@ function countHitType(items: string[], pattern: RegExp): number {
 
 export const Hero = () => {
   const [resultItems, setResultItems] = useState<string[]>(FALLBACK_NEWS);
+  const [tickerDistance, setTickerDistance] = useState<number | null>(null);
+  const tickerGroupRef = useRef<HTMLDivElement | null>(null);
+  const tickerLoopItems = useMemo(() => buildTickerLoopItems(resultItems), [resultItems]);
+  const tickerDuration = useMemo(() => tickerDurationSeconds(tickerLoopItems) * 2, [tickerLoopItems]);
   const resultSummary = useMemo(
     () => [
       { label: "Recent hit notes", value: resultItems.length },
@@ -76,6 +81,24 @@ export const Hero = () => {
     ],
     [resultItems],
   );
+
+  useLayoutEffect(() => {
+    const group = tickerGroupRef.current;
+    if (!group) return;
+
+    const updateDistance = () => {
+      setTickerDistance(Math.ceil(group.scrollWidth));
+    };
+
+    updateDistance();
+    const observer = new ResizeObserver(updateDistance);
+    observer.observe(group);
+    if (document.fonts) {
+      void document.fonts.ready.then(updateDistance);
+    }
+
+    return () => observer.disconnect();
+  }, [tickerLoopItems]);
 
   useEffect(() => {
     supabase
@@ -109,7 +132,7 @@ export const Hero = () => {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 container mx-auto px-4 pt-32 pb-12 sm:pb-16">
+      <div className="relative z-10 container mx-auto px-4 pt-[203px] pb-28 sm:pb-32">
         <div className="max-w-4xl mx-auto text-center">
           <motion.div
             initial={false}
@@ -242,6 +265,40 @@ export const Hero = () => {
               <div className="w-1.5 h-3 bg-foreground/40 rounded-full" />
             </motion.div>
           </motion.div>
+        </div>
+      </div>
+
+      <div className="absolute bottom-0 left-0 right-0 z-20 overflow-hidden border-t border-border bg-card/90 backdrop-blur-sm">
+        <div className="flex items-center">
+          <div className="flex-shrink-0 bg-primary px-4 py-2 text-xs font-bold uppercase tracking-wider text-primary-foreground">
+            Breaking News
+          </div>
+          <div className="min-w-0 flex-1 overflow-hidden">
+            <div
+              className="flex w-max whitespace-nowrap animate-ticker-scroll will-change-transform motion-reduce:animate-none"
+              style={{
+                animationDuration: `${tickerDuration}s`,
+                "--ticker-distance": tickerDistance ? `${tickerDistance}px` : "50%",
+              } as CSSProperties}
+            >
+              <div ref={tickerGroupRef} className="flex shrink-0 whitespace-nowrap">
+                {tickerLoopItems.map((news, i) => (
+                  <span key={`hero-news-a-${i}`} className="mx-8 inline-flex shrink-0 items-center text-sm text-foreground/80">
+                    <span className="mr-3 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary" />
+                    {news}
+                  </span>
+                ))}
+              </div>
+              <div className="flex shrink-0 whitespace-nowrap" aria-hidden="true">
+                {tickerLoopItems.map((news, i) => (
+                  <span key={`hero-news-b-${i}`} className="mx-8 inline-flex shrink-0 items-center text-sm text-foreground/80">
+                    <span className="mr-3 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary" />
+                    {news}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
