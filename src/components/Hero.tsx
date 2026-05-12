@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useMemo, useRef, type CSSProperties } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, FileText, MapPin, Sparkles, Infinity as InfinityIcon, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,6 @@ import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-racing.jpg";
 import racecardPreview from "@/assets/racecard-guide/racecard-guide-page-02-cropped.png";
 import { supabase } from "@/integrations/supabase/client";
-import { buildTickerLoopItems, tickerDurationSeconds } from "@/lib/breakingNewsTicker";
 
 const FALLBACK_NEWS = [
   "Concert algorithm picks Winner in race#1, race#2, race#3, race#6, race#7; Belmont At Big A May1, 2026",
@@ -69,10 +68,6 @@ function countHitType(items: string[], pattern: RegExp): number {
 
 export const Hero = () => {
   const [resultItems, setResultItems] = useState<string[]>(FALLBACK_NEWS);
-  const [tickerDistance, setTickerDistance] = useState<number | null>(null);
-  const tickerGroupRef = useRef<HTMLDivElement | null>(null);
-  const tickerLoopItems = useMemo(() => buildTickerLoopItems(resultItems), [resultItems]);
-  const tickerDuration = useMemo(() => tickerDurationSeconds(tickerLoopItems) * 2, [tickerLoopItems]);
   const resultSummary = useMemo(
     () => [
       { label: "Recent hit notes", value: resultItems.length },
@@ -81,24 +76,6 @@ export const Hero = () => {
     ],
     [resultItems],
   );
-
-  useLayoutEffect(() => {
-    const group = tickerGroupRef.current;
-    if (!group) return;
-
-    const updateDistance = () => {
-      setTickerDistance(Math.ceil(group.scrollWidth));
-    };
-
-    updateDistance();
-    const observer = new ResizeObserver(updateDistance);
-    observer.observe(group);
-    if (document.fonts) {
-      void document.fonts.ready.then(updateDistance);
-    }
-
-    return () => observer.disconnect();
-  }, [tickerLoopItems]);
 
   useEffect(() => {
     supabase
@@ -115,7 +92,7 @@ export const Hero = () => {
   }, []);
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+    <section className="relative flex h-[calc(100vh-var(--header-height))] min-h-[700px] items-center justify-center overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0">
         <img
@@ -132,7 +109,7 @@ export const Hero = () => {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 container mx-auto px-4 pt-[203px] pb-28 sm:pb-32">
+      <div className="relative z-10 container mx-auto px-4 pt-[75px] pb-16">
         <div className="max-w-4xl mx-auto text-center">
           <motion.div
             initial={false}
@@ -173,7 +150,7 @@ export const Hero = () => {
             initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="text-base text-muted-foreground italic mb-10"
+            className="text-base text-muted-foreground italic mb-8"
           >
             Horse Racing Simplified®
           </motion.p>
@@ -210,7 +187,7 @@ export const Hero = () => {
             initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="mx-auto mb-10 grid max-w-3xl items-center gap-4 rounded-xl border border-border/70 bg-card/75 p-3 text-left shadow-xl backdrop-blur-sm sm:grid-cols-[104px_minmax(0,1fr)_auto]"
+            className="mx-auto mb-8 grid max-w-3xl items-center gap-4 rounded-xl border border-border/70 bg-card/75 p-3 text-left shadow-xl backdrop-blur-sm sm:grid-cols-[104px_minmax(0,1fr)_auto]"
           >
             <img
               src={racecardPreview}
@@ -254,7 +231,7 @@ export const Hero = () => {
             initial={false}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4 }}
-            className="mt-12 sm:mt-14 md:mt-16 flex flex-col items-center gap-2 text-foreground/40"
+            className="mt-8 flex flex-col items-center gap-2 text-foreground/40"
           >
             <span className="text-xs uppercase tracking-wider">Scroll to explore</span>
             <motion.div
@@ -268,39 +245,6 @@ export const Hero = () => {
         </div>
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 z-20 overflow-hidden border-t border-border bg-card/90 backdrop-blur-sm">
-        <div className="flex items-center">
-          <div className="flex-shrink-0 bg-primary px-4 py-2 text-xs font-bold uppercase tracking-wider text-primary-foreground">
-            Breaking News
-          </div>
-          <div className="min-w-0 flex-1 overflow-hidden">
-            <div
-              className="flex w-max whitespace-nowrap animate-ticker-scroll will-change-transform motion-reduce:animate-none"
-              style={{
-                animationDuration: `${tickerDuration}s`,
-                "--ticker-distance": tickerDistance ? `${tickerDistance}px` : "50%",
-              } as CSSProperties}
-            >
-              <div ref={tickerGroupRef} className="flex shrink-0 whitespace-nowrap">
-                {tickerLoopItems.map((news, i) => (
-                  <span key={`hero-news-a-${i}`} className="mx-8 inline-flex shrink-0 items-center text-sm text-foreground/80">
-                    <span className="mr-3 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary" />
-                    {news}
-                  </span>
-                ))}
-              </div>
-              <div className="flex shrink-0 whitespace-nowrap" aria-hidden="true">
-                {tickerLoopItems.map((news, i) => (
-                  <span key={`hero-news-b-${i}`} className="mx-8 inline-flex shrink-0 items-center text-sm text-foreground/80">
-                    <span className="mr-3 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary" />
-                    {news}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </section>
   );
 };

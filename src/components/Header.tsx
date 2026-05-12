@@ -32,7 +32,11 @@ const navItems = [
   { label: "Contact", href: "/contact" },
 ];
 
-export const Header = () => {
+interface HeaderProps {
+  topOffsetClassName?: string;
+}
+
+export const Header = ({ topOffsetClassName = "top-0" }: HeaderProps) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -96,7 +100,7 @@ export const Header = () => {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 bg-background transition-all duration-300 ${
+      className={`fixed ${topOffsetClassName} left-0 right-0 z-50 bg-background transition-all duration-300 ${
         isScrolled ? "border-b border-border py-3 shadow-sm" : "py-5"
       }`}
     >
