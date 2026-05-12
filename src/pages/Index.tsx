@@ -52,13 +52,13 @@ const BreakingNewsBar = () => {
   const activeItem = items[activeIndex] ?? "";
 
   return (
-    <div data-testid="breaking-news-bar" className="fixed left-0 right-0 top-0 z-[60] flex h-8 overflow-hidden bg-background shadow-sm sm:h-9">
+    <div data-testid="breaking-news-bar" className="fixed left-0 right-0 top-0 z-[60] flex h-8 overflow-hidden border-b border-primary/60 bg-black shadow-sm sm:h-9">
       <div className="flex shrink-0 items-center gap-1.5 bg-primary px-3 text-[10px] font-bold uppercase tracking-wider text-primary-foreground sm:gap-2 sm:px-4 sm:text-xs">
         <Trophy className="h-4 w-4" />
         <span className="sm:hidden">News</span>
         <span className="hidden sm:inline">Breaking News</span>
       </div>
-      <div className="flex min-w-0 flex-1 items-center overflow-hidden bg-background px-3 text-xs font-medium text-foreground/90 sm:px-4 sm:text-sm">
+      <div className="flex min-w-0 flex-1 items-center overflow-hidden bg-black px-3 text-xs font-medium text-white/85 sm:px-4 sm:text-sm">
         <AnimatePresence mode="wait" initial={false}>
           <motion.p
             key={`${activeIndex}-${activeItem}`}
