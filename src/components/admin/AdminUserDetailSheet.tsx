@@ -57,7 +57,7 @@ export function AdminUserDetailSheet({
   const [fullName, setFullName] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
-  /** Keeps UI in sync after admin_set_unlimited_credits when parent row cache is stale. */
+  /** Keeps UI in sync after unlimited credit changes when parent row cache is stale. */
   const [unlimitedPlan, setUnlimitedPlan] = useState(false);
 
   const userTx = customer
@@ -184,15 +184,14 @@ export function AdminUserDetailSheet({
       }
     }
     setBusy("unlimited");
-    const { error } = await supabase.rpc("admin_set_unlimited_credits", {
-      _user_id: customer.user_id,
-      _unlimited: next,
+    const res = await invokeManage({
+      action: "set_unlimited_credits",
+      userId: customer.user_id,
+      unlimited: next,
     });
     setBusy(null);
-    if (error) {
-      toast({ title: "Could not update plan", description: sanitizeError(error), variant: "destructive" });
-      return;
-    }
+    if (!res?.ok) return;
+
     setUnlimitedPlan(next);
     toast({ title: next ? "Unlimited credits enabled" : "Unlimited credits removed" });
     onUpdated();

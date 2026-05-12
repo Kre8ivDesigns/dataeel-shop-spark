@@ -6,6 +6,7 @@ type Action =
   | "unban"
   | "send_password_recovery"
   | "update_profile"
+  | "set_unlimited_credits"
   | "delete_user"
   | "delete_fake_zero_credit_users";
 
@@ -86,6 +87,7 @@ Deno.serve(async (req) => {
       action: Action;
       userId?: string;
       full_name?: string;
+      unlimited?: boolean;
     };
     const { action } = body;
     const userId = normalizeUserId(body.userId);
@@ -205,6 +207,53 @@ Deno.serve(async (req) => {
         resource_id: userId,
         detail: { full_name },
       });
+      return respond({ ok: true });
+    }
+
+    if (action === "set_unlimited_credits") {
+      if (typeof body.unlimited !== "boolean") {
+        return respond({ error: "unlimited must be a boolean" }, 400);
+      }
+
+      const { data: balance, error: balanceErr } = await supabaseAdmin
+        .from("credit_balances")
+        .select("credits")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (balanceErr) return respond({ error: balanceErr.message }, 500);
+
+      if (balance) {
+        const { error } = await supabaseAdmin
+          .from("credit_balances")
+          .update({ unlimited_credits: body.unlimited, updated_at: new Date().toISOString() })
+          .eq("user_id", userId);
+        if (error) return respond({ error: error.message }, 500);
+      } else {
+        const { error } = await supabaseAdmin
+          .from("credit_balances")
+          .insert({ user_id: userId, credits: 0, unlimited_credits: body.unlimited });
+        if (error) return respond({ error: error.message }, 500);
+      }
+
+      const balanceAfter = Number(balance?.credits ?? 0);
+      const { error: ledgerErr } = await supabaseAdmin.from("credit_ledger").insert({
+        user_id: userId,
+        delta: 0,
+        balance_after: balanceAfter,
+        entry_type: "admin_grant",
+        ref_id: null,
+        meta: { admin_id: actorId, unlimited_credits: body.unlimited },
+      });
+      if (ledgerErr) return respond({ error: ledgerErr.message }, 500);
+
+      await supabaseAdmin.from("audit_log").insert({
+        actor_id: actorId,
+        action: body.unlimited ? "admin.user.unlimited_credits.enable" : "admin.user.unlimited_credits.disable",
+        resource: "credit_balances",
+        resource_id: userId,
+        detail: { unlimited_credits: body.unlimited },
+      });
+
       return respond({ ok: true });
     }
 
