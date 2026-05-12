@@ -13,13 +13,12 @@ const footerLinks = {
     { label: "About Us", href: "/#about" },
     { label: "FAQ", href: "/#faq" },
     { label: "Contact", href: "/contact" },
-    { label: "Careers", href: "#" },
   ],
   legal: [
     { label: "Terms & Conditions", href: "/terms" },
     { label: "Privacy Policy", href: "/privacy-policy" },
     { label: "Disclaimer", href: "/disclaimer" },
-    { label: "Responsible Gaming", href: "#" },
+    { label: "Responsible Gaming", href: "/betting-basics#responsible" },
   ],
 };
 

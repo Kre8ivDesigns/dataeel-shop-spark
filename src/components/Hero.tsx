@@ -92,7 +92,7 @@ export const Hero = () => {
   }, []);
 
   return (
-    <section className="relative flex h-[calc(100vh-var(--header-height))] min-h-[700px] items-center justify-center overflow-hidden">
+    <section className="relative mt-[calc(var(--header-height)+2rem)] flex min-h-[calc(100svh-var(--header-height)-2rem)] items-center justify-center overflow-hidden sm:mt-[calc(var(--header-height)+2.25rem)] sm:min-h-[calc(100svh-var(--header-height)-2.25rem)]">
       {/* Background */}
       <div className="absolute inset-0">
         <img
@@ -109,13 +109,13 @@ export const Hero = () => {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 container mx-auto px-4 pt-[75px] pb-16">
+      <div className="relative z-10 container mx-auto px-4 pb-10 pt-[75px] sm:pb-14 lg:pb-16">
         <div className="max-w-4xl mx-auto text-center">
           <motion.div
             initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="mx-auto mb-6 inline-flex flex-wrap items-center justify-center gap-2 rounded-full border border-primary/30 bg-card/70 px-4 py-2 text-sm text-foreground/80 shadow-[0_0_28px_hsl(var(--primary)/0.12)] backdrop-blur-sm"
+            className="mx-auto mb-4 inline-flex max-w-full flex-wrap items-center justify-center gap-1.5 rounded-full border border-primary/30 bg-card/70 px-3 py-2 text-xs text-foreground/80 shadow-[0_0_28px_hsl(var(--primary)/0.12)] backdrop-blur-sm sm:mb-6 sm:gap-2 sm:px-4 sm:text-sm"
           >
             <Trophy className="h-4 w-4 text-primary" />
             <span className="font-semibold text-foreground">Recent results snapshot:</span>
@@ -129,7 +129,7 @@ export const Hero = () => {
             initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-foreground leading-tight mb-6 font-heading tracking-tight"
+            className="mb-4 text-3xl font-bold leading-tight text-foreground sm:text-4xl md:mb-6 md:text-5xl lg:text-6xl xl:text-7xl font-heading tracking-tight"
           >
             Stop Guessing. Start Reading the Race Smarter.
           </motion.h1>
@@ -139,7 +139,7 @@ export const Hero = () => {
             initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="text-lg md:text-xl text-foreground/70 max-w-2xl mx-auto mb-4"
+            className="mx-auto mb-3 max-w-2xl text-base text-foreground/70 sm:text-lg md:mb-4 md:text-xl"
           >
             Algorithm-powered RaceCards for 28+ tracks. See the Concert™ and Aptitude™ picks in a
             simple PDF before you spend hours buried in past performances.
@@ -150,7 +150,7 @@ export const Hero = () => {
             initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="text-base text-muted-foreground italic mb-8"
+            className="mb-6 text-sm italic text-muted-foreground sm:mb-8 sm:text-base"
           >
             Horse Racing Simplified®
           </motion.p>
@@ -160,12 +160,12 @@ export const Hero = () => {
             initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8"
+            className="mb-6 flex flex-col items-stretch justify-center gap-3 sm:mb-8 sm:flex-row sm:items-center sm:gap-4"
           >
             <Link to="/how-to-read-racecard">
               <Button
                 size="lg"
-                className="btn-neon text-lg px-10 py-6 h-auto"
+                className="btn-neon h-auto w-full px-8 py-5 text-base sm:w-auto sm:px-10 sm:py-6 sm:text-lg"
               >
                 <FileText className="mr-2 h-5 w-5" />
                 View Sample RaceCard
@@ -175,7 +175,7 @@ export const Hero = () => {
               <Button
                 size="lg"
                 variant="outline"
-                className="btn-ghost-light text-lg px-10 py-6 h-auto"
+                className="btn-ghost-light h-auto w-full px-8 py-5 text-base sm:w-auto sm:px-10 sm:py-6 sm:text-lg"
               >
                 Today Races
                 <ArrowRight className="ml-2 h-5 w-5" />
@@ -187,12 +187,12 @@ export const Hero = () => {
             initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="mx-auto mb-8 grid max-w-3xl items-center gap-4 rounded-xl border border-border/70 bg-card/75 p-3 text-left shadow-xl backdrop-blur-sm sm:grid-cols-[104px_minmax(0,1fr)_auto]"
+            className="mx-auto mb-6 grid max-w-3xl items-center gap-3 rounded-xl border border-border/70 bg-card/75 p-3 text-left shadow-xl backdrop-blur-sm sm:mb-8 sm:grid-cols-[104px_minmax(0,1fr)_auto] sm:gap-4"
           >
             <img
               src={racecardPreview}
               alt="Preview of an EEL RaceCard showing race details and algorithm rankings"
-              className="h-32 w-full rounded-lg object-cover object-top sm:h-28 sm:w-24"
+              className="h-24 w-full rounded-lg object-cover object-top sm:h-28 sm:w-24"
               loading="eager"
             />
             <div className="min-w-0">
@@ -213,12 +213,12 @@ export const Hero = () => {
             initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="flex flex-wrap items-center justify-center gap-4 md:gap-6"
+            className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 md:gap-6"
           >
             {trustBadges.map((badge) => (
               <div
                 key={badge.label}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50 backdrop-blur-sm text-foreground/80 text-sm"
+                className="inline-flex items-center gap-1.5 rounded-full bg-muted/50 px-3 py-1.5 text-xs text-foreground/80 backdrop-blur-sm sm:gap-2 sm:px-4 sm:py-2 sm:text-sm"
               >
                 <badge.icon className="h-4 w-4 text-primary" />
                 <span>{badge.label}</span>
@@ -231,7 +231,7 @@ export const Hero = () => {
             initial={false}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4 }}
-            className="mt-8 flex flex-col items-center gap-2 text-foreground/40"
+            className="mt-8 hidden flex-col items-center gap-2 text-foreground/40 sm:flex"
           >
             <span className="text-xs uppercase tracking-wider">Scroll to explore</span>
             <motion.div

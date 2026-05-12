@@ -52,26 +52,25 @@ const BreakingNewsBar = () => {
   const activeItem = items[activeIndex] ?? "";
 
   return (
-    <div className="fixed left-0 right-0 top-0 z-[60] border-b border-primary/30 bg-primary text-primary-foreground shadow-sm">
-      <div className="container mx-auto flex h-9 items-center gap-3 overflow-hidden px-4">
-        <div className="flex shrink-0 items-center gap-2 text-xs font-bold uppercase tracking-wider">
-          <Trophy className="h-4 w-4" />
-          Breaking News
-        </div>
-        <div className="min-w-0 flex-1 overflow-hidden text-sm font-medium">
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.p
-              key={`${activeIndex}-${activeItem}`}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.25 }}
-              className="truncate"
-            >
-              {activeItem}
-            </motion.p>
-          </AnimatePresence>
-        </div>
+    <div data-testid="breaking-news-bar" className="fixed left-0 right-0 top-0 z-[60] flex h-8 overflow-hidden border-b border-primary/30 shadow-sm sm:h-9">
+      <div className="flex shrink-0 items-center gap-1.5 bg-primary px-3 text-[10px] font-bold uppercase tracking-wider text-primary-foreground sm:gap-2 sm:px-4 sm:text-xs">
+        <Trophy className="h-4 w-4" />
+        <span className="sm:hidden">News</span>
+        <span className="hidden sm:inline">Breaking News</span>
+      </div>
+      <div className="flex min-w-0 flex-1 items-center overflow-hidden bg-background px-3 text-xs font-medium text-foreground/90 sm:px-4 sm:text-sm">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.p
+            key={`${activeIndex}-${activeItem}`}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25 }}
+            className="truncate"
+          >
+            {activeItem}
+          </motion.p>
+        </AnimatePresence>
       </div>
     </div>
   );
@@ -91,7 +90,7 @@ const Index = () => {
   return (
     <div className="min-h-screen">
       <BreakingNewsBar />
-      <Header topOffsetClassName="top-9" />
+      <Header topOffsetClassName="top-8 sm:top-9" />
       <Hero />
       <HowItWorks />
       <Results />
