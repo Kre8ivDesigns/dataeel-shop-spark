@@ -96,6 +96,10 @@ verify_jwt = false
 [functions.ingest-race-results]
 verify_jwt = false
 
+# Cron-triggered daily site analytics + SEO email report.
+[functions.daily-site-report]
+verify_jwt = false
+
 [functions.manage-credit-package]
 verify_jwt = true
 
