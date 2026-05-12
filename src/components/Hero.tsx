@@ -1,11 +1,11 @@
-import { useState, useEffect, useLayoutEffect, useMemo, useRef, type CSSProperties } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, FileText, Play, MapPin, Sparkles, Infinity as InfinityIcon } from "lucide-react";
+import { ArrowRight, FileText, MapPin, Sparkles, Infinity as InfinityIcon, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-racing.jpg";
+import racecardPreview from "@/assets/racecard-guide/racecard-guide-page-02-cropped.png";
 import { supabase } from "@/integrations/supabase/client";
-import { buildTickerLoopItems, tickerDurationSeconds } from "@/lib/breakingNewsTicker";
 
 const FALLBACK_NEWS = [
   "Concert algorithm picks Winner in race#1, race#2, race#3, race#6, race#7; Belmont At Big A May1, 2026",
@@ -62,30 +62,20 @@ const trustBadges = [
   { icon: InfinityIcon, label: "Credits never expire" },
 ];
 
+function countHitType(items: string[], pattern: RegExp): number {
+  return items.filter((item) => pattern.test(item)).length;
+}
+
 export const Hero = () => {
-  const [tickerItems, setTickerItems] = useState<string[]>(FALLBACK_NEWS);
-  const [tickerDistance, setTickerDistance] = useState<number | null>(null);
-  const tickerGroupRef = useRef<HTMLDivElement | null>(null);
-  const tickerLoopItems = useMemo(() => buildTickerLoopItems(tickerItems), [tickerItems]);
-  const tickerDuration = useMemo(() => tickerDurationSeconds(tickerLoopItems), [tickerLoopItems]);
-
-  useLayoutEffect(() => {
-    const group = tickerGroupRef.current;
-    if (!group) return;
-
-    const updateDistance = () => {
-      setTickerDistance(Math.ceil(group.scrollWidth));
-    };
-
-    updateDistance();
-    const observer = new ResizeObserver(updateDistance);
-    observer.observe(group);
-    if (document.fonts) {
-      void document.fonts.ready.then(updateDistance);
-    }
-
-    return () => observer.disconnect();
-  }, [tickerLoopItems]);
+  const [resultItems, setResultItems] = useState<string[]>(FALLBACK_NEWS);
+  const resultSummary = useMemo(
+    () => [
+      { label: "Recent hit notes", value: resultItems.length },
+      { label: "Winner calls", value: countHitType(resultItems, /\bwinner\b/i) },
+      { label: "Exotics posted", value: countHitType(resultItems, /\b(?:exacta|trifecta|superfecta|pick\s*3|daily double)\b/i) },
+    ],
+    [resultItems],
+  );
 
   useEffect(() => {
     supabase
@@ -96,7 +86,7 @@ export const Hero = () => {
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         if (data && data.length > 0) {
-          setTickerItems(data.map((r) => r.text));
+          setResultItems(data.map((r) => r.text));
         }
       });
   }, []);
@@ -118,44 +108,22 @@ export const Hero = () => {
         />
       </div>
 
-      {/* Breaking News Ticker */}
-      <div className="absolute top-[var(--header-height)] left-0 right-0 z-20 bg-card/90 backdrop-blur-sm border-b border-border overflow-hidden">
-        <div className="flex items-center">
-          <div className="flex-shrink-0 px-4 py-2 bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wider">
-            Breaking News
-          </div>
-          <div className="overflow-hidden flex-1 min-w-0">
-            <div
-              className="flex w-max whitespace-nowrap animate-ticker-scroll will-change-transform motion-reduce:animate-none"
-              style={{
-                animationDuration: `${tickerDuration}s`,
-                "--ticker-distance": tickerDistance ? `${tickerDistance}px` : "50%",
-              } as CSSProperties}
-            >
-              <div ref={tickerGroupRef} className="flex shrink-0 whitespace-nowrap">
-                {tickerLoopItems.map((news, i) => (
-                  <span key={`a-${i}`} className="inline-flex items-center text-sm text-foreground/80 mx-8 shrink-0">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary mr-3 flex-shrink-0" />
-                    {news}
-                  </span>
-                ))}
-              </div>
-              <div className="flex shrink-0 whitespace-nowrap" aria-hidden="true">
-                {tickerLoopItems.map((news, i) => (
-                  <span key={`b-${i}`} className="inline-flex items-center text-sm text-foreground/80 mx-8 shrink-0">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary mr-3 flex-shrink-0" />
-                    {news}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Content */}
-      <div className="relative z-10 container mx-auto px-4 pt-32 pb-16">
+      <div className="relative z-10 container mx-auto px-4 pt-32 pb-12 sm:pb-16">
         <div className="max-w-4xl mx-auto text-center">
+          <motion.div
+            initial={false}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="mx-auto mb-6 inline-flex flex-wrap items-center justify-center gap-2 rounded-full border border-primary/30 bg-card/70 px-4 py-2 text-sm text-foreground/80 shadow-[0_0_28px_hsl(var(--primary)/0.12)] backdrop-blur-sm"
+          >
+            <Trophy className="h-4 w-4 text-primary" />
+            <span className="font-semibold text-foreground">Recent results snapshot:</span>
+            <span>{resultSummary[1].value} winner calls</span>
+            <span aria-hidden="true" className="text-muted-foreground">/</span>
+            <span>{resultSummary[2].value} exotics posted</span>
+          </motion.div>
+
           {/* Main Headline */}
           <motion.h1
             initial={false}
@@ -163,7 +131,7 @@ export const Hero = () => {
             transition={{ duration: 0.5 }}
             className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-foreground leading-tight mb-6 font-heading tracking-tight"
           >
-            Win More. Bet Smarter.
+            Stop Guessing. Start Reading the Race Smarter.
           </motion.h1>
 
           {/* Sub-headline */}
@@ -173,9 +141,8 @@ export const Hero = () => {
             transition={{ duration: 0.5 }}
             className="text-lg md:text-xl text-foreground/70 max-w-2xl mx-auto mb-4"
           >
-            How about a simplified and honest approach to Horse Racing?
-            Algorithm-powered RaceCards for 28+ tracks. Two expert algorithms,
-            instant downloads, proven results.
+            Algorithm-powered RaceCards for 28+ tracks. See the Concert™ and Aptitude™ picks in a
+            simple PDF before you spend hours buried in past performances.
           </motion.p>
 
           {/* Tagline */}
@@ -193,36 +160,50 @@ export const Hero = () => {
             initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12"
+            className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8"
           >
-            <Link to="/racecards">
+            <Link to="/how-to-read-racecard">
               <Button
                 size="lg"
                 className="btn-neon text-lg px-10 py-6 h-auto"
               >
-                Get Today's Cards
-                <ArrowRight className="ml-2 h-5 w-5" />
+                <FileText className="mr-2 h-5 w-5" />
+                View Sample RaceCard
               </Button>
             </Link>
-            <Button
-              size="lg"
-              variant="outline"
-              className="btn-ghost-light text-lg px-10 py-6 h-auto"
-              onClick={() => {
-                document.querySelector("#how-it-works")?.scrollIntoView({ behavior: "smooth" });
-              }}
-            >
-              <Play className="mr-2 h-5 w-5" />
-              How It Works
-            </Button>
-            <Link to="/how-to-read-racecard">
+            <Link to="/racecards">
               <Button
                 size="lg"
                 variant="outline"
                 className="btn-ghost-light text-lg px-10 py-6 h-auto"
               >
-                <FileText className="mr-2 h-5 w-5" />
-                View Sample RaceCard
+                Get Today's Cards
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
+          </motion.div>
+
+          <motion.div
+            initial={false}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="mx-auto mb-10 grid max-w-3xl items-center gap-4 rounded-xl border border-border/70 bg-card/75 p-3 text-left shadow-xl backdrop-blur-sm sm:grid-cols-[104px_minmax(0,1fr)_auto]"
+          >
+            <img
+              src={racecardPreview}
+              alt="Preview of an EEL RaceCard showing race details and algorithm rankings"
+              className="h-32 w-full rounded-lg object-cover object-top sm:h-28 sm:w-24"
+              loading="eager"
+            />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground">Know what you are buying.</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Preview the RaceCard format: race details, horse numbers, odds, and side-by-side algorithm rankings.
+              </p>
+            </div>
+            <Link to="/how-to-read-racecard" className="shrink-0">
+              <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                Open sample
               </Button>
             </Link>
           </motion.div>

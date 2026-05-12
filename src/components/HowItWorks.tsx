@@ -1,29 +1,29 @@
 import { motion } from "framer-motion";
-import { UserPlus, MapPin, Download, Trophy, ArrowRight } from "lucide-react";
+import { Eye, MapPin, Download, Trophy, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
 const steps = [
   {
-    icon: UserPlus,
+    icon: Eye,
     number: "01",
-    title: "Register for FREE",
+    title: "Preview the RaceCard",
     description:
-      "Registration is FREE and gives you access to see which racetracks are running with EEL RaceCards this week.",
+      "Start with the sample RaceCard and see the exact format before creating an account or buying credits.",
   },
   {
     icon: MapPin,
     number: "02",
-    title: "Choose Your Track",
+    title: "Browse Running Tracks",
     description:
-      "Select from 28+ racetracks across the U.S. and Canada. We cover all major thoroughbred venues every race day including Churchill Downs, Santa Anita, Gulfstream Park, and more.",
+      "Check which RaceCards are available by track and date across major thoroughbred venues including Churchill Downs, Santa Anita, Gulfstream Park, and more.",
   },
   {
     icon: Download,
     number: "03",
-    title: "Buy Credits & Download",
+    title: "Unlock When Ready",
     description:
-      "Purchase credits from the Dashboard after login. 1 Credit = 1 full day of EEL RaceCard predictions for a specific track. Simple PDF download, instant access.",
+      "Create a free account only when you are ready to download. One credit unlocks a full race day for a specific track.",
   },
   {
     icon: Trophy,
@@ -64,12 +64,11 @@ export const HowItWorks = () => {
         >
           <span className="badge-neon mb-4 inline-block">How It Works</span>
           <h2 className="section-title mb-4">
-            Four Simple Steps to{" "}
-            <span className="text-neon">Winning Picks</span>
+            See Value Before You{" "}
+            <span className="text-neon">Sign Up</span>
           </h2>
           <p className="section-subtitle">
-            Horse Racing Simplified® – No complicated handicapping. No hours of research.
-            Just algorithmic predictions delivered straight to you.
+            Preview the product, browse the available tracks, then unlock a RaceCard only when it fits your race day.
           </p>
         </motion.div>
 
@@ -115,12 +114,12 @@ export const HowItWorks = () => {
               size="lg"
               className="btn-neon text-lg px-8 py-6 h-auto"
             >
-              Get Started
+              Browse RaceCards
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </Link>
           <p className="text-sm text-muted-foreground mt-4">
-            Registration is FREE · 1 Credit per RaceCard
+            Preview first · free account when you are ready · 1 credit per RaceCard
           </p>
         </motion.div>
       </div>
