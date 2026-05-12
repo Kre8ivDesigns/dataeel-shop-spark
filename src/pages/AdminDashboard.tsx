@@ -16,6 +16,7 @@ import {
   RefreshCw,
   DollarSign,
   BarChart3,
+  Search,
   Settings,
   Package,
   TrendingUp,
@@ -119,68 +120,96 @@ const AdminDashboard = () => {
 
     setUploading(true);
     let successCount = 0;
+    let failureCount = 0;
+    let skippedCount = 0;
 
-    for (const file of Array.from(files)) {
-      if (file.type !== "application/pdf") {
-        toast({ title: `Skipped ${file.name}`, description: "Only PDF files accepted", variant: "destructive" });
-        continue;
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        toast({ title: `Skipped ${file.name}`, description: "Maximum file size is 10MB", variant: "destructive" });
-        continue;
-      }
+    try {
+      for (const file of Array.from(files)) {
+        const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+        if (!isPdf) {
+          skippedCount++;
+          toast({ title: `Skipped ${file.name}`, description: "Only PDF files accepted", variant: "destructive" });
+          continue;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          skippedCount++;
+          toast({ title: `Skipped ${file.name}`, description: "Maximum file size is 10MB", variant: "destructive" });
+          continue;
+        }
 
-      const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const { data: urlData, error: urlError } = await supabase.functions.invoke("generate-upload-url", {
-        body: { fileName: sanitizedName },
+        try {
+          const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+          const { data: urlData, error: urlError } = await supabase.functions.invoke("generate-upload-url", {
+            body: { fileName: sanitizedName },
+          });
+
+          if (urlError || !urlData?.uploadUrl) {
+            failureCount++;
+            toast({
+              title: `Upload failed: ${file.name}`,
+              description: formatInvokeFailureMessage("generate-upload-url", urlError, urlData),
+              variant: "destructive",
+            });
+            continue;
+          }
+
+          const s3Res = await fetch(urlData.uploadUrl, {
+            method: "PUT",
+            body: file,
+            headers: { "Content-Type": "application/pdf" },
+          });
+          if (!s3Res.ok) {
+            failureCount++;
+            toast({
+              title: `Upload failed: ${file.name}`,
+              description: `S3 error: ${s3Res.status} ${s3Res.statusText}`,
+              variant: "destructive",
+            });
+            continue;
+          }
+
+          const { trackCode, raceDate } = parseRacecardFilename(file.name);
+
+          const { error: dbError } = await supabase.from("racecards").insert({
+            file_name: file.name,
+            file_url: urlData.s3Key,
+            track_code: trackCode,
+            track_name: getRacetrackLabel(trackCode),
+            race_date: raceDate,
+            digitization_status: "queued",
+            uploaded_by: user.id,
+          });
+
+          if (dbError) {
+            failureCount++;
+            toast({ title: `DB insert failed: ${file.name}`, description: sanitizeError(dbError), variant: "destructive" });
+          } else {
+            successCount++;
+          }
+        } catch (err) {
+          failureCount++;
+          toast({
+            title: `Upload failed: ${file.name}`,
+            description:
+              err instanceof TypeError
+                ? "Browser could not upload to S3. Check the S3 bucket CORS rules allow PUT from this site and the Content-Type header."
+                : sanitizeError(err),
+            variant: "destructive",
+          });
+        }
+      }
+    } finally {
+      const summary = [`${successCount} uploaded`];
+      if (failureCount > 0) summary.push(`${failureCount} failed`);
+      if (skippedCount > 0) summary.push(`${skippedCount} skipped`);
+      toast({
+        title: `RaceCard upload finished: ${summary.join(", ")}`,
+        variant: successCount > 0 && failureCount === 0 ? "default" : "destructive",
       });
-
-      if (urlError || !urlData?.uploadUrl) {
-        toast({
-          title: `Upload failed: ${file.name}`,
-          description: formatInvokeFailureMessage("generate-upload-url", urlError, urlData),
-          variant: "destructive",
-        });
-        continue;
-      }
-
-      const s3Res = await fetch(urlData.uploadUrl, {
-        method: "PUT",
-        body: file,
-        headers: { "Content-Type": "application/pdf" },
-      });
-      if (!s3Res.ok) {
-        toast({
-          title: `Upload failed: ${file.name}`,
-          description: `S3 error: ${s3Res.status} ${s3Res.statusText}`,
-          variant: "destructive",
-        });
-        continue;
-      }
-
-      const { trackCode, raceDate } = parseRacecardFilename(file.name);
-
-      const { error: dbError } = await supabase.from("racecards").insert({
-        file_name: file.name,
-        file_url: urlData.s3Key,
-        track_code: trackCode,
-        track_name: getRacetrackLabel(trackCode),
-        race_date: raceDate,
-        digitization_status: "queued",
-        uploaded_by: user.id,
-      });
-
-      if (dbError) {
-        toast({ title: `DB insert failed: ${file.name}`, description: sanitizeError(dbError), variant: "destructive" });
-      } else {
-        successCount++;
-      }
+      setUploading(false);
+      void fetchData();
+      e.target.value = "";
     }
-
-    toast({ title: `Uploaded ${successCount} racecard(s)` });
-    setUploading(false);
-    fetchData();
-    e.target.value = "";
   };
 
   const handleSyncS3 = async () => {
@@ -371,6 +400,7 @@ const AdminDashboard = () => {
     { to: "/admin/reports", title: "Reports", subtitle: "Downloads, credit ledger", icon: Table2 },
     { to: "/admin/financials", title: "Financial dashboard", subtitle: "Revenue, charts, CSV", icon: DollarSign },
     { to: "/admin/analytics", title: "Site analytics", subtitle: "Signups, downloads, audit log", icon: BarChart3 },
+    { to: "/admin/seo", title: "SEO tools", subtitle: "Keywords, speed, audits", icon: Search },
     { to: "/admin/settings", title: "Settings", subtitle: "Stripe, site, integrations", icon: Settings },
     { to: "/admin/credit-packages", title: "Credit packages", subtitle: "Pricing tiers", icon: Package },
     { to: "/admin/help", title: "Help", subtitle: "Admin documentation", icon: HelpCircle },

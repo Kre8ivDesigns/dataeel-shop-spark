@@ -405,6 +405,51 @@ export type Database = {
         }
         Relationships: []
       }
+      feedback_credit_offers: {
+        Row: {
+          id: string
+          user_id: string
+          email: string
+          offer_token: string
+          source: string
+          sent_at: string | null
+          responded_at: string | null
+          credited_at: string | null
+          response_message: string | null
+          credit_amount: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          email: string
+          offer_token?: string
+          source?: string
+          sent_at?: string | null
+          responded_at?: string | null
+          credited_at?: string | null
+          response_message?: string | null
+          credit_amount?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          email?: string
+          offer_token?: string
+          source?: string
+          sent_at?: string | null
+          responded_at?: string | null
+          credited_at?: string | null
+          response_message?: string | null
+          credit_amount?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pages: {
         Row: {
           id: string
@@ -583,6 +628,17 @@ export type Database = {
           _user_id: string
         }
         Returns: null
+      }
+      claim_feedback_credit: {
+        Args: {
+          p_offer_token: string | null
+          p_message: string
+        }
+        Returns: {
+          already_claimed: boolean
+          credited: boolean
+          new_balance: number
+        }[]
       }
       deduct_credit_if_sufficient: {
         Args: {

@@ -82,7 +82,7 @@ export function NewVisitorRacecardOffer() {
       setOpen(true);
       if (!hasTrackedView.current) {
         hasTrackedView.current = true;
-        void trackSiteEvent("popup_viewed", { popup: "racecard_sample", trigger, path: location.pathname }, user?.id);
+        void trackSiteEvent("popup_viewed", { popup: "feedback_credit", trigger, path: location.pathname }, user?.id);
       }
     };
 
@@ -112,7 +112,7 @@ export function NewVisitorRacecardOffer() {
   const dismiss = (reason: "dismiss_button" | "outside") => {
     setOpen(false);
     setNumberInStorage(DISMISSED_UNTIL_KEY, Date.now() + DISMISS_WINDOW_MS);
-    void trackSiteEvent("popup_dismissed", { popup: "racecard_sample", reason, path: location.pathname }, user?.id);
+    void trackSiteEvent("popup_dismissed", { popup: "feedback_credit", reason, path: location.pathname }, user?.id);
   };
 
   const convert = () => {
@@ -121,12 +121,7 @@ export function NewVisitorRacecardOffer() {
     } catch {
       // Ignore storage-denied modes.
     }
-    void trackSiteEvent("popup_converted", { popup: "racecard_sample", path: location.pathname }, user?.id);
-    void trackSiteEvent(
-      "racecard_preview_opened",
-      { location: "new_visitor_popup", href: "/how-to-read-racecard" },
-      user?.id,
-    );
+    void trackSiteEvent("popup_converted", { popup: "feedback_credit", path: location.pathname }, user?.id);
   };
 
   return (
@@ -139,11 +134,11 @@ export function NewVisitorRacecardOffer() {
             </div>
             <DialogHeader className="space-y-3 text-left">
               <DialogTitle className="pr-10 font-heading text-2xl leading-tight text-foreground">
-                See how a DATAEEL RaceCard works
+                Get 1 RaceCard credit for your feedback
               </DialogTitle>
               <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
-                Preview the RaceCard layout, the Concert and Aptitude columns, and how one credit unlocks a full
-                track-day PDF before you buy.
+                Register, tell us what would make DATAEEL easier to trust or use, and we&apos;ll add one RaceCard
+                credit to your account before your first purchase.
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -152,18 +147,18 @@ export function NewVisitorRacecardOffer() {
             <div className="grid gap-3 text-sm text-muted-foreground">
               <div className="flex items-start gap-3">
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                <span>No account required to view the sample guide.</span>
+                <span>One feedback credit per registered account.</span>
               </div>
               <div className="flex items-start gap-3">
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                <span>See what you get before choosing today&apos;s track.</span>
+                <span>Your feedback helps us improve before you spend money.</span>
               </div>
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row">
               <Button asChild className="h-12 flex-1 bg-primary text-primary-foreground shadow-neon hover:brightness-110">
-                <Link to="/how-to-read-racecard" onClick={convert}>
-                  Show me a sample
+                <Link to="/feedback?source=popup" onClick={convert}>
+                  Claim feedback credit
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>

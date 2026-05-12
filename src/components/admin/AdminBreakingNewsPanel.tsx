@@ -15,6 +15,14 @@ interface TickerItem {
   created_at: string;
 }
 
+function getDatabaseErrorMessage(err: unknown, fallback: string): string {
+  if (!err || typeof err !== "object") return fallback;
+  const error = err as { message?: string; details?: string | null; hint?: string | null; code?: string | null };
+  const parts = [error.message, error.details, error.hint ? `hint: ${error.hint}` : null, error.code ? `code: ${error.code}` : null]
+    .filter((part): part is string => typeof part === "string" && part.trim().length > 0);
+  return parts.length > 0 ? parts.join(" — ") : fallback;
+}
+
 export const AdminBreakingNewsPanel = () => {
   const [items, setItems] = useState<TickerItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,9 +73,9 @@ export const AdminBreakingNewsPanel = () => {
       if (error) throw error;
       toast.success(`Added ${lines.length} ticker item${lines.length > 1 ? "s" : ""}`);
       setBulkText("");
-      fetchItems();
+      await fetchItems();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to add items");
+      toast.error(getDatabaseErrorMessage(err, "Failed to add items"));
     } finally {
       setAdding(false);
     }

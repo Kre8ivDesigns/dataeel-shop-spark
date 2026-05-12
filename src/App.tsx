@@ -25,6 +25,7 @@ import Disclaimer from "./pages/Disclaimer";
 import NotFound from "./pages/NotFound";
 import BettingBasics from "./pages/BettingBasics";
 import HowToReadRacecard from "./pages/HowToReadRacecard";
+import Feedback from "./pages/Feedback";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { HomeSectionHashRedirect } from "./components/HomeSectionHashRedirect";
 import { DataeelAiAssistant } from "./components/DataeelAiAssistant";
@@ -36,6 +37,7 @@ const AdminAnalytics = lazy(() => import("./pages/AdminAnalytics"));
 const AdminSupport = lazy(() => import("./pages/AdminSupport"));
 const AdminReports = lazy(() => import("./pages/AdminReports"));
 const AdminHelp = lazy(() => import("./pages/AdminHelp"));
+const AdminSeoTools = lazy(() => import("./pages/AdminSeoTools"));
 
 const adminChartFallback = (
   <div className="min-h-screen flex items-center justify-center bg-background">
@@ -129,6 +131,7 @@ const App = () => (
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/disclaimer" element={<Disclaimer />} />
+              <Route path="/feedback" element={<Feedback />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/buy-credits" element={<ProtectedRoute><BuyCredits /></ProtectedRoute>} />
               <Route path="/racecards" element={<RaceCardsBrowse />} />
@@ -152,6 +155,16 @@ const App = () => (
                   <ProtectedRoute requireAdmin>
                     <Suspense fallback={adminChartFallback}>
                       <AdminAnalytics />
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/seo"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <Suspense fallback={adminChartFallback}>
+                      <AdminSeoTools />
                     </Suspense>
                   </ProtectedRoute>
                 }
