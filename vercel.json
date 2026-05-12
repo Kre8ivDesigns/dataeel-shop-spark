@@ -28,7 +28,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; frame-src https://js.stripe.com https://www.youtube-nocookie.com https://www.youtube.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://api.open-meteo.com; img-src 'self' data: https://lfjaitapxmcvysavihvp.supabase.co https://images.unsplash.com https://img.youtube.com https://i.ytimg.com; font-src 'self' data: https://fonts.gstatic.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; frame-src https://js.stripe.com https://www.youtube-nocookie.com https://www.youtube.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://api.open-meteo.com https://*.amazonaws.com; img-src 'self' data: https://lfjaitapxmcvysavihvp.supabase.co https://images.unsplash.com https://img.youtube.com https://i.ytimg.com; font-src 'self' data: https://fonts.gstatic.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests"
         },
         {
           "key": "X-DNS-Prefetch-Control",

@@ -67,6 +67,10 @@ Deno.serve(async (req) => {
 
     const s3 = new S3Client({
       region: aws.region,
+      // Browser presigned PUTs upload the file outside the SDK, so the signer
+      // cannot calculate a real payload checksum. Keep checksum validation off
+      // for this URL or S3 receives checksum query params for an empty payload.
+      requestChecksumCalculation: "WHEN_REQUIRED",
       credentials: {
         accessKeyId: aws.accessKeyId,
         secretAccessKey: aws.secretAccessKey,
