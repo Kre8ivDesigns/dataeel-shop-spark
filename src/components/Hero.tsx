@@ -4,7 +4,6 @@ import { ArrowRight, FileText, MapPin, Sparkles, Infinity as InfinityIcon, Troph
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-racing.jpg";
-import racecardPreview from "@/assets/racecard-guide/racecard-guide-page-02-cropped.png";
 import { supabase } from "@/integrations/supabase/client";
 
 const FALLBACK_NEWS = [
@@ -179,31 +178,6 @@ export const Hero = () => {
               >
                 Today Races
                 <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
-          </motion.div>
-
-          <motion.div
-            initial={false}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="mx-auto mb-6 grid max-w-3xl items-center gap-3 rounded-xl border border-border/70 bg-card/75 p-3 text-left shadow-xl backdrop-blur-sm sm:mb-8 sm:grid-cols-[104px_minmax(0,1fr)_auto] sm:gap-4"
-          >
-            <img
-              src={racecardPreview}
-              alt="Preview of an EEL RaceCard showing race details and algorithm rankings"
-              className="h-24 w-full rounded-lg object-cover object-top sm:h-28 sm:w-24"
-              loading="eager"
-            />
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-foreground">Know what you are buying.</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Preview the RaceCard format: race details, horse numbers, odds, and side-by-side algorithm rankings.
-              </p>
-            </div>
-            <Link to="/how-to-read-racecard" className="shrink-0">
-              <Button variant="outline" size="sm" className="w-full sm:w-auto">
-                Open sample
               </Button>
             </Link>
           </motion.div>
