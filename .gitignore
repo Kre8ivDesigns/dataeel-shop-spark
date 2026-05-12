@@ -40,5 +40,6 @@ data/*.sql
 .ijfw/
 .agents/
 .codex/
+.claude/worktrees/
 .claude-context.md
 .vercel
