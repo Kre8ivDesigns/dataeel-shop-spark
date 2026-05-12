@@ -53,12 +53,14 @@ function missingSupabaseEdgeKeys(requireAnon: boolean): string[] {
 
 async function requireIngestionAccess(req: Request, supabaseUrl: string, supabaseServiceRoleKey: string): Promise<{ ok: true; mode: "cron" | "admin" } | { ok: false; status: number; error: string }> {
   const authHeader = req.headers.get("Authorization");
-  if (!authHeader) return { ok: false, status: 401, error: "Unauthorized" };
+  const cronHeader = req.headers.get("x-cron-secret");
 
   const cronSecret = Deno.env.get("CRON_SECRET");
-  if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
+  if (cronSecret && (authHeader === `Bearer ${cronSecret}` || cronHeader === cronSecret)) {
     return { ok: true, mode: "cron" };
   }
+
+  if (!authHeader) return { ok: false, status: 401, error: "Unauthorized" };
 
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY")?.trim();
   if (!anonKey) {
