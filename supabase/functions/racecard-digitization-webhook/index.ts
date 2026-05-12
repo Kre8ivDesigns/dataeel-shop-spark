@@ -1,5 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { parseRacecardFilename, stripRacecardUuidPrefix } from "../_shared/parseRacecardFilename.ts";
+import { getRacetrackLabel } from "../_shared/racetracks.ts";
 
 type PredictionInput = {
   race_number?: unknown;
@@ -72,6 +74,72 @@ function cleanPrediction(row: PredictionInput) {
   };
 }
 
+function parseS3Key(s3Key: string): { trackCode: string; raceDate: string; fileName: string } {
+  const leaf = s3Key.split("/").pop() ?? s3Key;
+  const fileName = stripRacecardUuidPrefix(leaf);
+  const { trackCode, raceDate } = parseRacecardFilename(fileName);
+  return { trackCode, raceDate, fileName };
+}
+
+function isValidPostgresDate(iso: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false;
+  const ms = Date.parse(`${iso}T12:00:00.000Z`);
+  if (Number.isNaN(ms)) return false;
+  return new Date(ms).toISOString().slice(0, 10) === iso;
+}
+
+async function markRacecardProcessing(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  params: { s3Key: string; jobId: string; now: string },
+): Promise<RacecardRow | null> {
+  const updateValues = {
+    digitization_status: "processing",
+    textract_job_id: params.jobId,
+    digitization_error: null,
+    digitization_updated_at: params.now,
+  };
+
+  const { data, error } = await supabaseAdmin
+    .from("racecards")
+    .update(updateValues)
+    .eq("file_url", params.s3Key)
+    .select("id, file_url")
+    .maybeSingle();
+
+  if (error) throw error;
+  if (data) return data as RacecardRow;
+
+  const { trackCode, raceDate, fileName } = parseS3Key(params.s3Key);
+  if (!isValidPostgresDate(raceDate)) return null;
+
+  const { data: inserted, error: insertError } = await supabaseAdmin
+    .from("racecards")
+    .insert({
+      file_name: fileName,
+      file_url: params.s3Key,
+      track_code: trackCode,
+      track_name: getRacetrackLabel(trackCode),
+      race_date: raceDate,
+      uploaded_by: null,
+      ...updateValues,
+    })
+    .select("id, file_url")
+    .maybeSingle();
+
+  if (!insertError && inserted) return inserted as RacecardRow;
+  if (insertError && insertError.code !== "23505") throw insertError;
+
+  const { data: racedData, error: racedError } = await supabaseAdmin
+    .from("racecards")
+    .update(updateValues)
+    .eq("file_url", params.s3Key)
+    .select("id, file_url")
+    .maybeSingle();
+
+  if (racedError) throw racedError;
+  return (racedData as RacecardRow | null) ?? null;
+}
+
 async function findRacecard(
   supabaseAdmin: ReturnType<typeof createClient>,
   params: { s3Key: string | null; jobId: string | null },
@@ -141,21 +209,9 @@ Deno.serve(async (req) => {
     if (action === "processing") {
       if (!s3Key || !jobId) return jsonResponse(400, { error: "s3Key and jobId are required" }, cors);
 
-      const { data, error } = await supabaseAdmin
-        .from("racecards")
-        .update({
-          digitization_status: "processing",
-          textract_job_id: jobId,
-          digitization_error: null,
-          digitization_updated_at: now,
-        })
-        .eq("file_url", s3Key)
-        .select("id")
-        .maybeSingle();
-
-      if (error) throw error;
-      if (!data) return jsonResponse(404, { error: "racecard_not_found", retryable: true }, cors);
-      return jsonResponse(200, { ok: true, racecard_id: data.id }, cors);
+      const racecard = await markRacecardProcessing(supabaseAdmin, { s3Key, jobId, now });
+      if (!racecard) return jsonResponse(404, { error: "racecard_not_found", retryable: true }, cors);
+      return jsonResponse(200, { ok: true, racecard_id: racecard.id }, cors);
     }
 
     const racecard = await findRacecard(supabaseAdmin, { s3Key, jobId });

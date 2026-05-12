@@ -189,7 +189,7 @@ const AdminDashboard = () => {
 
           const { trackCode, raceDate } = parseRacecardFilename(file.name);
 
-          const { error: dbError } = await supabase.from("racecards").insert({
+          const { error: dbError } = await supabase.from("racecards").upsert({
             file_name: file.name,
             file_url: urlData.s3Key,
             track_code: trackCode,
@@ -197,6 +197,9 @@ const AdminDashboard = () => {
             race_date: raceDate,
             digitization_status: "queued",
             uploaded_by: user.id,
+          }, {
+            ignoreDuplicates: true,
+            onConflict: "file_url",
           });
 
           if (dbError) {

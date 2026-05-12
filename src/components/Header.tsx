@@ -29,6 +29,7 @@ const navItems = [
   { label: "Pricing", href: "/pricing" },
   { label: "Betting Basics", href: "/betting-basics" },
   { label: "Reading the RaceCard", href: "/how-to-read-racecard" },
+  { label: "Insights", href: "/insights" },
   { label: "Contact", href: "/contact" },
 ];
 
@@ -113,7 +114,7 @@ export const Header = ({ topOffsetClassName = "top-0" }: HeaderProps) => {
           </span>
         </Link>
 
-        <nav className="hidden lg:flex items-center gap-8">
+        <nav className="hidden lg:flex items-center gap-4 xl:gap-8">
           {navItems.map((item) => renderNavLink(item))}
         </nav>
 

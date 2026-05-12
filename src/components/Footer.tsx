@@ -8,6 +8,7 @@ const footerLinks = {
     { label: "RaceCards", href: "/#racecards" },
     { label: "Pricing", href: "/pricing" },
     { label: "News", href: "/#us-racing-news" },
+    { label: "Insights", href: "/insights" },
   ],
   company: [
     { label: "About Us", href: "/#about" },
