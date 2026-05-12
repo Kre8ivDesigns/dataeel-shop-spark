@@ -41,6 +41,22 @@ import { PageHero } from "@/components/PageHero";
 import { AdminDeleteUserDialog } from "@/components/admin/AdminDeleteUserDialog";
 import { filterLiveStripeRevenueTransactions } from "@/lib/adminCharts";
 
+const ADMIN_RACECARD_COLUMNS = [
+  "id",
+  "track_name",
+  "track_code",
+  "race_date",
+  "num_races",
+  "file_name",
+  "uploaded_by",
+  "created_at",
+  "updated_at",
+  "metadata",
+  "metadata_updated_at",
+  "digitization_status",
+  "digitization_error",
+].join(",");
+
 const AdminDashboard = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -88,7 +104,7 @@ const AdminDashboard = () => {
       supabase.from("profiles").select("*").order("created_at", { ascending: false }),
       supabase.from("credit_balances").select("user_id, credits, unlimited_credits"),
       supabase.from("transactions").select("*").order("created_at", { ascending: false }),
-      supabase.from("racecards").select("*").order("race_date", { ascending: false }),
+      supabase.from("racecards").select(ADMIN_RACECARD_COLUMNS).order("race_date", { ascending: false }),
       supabase.from("contact_submissions").select("id", { count: "exact", head: true }).eq("status", "open"),
     ]);
     setCustomers(mergeProfilesWithCredits(custRes.data, balRes.data));
