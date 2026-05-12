@@ -67,6 +67,7 @@ const AdminDashboard = () => {
   const [deletingUser, setDeletingUser] = useState(false);
   const [deletingOldTransactions, setDeletingOldTransactions] = useState(false);
   const [deletingFakeUsers, setDeletingFakeUsers] = useState(false);
+  const [newSupportMessages, setNewSupportMessages] = useState(0);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -83,15 +84,17 @@ const AdminDashboard = () => {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const [custRes, balRes, txRes, rcRes] = await Promise.all([
+    const [custRes, balRes, txRes, rcRes, supportRes] = await Promise.all([
       supabase.from("profiles").select("*").order("created_at", { ascending: false }),
       supabase.from("credit_balances").select("user_id, credits, unlimited_credits"),
       supabase.from("transactions").select("*").order("created_at", { ascending: false }),
       supabase.from("racecards").select("*").order("race_date", { ascending: false }),
+      supabase.from("contact_submissions").select("id", { count: "exact", head: true }).eq("status", "open"),
     ]);
     setCustomers(mergeProfilesWithCredits(custRes.data, balRes.data));
     setTransactions(txRes.data || []);
     setRacecards(rcRes.data || []);
+    setNewSupportMessages(supportRes.count ?? 0);
     setLoading(false);
   }, []);
 
@@ -396,7 +399,13 @@ const AdminDashboard = () => {
   ];
 
   const adminLinks = [
-    { to: "/admin/support", title: "Support inbox", subtitle: "Contact form submissions", icon: Inbox },
+    {
+      to: "/admin/support",
+      title: "Support inbox",
+      subtitle: "Contact form submissions",
+      icon: Inbox,
+      badgeCount: newSupportMessages,
+    },
     { to: "/admin/reports", title: "Reports", subtitle: "Downloads, credit ledger", icon: Table2 },
     { to: "/admin/financials", title: "Financial dashboard", subtitle: "Revenue, charts, CSV", icon: DollarSign },
     { to: "/admin/analytics", title: "Site analytics", subtitle: "Signups, downloads, audit log", icon: BarChart3 },
@@ -474,8 +483,16 @@ const AdminDashboard = () => {
               <Link key={item.to} to={item.to}>
                 <Card className="bg-card border-border hover:border-primary/40 transition-colors h-full">
                   <CardContent className="flex items-center gap-3 p-4">
-                    <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
+                    <div className="relative w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
                       <item.icon className="h-5 w-5 text-primary" />
+                      {"badgeCount" in item && item.badgeCount > 0 && (
+                        <span
+                          className="absolute -right-2 -top-2 min-w-5 h-5 rounded-full bg-destructive px-1.5 text-[11px] font-bold leading-5 text-destructive-foreground text-center shadow-sm ring-2 ring-card"
+                          aria-label={`${item.badgeCount} new support message${item.badgeCount === 1 ? "" : "s"}`}
+                        >
+                          {item.badgeCount > 99 ? "99+" : item.badgeCount}
+                        </span>
+                      )}
                     </div>
                     <div className="min-w-0">
                       <div className="font-semibold text-foreground text-sm truncate">{item.title}</div>
