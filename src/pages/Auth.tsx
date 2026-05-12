@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { PageHero } from "@/components/PageHero";
+import { trackSiteEvent } from "@/lib/siteAnalytics";
 import logo from "@/assets/dataeel-logo.png";
 
 const Auth = () => {
@@ -110,12 +111,14 @@ const Auth = () => {
       return;
     }
     if (data.session) {
+      void trackSiteEvent("signup_completed", { status: "session_created" }, data.user?.id);
       toast({ title: "Welcome!", description: "Your account is ready." });
       const next = searchParams.get("redirect");
       const safe = next && next.startsWith("/") && !next.startsWith("//");
       navigate(safe ? next : "/dashboard");
       return;
     }
+    void trackSiteEvent("signup_completed", { status: "email_confirmation_required" }, data.user?.id);
     setAwaitingEmailConfirm(true);
     toast({
       title: "Check your email",

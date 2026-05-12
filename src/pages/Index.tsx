@@ -52,7 +52,7 @@ const BreakingNewsBar = () => {
   const activeItem = items[activeIndex] ?? "";
 
   return (
-    <div data-testid="breaking-news-bar" className="fixed left-0 right-0 top-0 z-[60] flex h-8 overflow-hidden border-b border-primary/30 shadow-sm sm:h-9">
+    <div data-testid="breaking-news-bar" className="fixed left-0 right-0 top-0 z-[60] flex h-8 overflow-hidden bg-background shadow-sm sm:h-9">
       <div className="flex shrink-0 items-center gap-1.5 bg-primary px-3 text-[10px] font-bold uppercase tracking-wider text-primary-foreground sm:gap-2 sm:px-4 sm:text-xs">
         <Trophy className="h-4 w-4" />
         <span className="sm:hidden">News</span>

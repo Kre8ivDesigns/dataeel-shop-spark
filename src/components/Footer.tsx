@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Mail, Facebook, Twitter, Youtube } from "lucide-react";
+import { Mail, Facebook, Instagram, Youtube } from "lucide-react";
 import logo from "@/assets/dataeel-logo.png";
 
 const footerLinks = {
@@ -26,6 +26,12 @@ const tracks = [
   "Churchill Downs", "Santa Anita", "Gulfstream Park", "Saratoga",
   "Del Mar", "Belmont Park", "Keeneland", "Aqueduct",
   "Tampa Bay Downs", "Fair Grounds", "Oaklawn Park", "Woodbine",
+];
+
+const socialLinks = [
+  { label: "Facebook", href: "https://www.facebook.com/thedataeel", icon: Facebook },
+  { label: "Instagram", href: "https://www.instagram.com/thedataeel/", icon: Instagram },
+  { label: "YouTube", href: "https://www.youtube.com/@theDATAEEL", icon: Youtube },
 ];
 
 export const Footer = () => {
@@ -56,11 +62,14 @@ export const Footer = () => {
 
             {/* Social Links */}
             <div className="flex gap-4 mt-6">
-              {[Facebook, Twitter, Youtube].map((Icon, i) => (
+              {socialLinks.map(({ label, href, icon: Icon }) => (
                 <a
-                  key={i}
-                  href="#"
+                  key={label}
+                  href={href}
+                  aria-label={`Follow DATAEEL on ${label}`}
                   className="w-10 h-10 rounded-full bg-muted flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors text-foreground/60"
+                  rel="noopener noreferrer"
+                  target="_blank"
                 >
                   <Icon className="h-4 w-4" />
                 </a>

@@ -59,6 +59,7 @@ type AuditRow = {
 };
 
 const ERROR_ACTION_PATTERNS = ["error", "fail", "exception", "denied", "unauthorized"];
+const ALL_ACTION_TYPES = "all";
 
 function isErrorRow(row: AuditRow): boolean {
   const action = row.action.toLowerCase();
@@ -120,6 +121,7 @@ const AdminAnalytics = () => {
   const { isAdmin } = useAuth();
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<string>("90");
+  const [actionType, setActionType] = useState<string>(ALL_ACTION_TYPES);
   const [profiles, setProfiles] = useState<{ created_at: string }[]>([]);
   const [downloads, setDownloads] = useState<{ created_at: string }[]>([]);
   const [transactions, setTransactions] = useState<TransactionAnalyticsRow[]>([]);
@@ -183,6 +185,22 @@ const AdminAnalytics = () => {
   const analytics = useMemo(
     () => summarizeSiteAnalytics(siteEvents, transactions, days),
     [siteEvents, transactions, days],
+  );
+  const signupEventCount = useMemo(
+    () => filterSince(siteEvents.filter((row) => row.event_name === "signup_completed"), days).length,
+    [siteEvents, days],
+  );
+  const actionTypeOptions = useMemo(
+    () => Array.from(new Set(siteEvents.map((row) => row.event_name).filter(Boolean))).sort(),
+    [siteEvents],
+  );
+  const filteredSiteEvents = useMemo(
+    () =>
+      filterSince(siteEvents, days)
+        .filter((row) => actionType === ALL_ACTION_TYPES || row.event_name === actionType)
+        .sort((a, b) => b.created_at.localeCompare(a.created_at))
+        .slice(0, 80),
+    [siteEvents, days, actionType],
   );
 
   const combinedChart = useMemo(() => {
@@ -267,6 +285,7 @@ const AdminAnalytics = () => {
                 <MetricCard icon={Globe2} label="Top source" value={analytics.topSources[0]?.source ?? "None"} detail={analytics.topSources[0] ? `${analytics.topSources[0].medium} - ${analytics.topSources[0].visitors} visitors` : "No traffic source data"} />
                 <MetricCard icon={MousePointerClick} label="Pricing to buy" value={formatPercent(analytics.pricingToBuyRate)} detail={`${analytics.pricingVisitors} pricing visitors`} />
                 <MetricCard icon={Route} label="Checkout starts" value={analytics.checkoutStarts} detail={`${formatPercent(analytics.checkoutStartRate)} of Buy Credits visitors`} />
+                <MetricCard icon={UserPlus} label="Signup events" value={signupEventCount} detail="Tracked frontend signup completions" tone="primary" />
                 <MetricCard icon={Download} label="Racecard downloads" value={dlFiltered.length} detail="In selected range" tone="primary" />
                 <MetricCard icon={AlertTriangle} label="Errors" value={errors.length} detail="From latest 80 audit rows" tone={errors.length > 0 ? "danger" : "default"} />
               </div>
@@ -432,6 +451,59 @@ const AdminAnalytics = () => {
                   </CardContent>
                 </Card>
               )}
+
+              <Card className="bg-card border-border mb-8">
+                <CardHeader className="gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <CardTitle className="text-foreground">Site event log</CardTitle>
+                    <CardDescription>Recent first-party analytics actions in the selected date range</CardDescription>
+                  </div>
+                  <Select value={actionType} onValueChange={setActionType}>
+                    <SelectTrigger className="w-full bg-background border-border sm:w-[240px]">
+                      <SelectValue placeholder="Action type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={ALL_ACTION_TYPES}>All action types</SelectItem>
+                      {actionTypeOptions.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </CardHeader>
+                <CardContent className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Time</TableHead>
+                        <TableHead>Action type</TableHead>
+                        <TableHead>Path</TableHead>
+                        <TableHead>Source</TableHead>
+                        <TableHead>Detail</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredSiteEvents.map((event) => (
+                        <TableRow key={`${event.session_id}-${event.event_name}-${event.created_at}`}>
+                          <TableCell className="text-muted-foreground whitespace-nowrap text-xs">{new Date(event.created_at).toLocaleString()}</TableCell>
+                          <TableCell className="font-mono text-xs text-foreground">{event.event_name}</TableCell>
+                          <TableCell className="font-mono text-xs text-muted-foreground">{event.path ?? "-"}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{event.source} / {event.medium}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground max-w-md truncate font-mono">{event.properties ? JSON.stringify(event.properties) : "-"}</TableCell>
+                        </TableRow>
+                      ))}
+                      {filteredSiteEvents.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
+                            No site events match this action type
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
 
               <Card className="bg-card border-border">
                 <CardHeader>
