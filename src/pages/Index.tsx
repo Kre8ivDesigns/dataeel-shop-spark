@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useLocation } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
 import { Trophy } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Hero } from "@/components/Hero";
@@ -15,6 +14,7 @@ import { FAQ } from "@/components/FAQ";
 import { CTA } from "@/components/CTA";
 import { Footer } from "@/components/Footer";
 import { supabase } from "@/integrations/supabase/client";
+import { buildTickerLoopItems, tickerDurationSeconds } from "@/lib/breakingNewsTicker";
 
 const FALLBACK_NEWS = [
   "Concert algorithm picks Winner in race#1, race#2, race#3, race#6, race#7; Belmont At Big A May1, 2026",
@@ -24,7 +24,10 @@ const FALLBACK_NEWS = [
 
 const BreakingNewsBar = () => {
   const [items, setItems] = useState(FALLBACK_NEWS);
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [tickerDistance, setTickerDistance] = useState<number | null>(null);
+  const tickerGroupRef = useRef<HTMLDivElement | null>(null);
+  const tickerLoopItems = useMemo(() => buildTickerLoopItems(items, 12), [items]);
+  const tickerDuration = useMemo(() => tickerDurationSeconds(tickerLoopItems) * 2, [tickerLoopItems]);
 
   useEffect(() => {
     supabase
@@ -36,20 +39,27 @@ const BreakingNewsBar = () => {
       .then(({ data }) => {
         if (data && data.length > 0) {
           setItems(data.map((row) => row.text));
-          setActiveIndex(0);
         }
       });
   }, []);
 
-  useEffect(() => {
-    if (items.length < 2) return;
-    const timer = window.setInterval(() => {
-      setActiveIndex((current) => (current + 1) % items.length);
-    }, 2000);
-    return () => window.clearInterval(timer);
-  }, [items.length]);
+  useLayoutEffect(() => {
+    const group = tickerGroupRef.current;
+    if (!group) return;
 
-  const activeItem = items[activeIndex] ?? "";
+    const updateDistance = () => {
+      setTickerDistance(Math.ceil(group.scrollWidth));
+    };
+
+    updateDistance();
+    const observer = new ResizeObserver(updateDistance);
+    observer.observe(group);
+    if (document.fonts) {
+      void document.fonts.ready.then(updateDistance);
+    }
+
+    return () => observer.disconnect();
+  }, [tickerLoopItems]);
 
   return (
     <div data-testid="breaking-news-bar" className="fixed left-0 right-0 top-0 z-[60] flex h-8 overflow-hidden border-b border-primary/60 bg-black shadow-sm sm:h-9">
@@ -59,18 +69,30 @@ const BreakingNewsBar = () => {
         <span className="hidden sm:inline">Breaking News</span>
       </div>
       <div className="flex min-w-0 flex-1 items-center overflow-hidden bg-black px-3 text-xs font-medium text-white/85 sm:px-4 sm:text-sm">
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.p
-            key={`${activeIndex}-${activeItem}`}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.25 }}
-            className="truncate"
-          >
-            {activeItem}
-          </motion.p>
-        </AnimatePresence>
+        <div
+          className="flex w-max whitespace-nowrap animate-ticker-scroll will-change-transform motion-reduce:animate-none"
+          style={{
+            animationDuration: `${tickerDuration}s`,
+            "--ticker-distance": tickerDistance ? `${tickerDistance}px` : "50%",
+          } as CSSProperties}
+        >
+          <div ref={tickerGroupRef} className="flex shrink-0 whitespace-nowrap">
+            {tickerLoopItems.map((item, index) => (
+              <span key={`breaking-a-${index}`} className="mx-6 inline-flex shrink-0 items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                {item}
+              </span>
+            ))}
+          </div>
+          <div className="flex shrink-0 whitespace-nowrap" aria-hidden="true">
+            {tickerLoopItems.map((item, index) => (
+              <span key={`breaking-b-${index}`} className="mx-6 inline-flex shrink-0 items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                {item}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
