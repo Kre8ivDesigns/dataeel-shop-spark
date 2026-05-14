@@ -188,23 +188,49 @@ const AdminDashboard = () => {
           }
 
           const { trackCode, raceDate } = parseRacecardFilename(file.name);
-
-          const { error: dbError } = await supabase.from("racecards").upsert({
+          const racecardRow = {
             file_name: file.name,
             file_url: urlData.s3Key,
             track_code: trackCode,
             track_name: getRacetrackLabel(trackCode),
             race_date: raceDate,
             digitization_status: "queued",
+            digitization_error: null,
+            digitization_updated_at: new Date().toISOString(),
+            digitized_at: null,
+            textract_job_id: null,
             uploaded_by: user.id,
-          }, {
-            ignoreDuplicates: true,
-            onConflict: "file_url",
-          });
+          };
+
+          const { data: existingRacecard, error: existingError } = await supabase
+            .from("racecards")
+            .select("id")
+            .eq("file_name", file.name)
+            .order("updated_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (existingError) {
+            failureCount++;
+            toast({
+              title: `DB lookup failed: ${file.name}`,
+              description: sanitizeError(existingError),
+              variant: "destructive",
+            });
+            continue;
+          }
+
+          const { error: dbError } = existingRacecard
+            ? await supabase.from("racecards").update(racecardRow).eq("id", existingRacecard.id)
+            : await supabase.from("racecards").insert(racecardRow);
 
           if (dbError) {
             failureCount++;
-            toast({ title: `DB insert failed: ${file.name}`, description: sanitizeError(dbError), variant: "destructive" });
+            toast({
+              title: `DB save failed: ${file.name}`,
+              description: sanitizeError(dbError),
+              variant: "destructive",
+            });
           } else {
             successCount++;
           }
