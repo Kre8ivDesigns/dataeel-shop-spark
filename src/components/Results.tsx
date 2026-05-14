@@ -16,24 +16,24 @@ const stats = [
 
 const cardHighlights = [
   {
-    track: "Official charts",
+    track: "Digital card results",
     date: "After races",
     algorithm: "Equibase",
-    results: "Race results are checked against published Equibase Full Charts by track, date, and race number.",
+    results: "Each digital RaceCard can be checked against published Equibase Full Charts by track, date, and race number.",
     type: "multiple",
   },
   {
-    track: "Result matchups",
+    track: "Card-to-chart matchups",
     date: "Track/date",
     algorithm: "DATAEEL",
-    results: "Concert™ and Aptitude™ picks can be compared with the official winner once the chart is posted.",
+    results: "Concert™ and Aptitude™ picks on the digital card can be compared with the official winner once the chart is posted.",
     type: "multiple",
   },
   {
-    track: "Browse cards",
+    track: "Browse digital cards",
     date: "Your race day",
     algorithm: "EEL",
-    results: "Pick a RaceCard, then review how the algorithms performed when official results are available.",
+    results: "Choose a digital RaceCard for your race day, then review how the algorithms performed when official results are available.",
     type: "winner",
   },
 ];
@@ -207,7 +207,7 @@ export const Results = () => {
         >
           <h3 className="text-xl font-semibold text-foreground mb-6 flex items-center gap-2 font-heading">
             <TrendingUp className="h-5 w-5 text-primary" />
-            RaceCard Results Check
+            Digital RaceCard Results Check
           </h3>
 
           <div className="space-y-4">
@@ -250,7 +250,7 @@ export const Results = () => {
               Official result checks use Equibase Full Charts. Data provided by Equibase Company LLC.
             </p>
             <p className="mb-4 text-sm text-foreground/70">
-              Registration is FREE and gives you access to see which racetracks are running with EEL RaceCards this week.
+              Registration is FREE and gives you access to this week's digital EEL RaceCards by racetrack.
             </p>
             <Button
               variant="outline"
@@ -258,7 +258,7 @@ export const Results = () => {
               asChild
             >
               <Link to="/racecards">
-                Browse RaceCards
+                Browse Digital RaceCards
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>

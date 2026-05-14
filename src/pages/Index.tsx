@@ -27,7 +27,7 @@ const BreakingNewsBar = () => {
   const [tickerDistance, setTickerDistance] = useState<number | null>(null);
   const tickerGroupRef = useRef<HTMLDivElement | null>(null);
   const tickerLoopItems = useMemo(() => buildTickerLoopItems(items, 12), [items]);
-  const tickerDuration = useMemo(() => tickerDurationSeconds(tickerLoopItems) * 1.5, [tickerLoopItems]);
+  const tickerDuration = useMemo(() => tickerDurationSeconds(tickerLoopItems) * 1.5 - 1, [tickerLoopItems]);
 
   useEffect(() => {
     supabase
