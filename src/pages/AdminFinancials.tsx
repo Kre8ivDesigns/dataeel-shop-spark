@@ -35,7 +35,6 @@ import {
 } from "recharts";
 import {
   filterLiveStripeRevenueTransactions,
-  filterFromToday,
   filterSince,
   sumByDayAmount,
   sumByPackage,
@@ -118,14 +117,14 @@ const AdminFinancials = () => {
           user_display_name: profileByUserId.get(row.user_id) ?? row.user_id,
         }));
 
-        setTransactions(filterFromToday(transactionsWithUsers));
+        setTransactions(transactionsWithUsers);
         const balanceRows = balRes.data ?? [];
         setCreditsOutstanding(balanceRows.reduce((s, r) => s + (r.credits ?? 0), 0));
       }
       if (import.meta.env.DEV) {
         console.debug(
-          "[AdminFinancials] transactions today:",
-          filterFromToday((txRes.data as Tx[]) ?? []).length,
+          "[AdminFinancials] transactions loaded:",
+          ((txRes.data as Tx[]) ?? []).length,
           "balances rows:",
           balRes.data?.length ?? 0,
           txRes.error ?? balRes.error ?? "",
