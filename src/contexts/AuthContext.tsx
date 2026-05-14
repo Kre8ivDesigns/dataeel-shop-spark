@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
+const RESET_PASSWORD_PATH = "/auth?mode=reset";
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -59,13 +61,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     fetchSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (!session?.user) {
           setIsAdmin(false);
         } else {
           void checkAdmin(session.user.id);
+        }
+        const alreadyOnResetPage =
+          window.location.pathname === "/auth" && new URLSearchParams(window.location.search).get("mode") === "reset";
+        if (event === "PASSWORD_RECOVERY" && !alreadyOnResetPage) {
+          window.location.replace(RESET_PASSWORD_PATH);
         }
       }
     );

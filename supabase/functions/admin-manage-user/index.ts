@@ -31,7 +31,7 @@ function looksLikeRandomTwoTokenName(value: unknown): boolean {
 
 function getRecoveryRedirectTo(req: Request): string | undefined {
   const origin = getValidatedOrigin(req);
-  return origin ? `${origin}/account-settings` : undefined;
+  return origin ? `${origin}/auth?mode=reset` : undefined;
 }
 
 async function deleteFromTable(
