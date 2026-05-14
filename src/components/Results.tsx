@@ -16,24 +16,24 @@ const stats = [
 
 const cardHighlights = [
   {
-    track: "Digital card results",
-    date: "After races",
-    algorithm: "Equibase",
-    results: "Each digital RaceCard can be checked against published Equibase Full Charts by track, date, and race number.",
+    track: "Browse availability",
+    date: "RaceCards page",
+    algorithm: "Track/date",
+    results: "Start on the RaceCards page to see which racetracks and race dates have cards available before you spend a credit.",
     type: "multiple",
   },
   {
-    track: "Card-to-chart matchups",
-    date: "Track/date",
-    algorithm: "DATAEEL",
-    results: "Concert™ and Aptitude™ picks on the digital card can be compared with the official winner once the chart is posted.",
+    track: "Unlock the card",
+    date: "Track card",
+    algorithm: "1 Credit",
+    results: "Purchase the RaceCard to unlock the full digital card. Owned cards show the View digital card and Re-download actions.",
     type: "multiple",
   },
   {
-    track: "Browse digital cards",
-    date: "Your race day",
-    algorithm: "EEL",
-    results: "Choose a digital RaceCard for your race day, then review how the algorithms performed when official results are available.",
+    track: "Return from dashboard",
+    date: "User dashboard",
+    algorithm: "Owned",
+    results: "Your dashboard keeps purchased RaceCards available, so you can reopen the digital card and review its picks after results post.",
     type: "winner",
   },
 ];
@@ -203,25 +203,25 @@ export const Results = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ delay: 0.4 }}
-          className="max-w-3xl mx-auto"
+          className="max-w-6xl mx-auto"
         >
           <h3 className="text-xl font-semibold text-foreground mb-6 flex items-center gap-2 font-heading">
             <TrendingUp className="h-5 w-5 text-primary" />
             Digital RaceCard Results Check
           </h3>
 
-          <div className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-3">
             {cardHighlights.map((win, index) => (
               <motion.div
                 key={index}
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
+                initial={{ opacity: 0, y: 18 }}
+                whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: 0.1 * index }}
-                className="flex items-center gap-4 p-4 rounded-xl bg-muted/50 border border-border hover:border-primary/30 transition-all"
+                className="flex h-full flex-col rounded-xl border border-border bg-muted/50 p-5 transition-all hover:border-primary/30"
               >
                 <div
-                  className={`w-2 h-12 rounded-full ${
+                  className={`mb-5 h-2 w-14 rounded-full ${
                     win.type === "trifecta"
                       ? "bg-danger"
                       : win.type === "multiple"
@@ -229,18 +229,18 @@ export const Results = () => {
                       : "bg-success"
                   }`}
                 />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-semibold text-foreground">{win.track}</span>
-                    <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
-                      {win.algorithm}™
+                <div className="mb-4 flex items-start justify-between gap-3">
+                  <div>
+                    <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      {win.date}
                     </span>
+                    <h4 className="mt-2 font-semibold text-foreground">{win.track}</h4>
                   </div>
-                  <p className="text-foreground/70 text-sm">{win.results}</p>
+                  <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                    {win.algorithm}
+                  </span>
                 </div>
-                <span className="text-muted-foreground text-sm whitespace-nowrap">
-                  {win.date}
-                </span>
+                <p className="text-sm leading-relaxed text-foreground/70">{win.results}</p>
               </motion.div>
             ))}
           </div>
@@ -250,7 +250,7 @@ export const Results = () => {
               Official result checks use Equibase Full Charts. Data provided by Equibase Company LLC.
             </p>
             <p className="mb-4 text-sm text-foreground/70">
-              Registration is FREE and gives you access to this week's digital EEL RaceCards by racetrack.
+              Registration is FREE. Purchase a RaceCard to unlock the full digital card for your selected racetrack and race date.
             </p>
             <Button
               variant="outline"
@@ -258,7 +258,7 @@ export const Results = () => {
               asChild
             >
               <Link to="/racecards">
-                Browse Digital RaceCards
+                Browse Available RaceCards
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
