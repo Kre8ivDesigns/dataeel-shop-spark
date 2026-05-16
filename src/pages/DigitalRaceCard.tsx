@@ -316,6 +316,13 @@ const DigitalRaceCard = () => {
   const showDataeelRaceBoxes = racecard
     ? !getRacecardDownloadUiBlock(racecard.race_date, RACECARD_DOWNLOAD_TZ, Date.now()).blocked
     : false;
+  const visibleRaceRows = useMemo(
+    () =>
+      showDataeelRaceBoxes
+        ? raceRows
+        : raceRows.filter((race) => (resultGroups[race.number ?? 0] ?? []).length > 0),
+    [raceRows, resultGroups, showDataeelRaceBoxes],
+  );
   const loading = racecardLoading || ownershipLoading;
 
   return (
@@ -442,7 +449,7 @@ const DigitalRaceCard = () => {
               )}
 
               <section className="space-y-3">
-                {raceRows.length === 0 ? (
+                {visibleRaceRows.length === 0 ? (
                   <div className="card-dark p-6 text-sm text-muted-foreground">
                     {unlocked && predictionsLoading
                       ? "Loading DATAEEL selections..."
@@ -457,7 +464,7 @@ const DigitalRaceCard = () => {
                       : "Race details are not posted yet. Check the official track website for the latest schedule."}
                   </div>
                 ) : (
-                  raceRows.map((race) => {
+                  visibleRaceRows.map((race) => {
                     const byAlgorithm = predictionGroups[race.number ?? 0] ?? {};
                     const resultsForRace = resultGroups[race.number ?? 0] ?? [];
                     return (
