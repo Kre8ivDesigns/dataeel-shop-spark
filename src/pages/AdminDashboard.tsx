@@ -23,6 +23,7 @@ import {
   HelpCircle,
   Inbox,
   Table2,
+  Edit3,
 } from "lucide-react";
 import { sanitizeError } from "@/lib/errorHandler";
 import {
@@ -455,6 +456,7 @@ const AdminDashboard = () => {
     { to: "/admin/financials", title: "Financial dashboard", subtitle: "Revenue, charts, CSV", icon: DollarSign },
     { to: "/admin/analytics", title: "Site analytics", subtitle: "Signups, downloads, audit log", icon: BarChart3 },
     { to: "/admin/seo", title: "SEO tools", subtitle: "Keywords, speed, audits", icon: Search },
+    { to: "/admin/pages", title: "Page editor", subtitle: "Frontend CMS pages", icon: Edit3 },
     { to: "/admin/settings", title: "Settings", subtitle: "Stripe, site, integrations", icon: Settings },
     { to: "/admin/credit-packages", title: "Credit packages", subtitle: "Pricing tiers", icon: Package },
     { to: "/admin/help", title: "Help", subtitle: "Admin documentation", icon: HelpCircle },

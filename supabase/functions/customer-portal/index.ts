@@ -7,6 +7,19 @@ function validatedReturnUrl(req: Request, path: string): string {
   return `${getValidatedOrigin(req)}${path}`;
 }
 
+function isDeletedCustomer(customer: Stripe.Customer | Stripe.DeletedCustomer): customer is Stripe.DeletedCustomer {
+  return "deleted" in customer && customer.deleted === true;
+}
+
+function isStripeMissingResource(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const stripeError = error as { code?: unknown; message?: unknown };
+  return (
+    stripeError.code === "resource_missing" ||
+    (typeof stripeError.message === "string" && stripeError.message.includes("No such customer"))
+  );
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: getCorsHeaders(req) });
@@ -56,21 +69,38 @@ Deno.serve(async (req) => {
 
     let customerId = profile?.stripe_customer_id as string | undefined;
 
-    if (!customerId) {
-      // Fall back to email lookup
-      const customers = await stripe.customers.list({ email: user.email, limit: 1 });
-      if (customers.data.length === 0) {
-        return new Response(
-          JSON.stringify({ error: "No billing account found. Make a purchase first." }),
-          { status: 404, headers }
-        );
+    if (customerId) {
+      try {
+        const customer = await stripe.customers.retrieve(customerId);
+        if (isDeletedCustomer(customer)) customerId = undefined;
+      } catch (err) {
+        if (!isStripeMissingResource(err)) throw err;
+        console.warn("[customer-portal] Stored Stripe customer was not found in the active Stripe mode.");
+        customerId = undefined;
       }
-      customerId = customers.data[0].id;
-      // Store for future use
-      await supabaseAdmin
+    }
+
+    if (!customerId) {
+      // Migrated users may have app profiles/credits but no stored Stripe customer id.
+      const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+      customerId = customers.data[0]?.id;
+
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user.email,
+          metadata: { supabase_user_id: user.id },
+        });
+        customerId = customer.id;
+      }
+
+      const { error: profileUpdateError } = await supabaseAdmin
         .from("profiles")
         .update({ stripe_customer_id: customerId })
         .eq("user_id", user.id);
+
+      if (profileUpdateError) {
+        console.warn("[customer-portal] Could not persist stripe_customer_id:", profileUpdateError.message);
+      }
     }
 
     const portalSession = await stripe.billingPortal.sessions.create({

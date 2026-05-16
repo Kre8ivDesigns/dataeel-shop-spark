@@ -32,6 +32,7 @@ import { HomeSectionHashRedirect } from "./components/HomeSectionHashRedirect";
 import { DataeelAiAssistant } from "./components/DataeelAiAssistant";
 import { SiteAnalyticsTracker } from "./components/SiteAnalyticsTracker";
 import { NewVisitorRacecardOffer } from "./components/NewVisitorRacecardOffer";
+import { EditablePage } from "./pages/EditablePage";
 
 const AdminFinancials = lazy(() => import("./pages/AdminFinancials"));
 const AdminAnalytics = lazy(() => import("./pages/AdminAnalytics"));
@@ -39,6 +40,8 @@ const AdminSupport = lazy(() => import("./pages/AdminSupport"));
 const AdminReports = lazy(() => import("./pages/AdminReports"));
 const AdminHelp = lazy(() => import("./pages/AdminHelp"));
 const AdminSeoTools = lazy(() => import("./pages/AdminSeoTools"));
+const AdminPages = lazy(() => import("./pages/AdminPages"));
+const PageEditor = lazy(() => import("./pages/PageEditor"));
 
 const adminChartFallback = (
   <div className="min-h-screen flex items-center justify-center bg-background">
@@ -124,16 +127,16 @@ const App = () => (
             <SiteAnalyticsTracker />
             <NewVisitorRacecardOffer />
             <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/pricing" element={<Pricing />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/betting-basics" element={<BettingBasics />} />
-              <Route path="/how-to-read-racecard" element={<HowToReadRacecard />} />
+              <Route path="/" element={<EditablePage slug="home" fallback={<Index />} />} />
+              <Route path="/pricing" element={<EditablePage slug="pricing" fallback={<Pricing />} />} />
+              <Route path="/contact" element={<EditablePage slug="contact" fallback={<Contact />} />} />
+              <Route path="/betting-basics" element={<EditablePage slug="betting-basics" fallback={<BettingBasics />} />} />
+              <Route path="/how-to-read-racecard" element={<EditablePage slug="how-to-read-racecard" fallback={<HowToReadRacecard />} />} />
               <Route path="/insights" element={<Insights />} />
               <Route path="/insights/:slug" element={<Insights />} />
-              <Route path="/terms" element={<Terms />} />
-              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-              <Route path="/disclaimer" element={<Disclaimer />} />
+              <Route path="/terms" element={<EditablePage slug="terms" fallback={<Terms />} />} />
+              <Route path="/privacy-policy" element={<EditablePage slug="privacy" fallback={<PrivacyPolicy />} />} />
+              <Route path="/disclaimer" element={<EditablePage slug="disclaimer" fallback={<Disclaimer />} />} />
               <Route path="/feedback" element={<Feedback />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/buy-credits" element={<ProtectedRoute><BuyCredits /></ProtectedRoute>} />
@@ -168,6 +171,26 @@ const App = () => (
                   <ProtectedRoute requireAdmin>
                     <Suspense fallback={adminChartFallback}>
                       <AdminSeoTools />
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/pages"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <Suspense fallback={adminChartFallback}>
+                      <AdminPages />
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/page-editor"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <Suspense fallback={adminChartFallback}>
+                      <PageEditor />
                     </Suspense>
                   </ProtectedRoute>
                 }
