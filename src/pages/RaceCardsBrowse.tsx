@@ -223,7 +223,7 @@ const RaceCardsBrowse = () => {
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-primary mb-1">Members only downloads</p>
                     <h2 className="text-lg md:text-xl font-heading font-bold text-foreground leading-snug">
-                      Join DATAEEL® to purchase credits and download racecards
+                      Join DATAEEL® to purchase credits and download RaceCards
                     </h2>
                     <p className="text-sm text-muted-foreground mt-2 max-w-xl">
                       Create a free account, buy credits, and unlock full PDF racecards for the tracks listed below—each

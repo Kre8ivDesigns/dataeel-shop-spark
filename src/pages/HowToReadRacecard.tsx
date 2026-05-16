@@ -57,7 +57,7 @@ const sections: {
     paragraphs: [
       "DATAEEL™ prediction algorithms are built for several audiences: newcomers to thoroughbred racing, experienced handicappers who want to shorten Racing Form study, and players who follow multiple tracks in a day and want a structured read.",
       "The aim is to give a straightforward way to think about which horses may finish in the money, keep the game fun and lower-stress, and offer an easy on-ramp to the sport.",
-      "There is also an introductory video, “A Complete Introduction to DATAEEL,” if you prefer to watch before reading the instructions below.",
+      "There is also an introductory video, “A Complete Introduction to DATAEEL,” if you prefer to watch before reading the instructions are below.",
     ],
   },
   {
