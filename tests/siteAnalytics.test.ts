@@ -58,4 +58,39 @@ describe("summarizeSiteAnalytics", () => {
     expect(summary.bounceRate).toBe(100);
     expect(summary.topSources[0]?.bounceRate).toBe(100);
   });
+
+  it("summarizes landing pages, CTA clicks, attribution, and intent funnels", () => {
+    const summary = summarizeSiteAnalytics(
+      [
+        event("page_view", { source: "facebook", medium: "social", campaign: "spring", path: "/racecards" }),
+        event("racecard_date_changed", { created_at: "2026-05-10T12:00:05.000Z", path: "/racecards" }),
+        event("racecard_search_used", { created_at: "2026-05-10T12:00:08.000Z", path: "/racecards" }),
+        event("racecard_card_expanded", { created_at: "2026-05-10T12:00:12.000Z", path: "/racecards" }),
+        event("cta_clicked", {
+          created_at: "2026-05-10T12:00:15.000Z",
+          path: "/racecards",
+          properties: { label: "Join now", href: "https://dataeel.com/auth?mode=signup" },
+        }),
+        event("signup_started", { created_at: "2026-05-10T12:00:20.000Z", path: "/auth" }),
+        event("signup_submitted", { created_at: "2026-05-10T12:00:25.000Z", path: "/auth" }),
+        event("signup_completed", { created_at: "2026-05-10T12:00:30.000Z", path: "/auth" }),
+      ],
+      [],
+      30,
+      new Date("2026-05-10T12:01:00.000Z"),
+    );
+
+    expect(summary.topLandingPages[0]).toMatchObject({ path: "/racecards", visitors: 1 });
+    expect(summary.topCtaClicks[0]).toMatchObject({ label: "Join now", clicks: 1, visitors: 1 });
+    expect(summary.utmCoverage).toMatchObject({ attributedVisitors: 1, percentAttributed: 100, campaignVisitors: 1 });
+    expect(summary.racecardsFunnel).toMatchObject({
+      racecardsVisitors: 1,
+      dateChanges: 1,
+      searches: 1,
+      cardExpansions: 1,
+      joinClicks: 1,
+      signupCompletions: 1,
+    });
+    expect(summary.signupFunnel).toMatchObject({ starts: 1, submits: 1, failures: 0, completions: 1 });
+  });
 });

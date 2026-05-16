@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -40,6 +40,7 @@ import { TrackWeatherBadge } from "@/components/TrackWeatherBadge";
 import { PageHero } from "@/components/PageHero";
 import { extractCanonicalTrackCode, getRacetrackLabel, getRacetrackLocation, getRacetrackWebsite } from "@/lib/racetracks";
 import { profilesByTrackCode, useRacetrackProfiles } from "@/lib/queries/racetrackProfiles";
+import { trackSiteEvent } from "@/lib/siteAnalytics";
 
 const RACECARD_DOWNLOAD_TZ =
   import.meta.env.VITE_RACECARD_DOWNLOAD_TZ ?? DEFAULT_RACECARD_DOWNLOAD_TZ;
@@ -55,6 +56,7 @@ const RaceCardsBrowse = () => {
   const [downloading, setDownloading] = useState<string | null>(null);
   const [expandedCardIds, setExpandedCardIds] = useState<Set<string>>(() => new Set());
   const [selectedDateIndex, setSelectedDateIndex] = useState(0);
+  const trackedSearchTerms = useRef<Set<string>>(new Set());
 
   const dayTabs = useMemo(() => {
     const today = new Date();
@@ -149,9 +151,25 @@ const RaceCardsBrowse = () => {
         next.delete(racecardId);
       } else {
         next.add(racecardId);
+        void trackSiteEvent("racecard_card_expanded", { racecard_id: racecardId }, user?.id);
       }
       return next;
     });
+  };
+
+  const selectDateIndex = (idx: number) => {
+    setSelectedDateIndex(idx);
+    const day = dayTabs[idx];
+    void trackSiteEvent("racecard_date_changed", { date: day.date, label: day.label }, user?.id);
+  };
+
+  const updateSearchQuery = (value: string) => {
+    setSearchQuery(value);
+    const normalized = value.trim().toLowerCase();
+    if (normalized.length >= 2 && !trackedSearchTerms.current.has(normalized)) {
+      trackedSearchTerms.current.add(normalized);
+      void trackSiteEvent("racecard_search_used", { query: normalized }, user?.id);
+    }
   };
 
   const q = searchQuery.toLowerCase();
@@ -255,7 +273,7 @@ const RaceCardsBrowse = () => {
                 <button
                   key={day.date}
                   type="button"
-                  onClick={() => setSelectedDateIndex(idx)}
+                  onClick={() => selectDateIndex(idx)}
                   className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${
                     selectedDateIndex === idx
                       ? "bg-primary text-primary-foreground shadow-neon"
@@ -273,7 +291,7 @@ const RaceCardsBrowse = () => {
                 type="text"
                 placeholder="Search tracks..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => updateSearchQuery(e.target.value)}
                 className="w-full pl-9 pr-4 py-2 rounded-lg bg-card border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
               />
             </div>

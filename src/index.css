@@ -219,6 +219,45 @@
     @apply w-full;
   }
 
+  @media print {
+    body {
+      background: white !important;
+      color: #111827 !important;
+    }
+
+    .analytics-print-hide {
+      display: none !important;
+    }
+
+    .analytics-print-report,
+    .analytics-print-report * {
+      color: #111827 !important;
+      box-shadow: none !important;
+      text-shadow: none !important;
+    }
+
+    .analytics-print-report {
+      background: white !important;
+      padding-bottom: 0 !important;
+    }
+
+    .analytics-print-report [class*="bg-card"],
+    .analytics-print-report [class*="bg-background"],
+    .analytics-print-report [class*="bg-destructive"],
+    .analytics-print-report [class*="bg-primary"],
+    .analytics-print-report [class*="bg-muted"] {
+      background: white !important;
+    }
+
+    .analytics-print-report [class*="border"] {
+      border-color: #d1d5db !important;
+    }
+
+    .analytics-print-report .recharts-wrapper {
+      break-inside: avoid;
+    }
+  }
+
   .page-editor-panel .gjs-block {
     min-height: 58px;
     width: 100%;

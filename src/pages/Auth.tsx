@@ -41,6 +41,12 @@ const Auth = () => {
   const resetTokenHash = searchParams.get("token_hash");
 
   useEffect(() => {
+    if (searchParams.get("mode") === "signup") {
+      void trackSiteEvent("signup_started", { source: "auth_route" });
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
     if (!isPasswordResetMode) return;
 
     let cancelled = false;
@@ -185,6 +191,7 @@ const Auth = () => {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    void trackSiteEvent("signup_submitted", { mode: "email_password" });
     setLoading(true);
     setAwaitingEmailConfirm(false);
     const { data, error } = await supabase.auth.signUp({
@@ -197,6 +204,7 @@ const Auth = () => {
     });
     setLoading(false);
     if (error) {
+      void trackSiteEvent("signup_failed", { reason: sanitizeError(error) });
       toast({ title: "Signup failed", description: sanitizeError(error), variant: "destructive" });
       return;
     }
@@ -292,7 +300,12 @@ const Auth = () => {
                 ) : null}
               </form>
             ) : (
-              <Tabs defaultValue={searchParams.get("mode") === "signup" ? "signup" : "login"}>
+                <Tabs
+                  defaultValue={searchParams.get("mode") === "signup" ? "signup" : "login"}
+                  onValueChange={(value) => {
+                    if (value === "signup") void trackSiteEvent("signup_started", { source: "auth_tab" });
+                  }}
+                >
                 <TabsList className="grid w-full grid-cols-2 mb-6">
                   <TabsTrigger value="login">Login</TabsTrigger>
                   <TabsTrigger value="signup">Sign Up</TabsTrigger>

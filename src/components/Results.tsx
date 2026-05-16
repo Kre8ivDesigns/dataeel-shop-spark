@@ -24,7 +24,7 @@ const cardHighlights = [
   },
   {
     track: "1-Credit Equals 1-Card",
-    date: "Track card",
+    date: "Race Track Card",
     algorithm: "1 Credit",
     results: "Purchase the RaceCard to unlock the full digital card. Owned cards show the View digital card and Re-download actions.",
     type: "multiple",

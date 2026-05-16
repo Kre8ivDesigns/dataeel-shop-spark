@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
   Activity,
   AlertTriangle,
@@ -18,6 +19,7 @@ import {
   Loader2,
   MonitorSmartphone,
   MousePointerClick,
+  Printer,
   Route,
   UserPlus,
   Users,
@@ -131,6 +133,16 @@ function formatDeviceLabel(deviceType: DeviceSummary["deviceType"]): string {
   return "Mobile";
 }
 
+function formatShortUrl(value: string | null): string {
+  if (!value) return "-";
+  try {
+    const url = new URL(value);
+    return `${url.pathname}${url.search}` || url.hostname;
+  } catch {
+    return value;
+  }
+}
+
 const AdminAnalytics = () => {
   const { isAdmin } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -217,6 +229,10 @@ const AdminAnalytics = () => {
     [siteEvents, days, actionType],
   );
 
+  const handlePrintReport = () => {
+    window.print();
+  };
+
   const combinedChart = useMemo(() => {
     const signupsByDay = countByDay(profFiltered);
     const downloadsByDay = countByDay(dlFiltered);
@@ -247,8 +263,10 @@ const AdminAnalytics = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
-      <main className="pb-16">
+      <div className="analytics-print-hide">
+        <Header />
+      </div>
+      <main className="pb-16 analytics-print-report">
         <PageHero
           backTo="/admin"
           backLabel="Back to Admin"
@@ -261,18 +279,24 @@ const AdminAnalytics = () => {
           subtitle="First-party traffic, visitor, source, and purchase-funnel analytics."
           align="left"
           aside={
-            <Select value={range} onValueChange={setRange}>
-              <SelectTrigger className="w-[200px] bg-card border-border lg:mt-6">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {RANGE_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>
-                    {o.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="analytics-print-hide flex flex-col gap-2 sm:flex-row lg:mt-6">
+              <Button type="button" variant="outline" className="gap-2" onClick={handlePrintReport}>
+                <Printer className="h-4 w-4" />
+                Print report
+              </Button>
+              <Select value={range} onValueChange={setRange}>
+                <SelectTrigger className="w-[200px] bg-card border-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {RANGE_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           }
           asideGridClassName="lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start gap-6"
           containerClassName="max-w-[1400px]"
@@ -301,7 +325,164 @@ const AdminAnalytics = () => {
                 <MetricCard icon={Route} label="Checkout starts" value={analytics.checkoutStarts} detail={`${formatPercent(analytics.checkoutStartRate)} of Buy Credits visitors`} />
                 <MetricCard icon={UserPlus} label="Signup events" value={signupEventCount} detail="Tracked frontend signup completions" tone="primary" />
                 <MetricCard icon={Download} label="Racecard downloads" value={dlFiltered.length} detail="In selected range" tone="primary" />
+                <MetricCard icon={Globe2} label="Attributed traffic" value={formatPercent(analytics.utmCoverage.percentAttributed)} detail={`${analytics.utmCoverage.directVisitors} direct visitors`} tone={analytics.utmCoverage.percentAttributed < 40 ? "danger" : "default"} />
+                <MetricCard icon={Route} label="RaceCards intent" value={analytics.racecardsFunnel.racecardsVisitors} detail={`${analytics.racecardsFunnel.joinClicks} join clicks from RaceCards`} />
+                <MetricCard icon={MousePointerClick} label="CTA clicks" value={analytics.topCtaClicks.reduce((sum, item) => sum + item.clicks, 0)} detail="Tracked buttons and links" />
                 <MetricCard icon={AlertTriangle} label="Errors" value={errors.length} detail="From latest 80 audit rows" tone={errors.length > 0 ? "danger" : "default"} />
+              </div>
+
+              <div className="grid xl:grid-cols-2 gap-6 mb-8">
+                <Card className="bg-card border-border">
+                  <CardHeader>
+                    <CardTitle className="text-foreground text-lg flex items-center gap-2">
+                      <Route className="h-5 w-5 text-primary" /> Landing pages
+                    </CardTitle>
+                    <CardDescription>First page in each session, with bounce and checkout signal</CardDescription>
+                  </CardHeader>
+                  <CardContent className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Landing page</TableHead>
+                          <TableHead>Visitors</TableHead>
+                          <TableHead>Bounce</TableHead>
+                          <TableHead>Checkouts</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {analytics.topLandingPages.map((page) => (
+                          <TableRow key={page.path}>
+                            <TableCell className="font-mono text-xs text-foreground">{page.path}</TableCell>
+                            <TableCell>{page.visitors}</TableCell>
+                            <TableCell>{formatPercent(page.bounceRate)}</TableCell>
+                            <TableCell>{page.checkoutStarts}</TableCell>
+                          </TableRow>
+                        ))}
+                        {analytics.topLandingPages.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                              No landing-page signal yet
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-card border-border">
+                  <CardHeader>
+                    <CardTitle className="text-foreground text-lg flex items-center gap-2">
+                      <MousePointerClick className="h-5 w-5 text-primary" /> CTA click map
+                    </CardTitle>
+                    <CardDescription>Which links and buttons visitors actually click</CardDescription>
+                  </CardHeader>
+                  <CardContent className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>CTA</TableHead>
+                          <TableHead>Path</TableHead>
+                          <TableHead>Clicks</TableHead>
+                          <TableHead>Visitors</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {analytics.topCtaClicks.map((cta) => (
+                          <TableRow key={cta.key}>
+                            <TableCell>
+                              <div className="max-w-[260px]">
+                                <p className="truncate text-sm font-medium text-foreground">{cta.label}</p>
+                                <p className="truncate text-xs text-muted-foreground">{formatShortUrl(cta.href)}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-mono text-xs text-muted-foreground">{cta.path ?? "-"}</TableCell>
+                            <TableCell>{cta.clicks}</TableCell>
+                            <TableCell>{cta.visitors}</TableCell>
+                          </TableRow>
+                        ))}
+                        {analytics.topCtaClicks.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                              No CTA clicks tracked yet
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="grid lg:grid-cols-3 gap-6 mb-8">
+                <Card className="bg-card border-border">
+                  <CardHeader>
+                    <CardTitle className="text-foreground text-lg">UTM coverage</CardTitle>
+                    <CardDescription>How much traffic is attributable versus direct</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-foreground">Attributed visitors</span>
+                        <span className="font-mono-data text-muted-foreground">
+                          {analytics.utmCoverage.attributedVisitors} · {formatPercent(analytics.utmCoverage.percentAttributed)}
+                        </span>
+                      </div>
+                      <Progress value={analytics.utmCoverage.percentAttributed} className="h-2" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="rounded-md bg-background/60 p-3">
+                        <div className="font-mono-data text-lg text-foreground">{analytics.utmCoverage.directVisitors}</div>
+                        <div className="text-xs text-muted-foreground">Direct visitors</div>
+                      </div>
+                      <div className="rounded-md bg-background/60 p-3">
+                        <div className="font-mono-data text-lg text-foreground">{analytics.utmCoverage.campaignVisitors}</div>
+                        <div className="text-xs text-muted-foreground">Campaign visitors</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-card border-border">
+                  <CardHeader>
+                    <CardTitle className="text-foreground text-lg">RaceCards intent funnel</CardTitle>
+                    <CardDescription>What visitors do on the RaceCards page before signup</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {[
+                      { label: "Viewed RaceCards", value: analytics.racecardsFunnel.racecardsVisitors },
+                      { label: "Changed date", value: analytics.racecardsFunnel.dateChanges },
+                      { label: "Searched tracks", value: analytics.racecardsFunnel.searches },
+                      { label: "Opened card details", value: analytics.racecardsFunnel.cardExpansions },
+                      { label: "Clicked join", value: analytics.racecardsFunnel.joinClicks },
+                    ].map((step) => (
+                      <div key={step.label} className="flex items-center justify-between rounded-md bg-background/60 px-3 py-2 text-sm">
+                        <span className="text-foreground">{step.label}</span>
+                        <span className="font-mono-data text-muted-foreground">{step.value}</span>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-card border-border">
+                  <CardHeader>
+                    <CardTitle className="text-foreground text-lg">Signup funnel</CardTitle>
+                    <CardDescription>Auth-page starts, submits, failures, and completions</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {[
+                      { label: "Signup starts", value: analytics.signupFunnel.starts },
+                      { label: "Signup submits", value: analytics.signupFunnel.submits },
+                      { label: "Signup failures", value: analytics.signupFunnel.failures },
+                      { label: "Signup completions", value: analytics.signupFunnel.completions },
+                    ].map((step) => (
+                      <div key={step.label} className="flex items-center justify-between rounded-md bg-background/60 px-3 py-2 text-sm">
+                        <span className="text-foreground">{step.label}</span>
+                        <span className="font-mono-data text-muted-foreground">{step.value}</span>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
               </div>
 
               <div className="grid lg:grid-cols-2 gap-6 mb-8">
@@ -521,7 +702,7 @@ const AdminAnalytics = () => {
                 </Card>
               )}
 
-              <Card className="bg-card border-border mb-8">
+              <Card className="bg-card border-border mb-8 analytics-print-hide">
                 <CardHeader className="gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <CardTitle className="text-foreground">Site event log</CardTitle>
@@ -574,7 +755,7 @@ const AdminAnalytics = () => {
                 </CardContent>
               </Card>
 
-              <Card className="bg-card border-border">
+              <Card className="bg-card border-border analytics-print-hide">
                 <CardHeader>
                   <CardTitle className="text-foreground">Audit log</CardTitle>
                   <CardDescription>Security and admin actions (newest first)</CardDescription>
@@ -619,7 +800,9 @@ const AdminAnalytics = () => {
           )}
         </div>
       </main>
-      <Footer />
+      <div className="analytics-print-hide">
+        <Footer />
+      </div>
     </div>
   );
 };

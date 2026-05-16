@@ -7,7 +7,13 @@ export type SiteAnalyticsEventName =
   | "engaged_session_10s"
   | "cta_clicked"
   | "racecard_preview_opened"
+  | "racecard_date_changed"
+  | "racecard_search_used"
+  | "racecard_card_expanded"
+  | "signup_started"
+  | "signup_submitted"
   | "signup_completed"
+  | "signup_failed"
   | "popup_viewed"
   | "popup_dismissed"
   | "popup_converted"
@@ -80,6 +86,46 @@ export type DeviceSummary = {
   percentOfVisitors: number;
 };
 
+export type LandingPageSummary = {
+  path: string;
+  visitors: number;
+  sessions: number;
+  bounceRate: number;
+  checkoutStarts: number;
+};
+
+export type CtaClickSummary = {
+  key: string;
+  label: string;
+  href: string | null;
+  path: string | null;
+  clicks: number;
+  visitors: number;
+};
+
+export type RacecardsFunnelSummary = {
+  racecardsVisitors: number;
+  dateChanges: number;
+  searches: number;
+  cardExpansions: number;
+  joinClicks: number;
+  signupCompletions: number;
+};
+
+export type SignupFunnelSummary = {
+  starts: number;
+  submits: number;
+  failures: number;
+  completions: number;
+};
+
+export type UtmCoverageSummary = {
+  attributedVisitors: number;
+  directVisitors: number;
+  percentAttributed: number;
+  campaignVisitors: number;
+};
+
 export type AnalyticsSummary = {
   visitors: number;
   newVisitors: number;
@@ -97,6 +143,11 @@ export type AnalyticsSummary = {
   checkoutCompletionRate: number;
   topSources: SourceSummary[];
   deviceBreakdown: DeviceSummary[];
+  topLandingPages: LandingPageSummary[];
+  topCtaClicks: CtaClickSummary[];
+  racecardsFunnel: RacecardsFunnelSummary;
+  signupFunnel: SignupFunnelSummary;
+  utmCoverage: UtmCoverageSummary;
   topExitPages: { path: string; exits: number }[];
   issues: AnalyticsIssue[];
 };
@@ -293,6 +344,19 @@ function hasMeaningfulEngagement(rows: SiteAnalyticsEventRow[]): boolean {
   );
 }
 
+function readStringProperty(row: SiteAnalyticsEventRow, key: string): string | null {
+  const value = row.properties?.[key];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function hasAttribution(row: SiteAnalyticsEventRow): boolean {
+  return (
+    row.source !== "direct" ||
+    row.medium !== "none" ||
+    Boolean(row.campaign || row.content || row.term || row.referrer_host)
+  );
+}
+
 export function summarizeSiteAnalytics(
   events: SiteAnalyticsEventRow[],
   transactions: TransactionAnalyticsRow[],
@@ -327,12 +391,28 @@ export function summarizeSiteAnalytics(
     sessionMap.set(row.session_id, sessionRows);
   }
 
+  const landingPageMap = new Map<
+    string,
+    { visitors: Set<string>; sessions: Set<string>; bounces: number; checkoutStarts: number }
+  >();
   let bounces = 0;
   const exitPageCounts = new Map<string, number>();
   for (const sessionRows of sessionMap.values()) {
     const ordered = [...sessionRows].sort((a, b) => a.created_at.localeCompare(b.created_at));
     const sessionPageViews = ordered.filter((row) => row.event_name === "page_view");
-    if (sessionPageViews.length <= 1 && !hasMeaningfulEngagement(ordered)) bounces += 1;
+    const bounced = sessionPageViews.length <= 1 && !hasMeaningfulEngagement(ordered);
+    if (bounced) bounces += 1;
+    const landing = sessionPageViews.find((row) => row.path);
+    if (landing?.path) {
+      const item =
+        landingPageMap.get(landing.path) ??
+        { visitors: new Set<string>(), sessions: new Set<string>(), bounces: 0, checkoutStarts: 0 };
+      item.visitors.add(landing.visitor_id);
+      item.sessions.add(landing.session_id);
+      if (bounced) item.bounces += 1;
+      item.checkoutStarts += ordered.filter((row) => row.event_name === "checkout_started").length;
+      landingPageMap.set(landing.path, item);
+    }
     const lastPage = [...ordered].reverse().find((row) => row.path)?.path;
     if (lastPage && !ordered.some((row) => row.event_name === "checkout_started")) {
       exitPageCounts.set(lastPage, (exitPageCounts.get(lastPage) ?? 0) + 1);
@@ -422,6 +502,72 @@ export function summarizeSiteAnalytics(
     }))
     .sort((a, b) => b.visitors - a.visitors);
 
+  const firstRowsByVisitor = new Map<string, SiteAnalyticsEventRow>();
+  for (const row of [...rows].sort((a, b) => a.created_at.localeCompare(b.created_at))) {
+    if (!firstRowsByVisitor.has(row.visitor_id)) firstRowsByVisitor.set(row.visitor_id, row);
+  }
+  const attributedVisitors = Array.from(firstRowsByVisitor.values()).filter(hasAttribution).length;
+  const campaignVisitors = Array.from(firstRowsByVisitor.values()).filter((row) => row.campaign).length;
+
+  const topLandingPages = Array.from(landingPageMap.entries())
+    .map(([path, item]) => ({
+      path,
+      visitors: item.visitors.size,
+      sessions: item.sessions.size,
+      bounceRate: percent(item.bounces, item.sessions.size),
+      checkoutStarts: item.checkoutStarts,
+    }))
+    .sort((a, b) => b.visitors - a.visitors)
+    .slice(0, 8);
+
+  const ctaMap = new Map<string, { label: string; href: string | null; path: string | null; clicks: number; visitors: Set<string> }>();
+  for (const row of rows.filter((event) => event.event_name === "cta_clicked")) {
+    const label = readStringProperty(row, "label") ?? "Unknown CTA";
+    const href = readStringProperty(row, "href");
+    const key = `${label}|${href ?? ""}|${row.path ?? ""}`;
+    const item =
+      ctaMap.get(key) ?? { label, href, path: row.path, clicks: 0, visitors: new Set<string>() };
+    item.clicks += 1;
+    item.visitors.add(row.visitor_id);
+    ctaMap.set(key, item);
+  }
+  const topCtaClicks = Array.from(ctaMap.entries())
+    .map(([key, item]) => ({
+      key,
+      label: item.label,
+      href: item.href,
+      path: item.path,
+      clicks: item.clicks,
+      visitors: item.visitors.size,
+    }))
+    .sort((a, b) => b.clicks - a.clicks)
+    .slice(0, 10);
+
+  const uniqueVisitorsForEvent = (eventName: string, predicate: (row: SiteAnalyticsEventRow) => boolean = () => true) =>
+    new Set(rows.filter((row) => row.event_name === eventName && predicate(row)).map((row) => row.visitor_id)).size;
+
+  const signupCompletions = uniqueVisitorsForEvent("signup_completed");
+  const racecardsFunnel: RacecardsFunnelSummary = {
+    racecardsVisitors: new Set(rows.filter((row) => row.path === "/racecards").map((row) => row.visitor_id)).size,
+    dateChanges: uniqueVisitorsForEvent("racecard_date_changed"),
+    searches: uniqueVisitorsForEvent("racecard_search_used"),
+    cardExpansions: uniqueVisitorsForEvent("racecard_card_expanded"),
+    joinClicks: uniqueVisitorsForEvent(
+      "cta_clicked",
+      (row) =>
+        row.path === "/racecards" &&
+        /join|signup|sign up|purchase/i.test(readStringProperty(row, "label") ?? ""),
+    ),
+    signupCompletions,
+  };
+
+  const signupFunnel: SignupFunnelSummary = {
+    starts: uniqueVisitorsForEvent("signup_started"),
+    submits: uniqueVisitorsForEvent("signup_submitted"),
+    failures: rows.filter((row) => row.event_name === "signup_failed").length,
+    completions: signupCompletions,
+  };
+
   const summary: AnalyticsSummary = {
     visitors: visitorIds.size,
     newVisitors,
@@ -439,6 +585,16 @@ export function summarizeSiteAnalytics(
     checkoutCompletionRate: percent(completedPurchases, checkoutStarts),
     topSources,
     deviceBreakdown,
+    topLandingPages,
+    topCtaClicks,
+    racecardsFunnel,
+    signupFunnel,
+    utmCoverage: {
+      attributedVisitors,
+      directVisitors: Math.max(visitorIds.size - attributedVisitors, 0),
+      percentAttributed: percent(attributedVisitors, visitorIds.size),
+      campaignVisitors,
+    },
     topExitPages: Array.from(exitPageCounts.entries())
       .map(([path, exits]) => ({ path, exits }))
       .sort((a, b) => b.exits - a.exits)
