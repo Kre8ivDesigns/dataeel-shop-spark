@@ -14,6 +14,7 @@ import {
   LayoutDashboard,
   Coins,
   ShoppingCart,
+  Search,
 } from "lucide-react";
 import logo from "@/assets/dataeel-logo.png";
 import { motion, AnimatePresence } from "framer-motion";
@@ -28,10 +29,15 @@ const navItems = [
   { label: "Pricing", href: "/pricing" },
   { label: "Betting Basics", href: "/betting-basics" },
   { label: "Reading the RaceCard", href: "/how-to-read-racecard" },
+  { label: "Insights", href: "/insights" },
   { label: "Contact", href: "/contact" },
 ];
 
-export const Header = () => {
+interface HeaderProps {
+  topOffsetClassName?: string;
+}
+
+export const Header = ({ topOffsetClassName = "top-0" }: HeaderProps) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -95,7 +101,7 @@ export const Header = () => {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 bg-background transition-all duration-300 ${
+      className={`fixed ${topOffsetClassName} left-0 right-0 z-50 bg-background transition-all duration-300 ${
         isScrolled ? "border-b border-border py-3 shadow-sm" : "py-5"
       }`}
     >
@@ -108,7 +114,7 @@ export const Header = () => {
           </span>
         </Link>
 
-        <nav className="hidden lg:flex items-center gap-8">
+        <nav className="hidden lg:flex items-center gap-4 xl:gap-8">
           {navItems.map((item) => renderNavLink(item))}
         </nav>
 
@@ -185,6 +191,14 @@ export const Header = () => {
                         >
                           <BarChart3 className="h-4 w-4" />
                           Analytics
+                        </Link>
+                        <Link
+                          to="/admin/seo"
+                          onClick={() => setIsUserMenuOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2.5 text-sm text-primary hover:bg-muted transition-colors"
+                        >
+                          <Search className="h-4 w-4" />
+                          SEO Tools
                         </Link>
                         <Link
                           to="/admin/support"
@@ -297,6 +311,11 @@ export const Header = () => {
                         <Link to="/admin/analytics" onClick={() => setIsMobileMenuOpen(false)}>
                           <Button variant="outline" className="w-full border-secondary text-primary gap-2">
                             <BarChart3 className="h-4 w-4" /> Analytics
+                          </Button>
+                        </Link>
+                        <Link to="/admin/seo" onClick={() => setIsMobileMenuOpen(false)}>
+                          <Button variant="outline" className="w-full border-secondary text-primary gap-2">
+                            <Search className="h-4 w-4" /> SEO Tools
                           </Button>
                         </Link>
                         <Link to="/admin/support" onClick={() => setIsMobileMenuOpen(false)}>

@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Trash2, PlusCircle, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -15,6 +16,14 @@ interface TickerItem {
   created_at: string;
 }
 
+function getDatabaseErrorMessage(err: unknown, fallback: string): string {
+  if (!err || typeof err !== "object") return fallback;
+  const error = err as { message?: string; details?: string | null; hint?: string | null; code?: string | null };
+  const parts = [error.message, error.details, error.hint ? `hint: ${error.hint}` : null, error.code ? `code: ${error.code}` : null]
+    .filter((part): part is string => typeof part === "string" && part.trim().length > 0);
+  return parts.length > 0 ? parts.join(" — ") : fallback;
+}
+
 export const AdminBreakingNewsPanel = () => {
   const [items, setItems] = useState<TickerItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,6 +31,8 @@ export const AdminBreakingNewsPanel = () => {
   const [adding, setAdding] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deletingSelected, setDeletingSelected] = useState(false);
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -32,7 +43,9 @@ export const AdminBreakingNewsPanel = () => {
         .order("sort_order", { ascending: true })
         .order("created_at", { ascending: false });
       if (error) throw error;
-      setItems(data ?? []);
+      const nextItems = data ?? [];
+      setItems(nextItems);
+      setSelectedIds((prev) => prev.filter((id) => nextItems.some((item) => item.id === id)));
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to load ticker items");
     } finally {
@@ -65,9 +78,9 @@ export const AdminBreakingNewsPanel = () => {
       if (error) throw error;
       toast.success(`Added ${lines.length} ticker item${lines.length > 1 ? "s" : ""}`);
       setBulkText("");
-      fetchItems();
+      await fetchItems();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to add items");
+      toast.error(getDatabaseErrorMessage(err, "Failed to add items"));
     } finally {
       setAdding(false);
     }
@@ -97,6 +110,7 @@ export const AdminBreakingNewsPanel = () => {
       const { error } = await supabase.from("breaking_news_items").delete().eq("id", id);
       if (error) throw error;
       setItems((prev) => prev.filter((i) => i.id !== id));
+      setSelectedIds((prev) => prev.filter((selectedId) => selectedId !== id));
       toast.success("Item deleted");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to delete item");
@@ -114,11 +128,48 @@ export const AdminBreakingNewsPanel = () => {
         .neq("id", "00000000-0000-0000-0000-000000000000"); // delete all rows
       if (error) throw error;
       setItems([]);
+      setSelectedIds([]);
       toast.success("All items deleted");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to delete all items");
     }
   };
+
+  const handleSelectItem = (id: string, checked: boolean) => {
+    setSelectedIds((prev) => (
+      checked ? Array.from(new Set([...prev, id])) : prev.filter((selectedId) => selectedId !== id)
+    ));
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    setSelectedIds(checked ? items.map((item) => item.id) : []);
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.length === 0) {
+      toast.error("Select at least one ticker item");
+      return;
+    }
+
+    if (!window.confirm(`Delete ${selectedIds.length} selected ticker item${selectedIds.length === 1 ? "" : "s"}? This cannot be undone.`)) return;
+
+    setDeletingSelected(true);
+    try {
+      const idsToDelete = [...selectedIds];
+      const { error } = await supabase.from("breaking_news_items").delete().in("id", idsToDelete);
+      if (error) throw error;
+      setItems((prev) => prev.filter((item) => !idsToDelete.includes(item.id)));
+      setSelectedIds([]);
+      toast.success(`Deleted ${idsToDelete.length} ticker item${idsToDelete.length === 1 ? "" : "s"}`);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete selected items");
+    } finally {
+      setDeletingSelected(false);
+    }
+  };
+
+  const selectedCount = selectedIds.length;
+  const allSelected = items.length > 0 && selectedCount === items.length;
 
   return (
     <div className="space-y-6">
@@ -158,14 +209,27 @@ export const AdminBreakingNewsPanel = () => {
             <div>
               <CardTitle className="text-foreground">Current Ticker Items</CardTitle>
               <CardDescription>
-                {loading ? "Loading…" : `${items.length} item${items.length !== 1 ? "s" : ""} · ${items.filter((i) => i.active).length} active`}
+                {loading ? "Loading…" : `${items.length} item${items.length !== 1 ? "s" : ""} · ${items.filter((i) => i.active).length} active · ${selectedCount} selected`}
               </CardDescription>
             </div>
-            {items.length > 0 && (
-              <Button variant="destructive" size="sm" onClick={handleDeleteAll}>
-                Delete All
-              </Button>
-            )}
+            <div className="flex flex-wrap justify-end gap-2">
+              {items.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDeleteSelected}
+                  disabled={selectedCount === 0 || deletingSelected}
+                >
+                  {deletingSelected ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                  Delete selected
+                </Button>
+              )}
+              {items.length > 0 && (
+                <Button variant="destructive" size="sm" onClick={handleDeleteAll} disabled={deletingSelected}>
+                  Delete All
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -178,50 +242,69 @@ export const AdminBreakingNewsPanel = () => {
               No ticker items yet. Add some above.
             </p>
           ) : (
-            <ul className="space-y-2">
-              {items.map((item) => (
-                <li
-                  key={item.id}
-                  className={`flex items-start gap-3 rounded-md border p-3 text-sm transition-colors ${
-                    item.active ? "border-border bg-muted/20" : "border-border/50 bg-muted/5 opacity-60"
-                  }`}
-                >
-                  <span className="flex-1 font-mono leading-snug break-all">{item.text}</span>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      title={item.active ? "Hide" : "Show"}
-                      onClick={() => handleToggle(item)}
-                      disabled={togglingId === item.id}
-                    >
-                      {togglingId === item.id ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : item.active ? (
-                        <Eye className="h-3.5 w-3.5" />
-                      ) : (
-                        <EyeOff className="h-3.5 w-3.5" />
-                      )}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-destructive hover:text-destructive"
-                      title="Delete"
-                      onClick={() => handleDelete(item.id)}
-                      disabled={deletingId === item.id}
-                    >
-                      {deletingId === item.id ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-3.5 w-3.5" />
-                      )}
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 rounded-md border border-border bg-muted/20 px-3 py-2 text-sm">
+                <Checkbox
+                  id="select-all-breaking-news"
+                  checked={allSelected}
+                  onCheckedChange={(checked) => handleSelectAll(checked === true)}
+                  aria-label="Select all ticker items"
+                />
+                <Label htmlFor="select-all-breaking-news" className="cursor-pointer text-sm font-medium">
+                  Select all
+                </Label>
+              </div>
+              <ul className="space-y-2">
+                {items.map((item) => (
+                  <li
+                    key={item.id}
+                    className={`flex items-start gap-3 rounded-md border p-3 text-sm transition-colors ${
+                      item.active ? "border-border bg-muted/20" : "border-border/50 bg-muted/5 opacity-60"
+                    }`}
+                  >
+                    <Checkbox
+                      checked={selectedIds.includes(item.id)}
+                      onCheckedChange={(checked) => handleSelectItem(item.id, checked === true)}
+                      aria-label={`Select ticker item: ${item.text}`}
+                      className="mt-0.5"
+                    />
+                    <span className="flex-1 font-mono leading-snug break-all">{item.text}</span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        title={item.active ? "Hide" : "Show"}
+                        onClick={() => handleToggle(item)}
+                        disabled={togglingId === item.id}
+                      >
+                        {togglingId === item.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : item.active ? (
+                          <Eye className="h-3.5 w-3.5" />
+                        ) : (
+                          <EyeOff className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        title="Delete"
+                        onClick={() => handleDelete(item.id)}
+                        disabled={deletingId === item.id}
+                      >
+                        {deletingId === item.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </CardContent>
       </Card>

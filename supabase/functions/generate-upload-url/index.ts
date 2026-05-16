@@ -44,9 +44,19 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers });
     }
 
-    const { data: isAdmin } = await supabaseAdmin.rpc("is_admin", { _user_id: user.id });
+    const { data: isAdmin, error: adminError } = await supabaseAdmin.rpc("is_admin", { _user_id: user.id });
+    if (adminError) {
+      console.error("generate-upload-url admin check failed:", adminError.message);
+      return new Response(
+        JSON.stringify({ error: "Admin check failed", detail: adminError.message }),
+        { status: 500, headers },
+      );
+    }
     if (!isAdmin) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers });
+      return new Response(
+        JSON.stringify({ error: "Forbidden", detail: "Signed-in user does not have the admin role" }),
+        { status: 403, headers },
+      );
     }
 
     const { fileName } = await req.json();
@@ -67,6 +77,10 @@ Deno.serve(async (req) => {
 
     const s3 = new S3Client({
       region: aws.region,
+      // Browser presigned PUTs upload the file outside the SDK, so the signer
+      // cannot calculate a real payload checksum. Keep checksum validation off
+      // for this URL or S3 receives checksum query params for an empty payload.
+      requestChecksumCalculation: "WHEN_REQUIRED",
       credentials: {
         accessKeyId: aws.accessKeyId,
         secretAccessKey: aws.secretAccessKey,

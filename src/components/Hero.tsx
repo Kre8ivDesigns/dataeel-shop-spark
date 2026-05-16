@@ -1,11 +1,10 @@
-import { useState, useEffect, useLayoutEffect, useMemo, useRef, type CSSProperties } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, FileText, Play, MapPin, Sparkles, Infinity as InfinityIcon } from "lucide-react";
+import { ArrowRight, FileText, MapPin, Sparkles, Infinity as InfinityIcon, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-racing.jpg";
 import { supabase } from "@/integrations/supabase/client";
-import { buildTickerLoopItems, tickerDurationSeconds } from "@/lib/breakingNewsTicker";
 
 const FALLBACK_NEWS = [
   "Concert algorithm picks Winner in race#1, race#2, race#3, race#6, race#7; Belmont At Big A May1, 2026",
@@ -62,30 +61,20 @@ const trustBadges = [
   { icon: InfinityIcon, label: "Credits never expire" },
 ];
 
+function countHitType(items: string[], pattern: RegExp): number {
+  return items.filter((item) => pattern.test(item)).length;
+}
+
 export const Hero = () => {
-  const [tickerItems, setTickerItems] = useState<string[]>(FALLBACK_NEWS);
-  const [tickerDistance, setTickerDistance] = useState<number | null>(null);
-  const tickerGroupRef = useRef<HTMLDivElement | null>(null);
-  const tickerLoopItems = useMemo(() => buildTickerLoopItems(tickerItems), [tickerItems]);
-  const tickerDuration = useMemo(() => tickerDurationSeconds(tickerLoopItems), [tickerLoopItems]);
-
-  useLayoutEffect(() => {
-    const group = tickerGroupRef.current;
-    if (!group) return;
-
-    const updateDistance = () => {
-      setTickerDistance(Math.ceil(group.scrollWidth));
-    };
-
-    updateDistance();
-    const observer = new ResizeObserver(updateDistance);
-    observer.observe(group);
-    if (document.fonts) {
-      void document.fonts.ready.then(updateDistance);
-    }
-
-    return () => observer.disconnect();
-  }, [tickerLoopItems]);
+  const [resultItems, setResultItems] = useState<string[]>(FALLBACK_NEWS);
+  const resultSummary = useMemo(
+    () => [
+      { label: "Recent hit notes", value: resultItems.length },
+      { label: "Winner calls", value: countHitType(resultItems, /\bwinner\b/i) },
+      { label: "Exotics posted", value: countHitType(resultItems, /\b(?:exacta|trifecta|superfecta|pick\s*3|daily double)\b/i) },
+    ],
+    [resultItems],
+  );
 
   useEffect(() => {
     supabase
@@ -96,13 +85,13 @@ export const Hero = () => {
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         if (data && data.length > 0) {
-          setTickerItems(data.map((r) => r.text));
+          setResultItems(data.map((r) => r.text));
         }
       });
   }, []);
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+    <section className="relative mt-[calc(var(--header-height)+2rem)] flex min-h-[calc(100svh-var(--header-height)-2rem)] items-center justify-center overflow-hidden sm:mt-[calc(var(--header-height)+2.25rem)] sm:min-h-[calc(100svh-var(--header-height)-2.25rem)]">
       {/* Background */}
       <div className="absolute inset-0">
         <img
@@ -118,52 +107,30 @@ export const Hero = () => {
         />
       </div>
 
-      {/* Breaking News Ticker */}
-      <div className="absolute top-[var(--header-height)] left-0 right-0 z-20 bg-card/90 backdrop-blur-sm border-b border-border overflow-hidden">
-        <div className="flex items-center">
-          <div className="flex-shrink-0 px-4 py-2 bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wider">
-            Breaking News
-          </div>
-          <div className="overflow-hidden flex-1 min-w-0">
-            <div
-              className="flex w-max whitespace-nowrap animate-ticker-scroll will-change-transform motion-reduce:animate-none"
-              style={{
-                animationDuration: `${tickerDuration}s`,
-                "--ticker-distance": tickerDistance ? `${tickerDistance}px` : "50%",
-              } as CSSProperties}
-            >
-              <div ref={tickerGroupRef} className="flex shrink-0 whitespace-nowrap">
-                {tickerLoopItems.map((news, i) => (
-                  <span key={`a-${i}`} className="inline-flex items-center text-sm text-foreground/80 mx-8 shrink-0">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary mr-3 flex-shrink-0" />
-                    {news}
-                  </span>
-                ))}
-              </div>
-              <div className="flex shrink-0 whitespace-nowrap" aria-hidden="true">
-                {tickerLoopItems.map((news, i) => (
-                  <span key={`b-${i}`} className="inline-flex items-center text-sm text-foreground/80 mx-8 shrink-0">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary mr-3 flex-shrink-0" />
-                    {news}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Content */}
-      <div className="relative z-10 container mx-auto px-4 pt-32 pb-16">
+      <div className="relative z-10 container mx-auto px-4 pb-10 pt-[75px] sm:pb-14 lg:pb-16">
         <div className="max-w-4xl mx-auto text-center">
+          <motion.div
+            initial={false}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="mx-auto mb-4 inline-flex max-w-full flex-wrap items-center justify-center gap-1.5 rounded-full border border-primary/30 bg-card/70 px-3 py-2 text-xs text-foreground/80 shadow-[0_0_28px_hsl(var(--primary)/0.12)] backdrop-blur-sm sm:mb-6 sm:gap-2 sm:px-4 sm:text-sm"
+          >
+            <Trophy className="h-4 w-4 text-primary" />
+            <span className="font-semibold text-foreground">Recent results snapshot:</span>
+            <span>{resultSummary[1].value} winner calls</span>
+            <span aria-hidden="true" className="text-muted-foreground">/</span>
+            <span>{resultSummary[2].value} exotics posted</span>
+          </motion.div>
+
           {/* Main Headline */}
           <motion.h1
             initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-foreground leading-tight mb-6 font-heading tracking-tight"
+            className="mb-4 text-3xl font-bold leading-tight text-foreground sm:text-4xl md:mb-6 md:text-5xl lg:text-6xl xl:text-7xl font-heading tracking-tight"
           >
-            Win More. Bet Smarter.
+            Stop Guessing. Start Reading the Race Smarter.
           </motion.h1>
 
           {/* Sub-headline */}
@@ -171,11 +138,10 @@ export const Hero = () => {
             initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="text-lg md:text-xl text-foreground/70 max-w-2xl mx-auto mb-4"
+            className="mx-auto mb-3 max-w-2xl text-base text-foreground/70 sm:text-lg md:mb-4 md:text-xl"
           >
-            How about a simplified and honest approach to Horse Racing?
-            Algorithm-powered RaceCards for 28+ tracks. Two expert algorithms,
-            instant downloads, proven results.
+            Algorithm-powered RaceCards for 28+ tracks. See the Concert™ and Aptitude™ picks in a
+            simple PDF before you spend hours buried in past performances.
           </motion.p>
 
           {/* Tagline */}
@@ -183,7 +149,7 @@ export const Hero = () => {
             initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="text-base text-muted-foreground italic mb-10"
+            className="mb-6 text-sm italic text-muted-foreground sm:mb-8 sm:text-base"
           >
             Horse Racing Simplified®
           </motion.p>
@@ -193,36 +159,25 @@ export const Hero = () => {
             initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12"
+            className="mb-6 flex flex-col items-stretch justify-center gap-3 sm:mb-8 sm:flex-row sm:items-center sm:gap-4"
           >
-            <Link to="/racecards">
-              <Button
-                size="lg"
-                className="btn-neon text-lg px-10 py-6 h-auto"
-              >
-                Get Today's Cards
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
-            <Button
-              size="lg"
-              variant="outline"
-              className="btn-ghost-light text-lg px-10 py-6 h-auto"
-              onClick={() => {
-                document.querySelector("#how-it-works")?.scrollIntoView({ behavior: "smooth" });
-              }}
-            >
-              <Play className="mr-2 h-5 w-5" />
-              How It Works
-            </Button>
             <Link to="/how-to-read-racecard">
               <Button
                 size="lg"
-                variant="outline"
-                className="btn-ghost-light text-lg px-10 py-6 h-auto"
+                className="btn-neon h-auto w-full px-8 py-5 text-base sm:w-auto sm:px-10 sm:py-6 sm:text-lg"
               >
                 <FileText className="mr-2 h-5 w-5" />
                 View Sample RaceCard
+              </Button>
+            </Link>
+            <Link to="/racecards">
+              <Button
+                size="lg"
+                variant="outline"
+                className="btn-ghost-light h-auto w-full px-8 py-5 text-base sm:w-auto sm:px-10 sm:py-6 sm:text-lg"
+              >
+                Today Races
+                <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
           </motion.div>
@@ -232,12 +187,12 @@ export const Hero = () => {
             initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="flex flex-wrap items-center justify-center gap-4 md:gap-6"
+            className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 md:gap-6"
           >
             {trustBadges.map((badge) => (
               <div
                 key={badge.label}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50 backdrop-blur-sm text-foreground/80 text-sm"
+                className="inline-flex items-center gap-1.5 rounded-full bg-muted/50 px-3 py-1.5 text-xs text-foreground/80 backdrop-blur-sm sm:gap-2 sm:px-4 sm:py-2 sm:text-sm"
               >
                 <badge.icon className="h-4 w-4 text-primary" />
                 <span>{badge.label}</span>
@@ -250,7 +205,7 @@ export const Hero = () => {
             initial={false}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4 }}
-            className="mt-12 sm:mt-14 md:mt-16 flex flex-col items-center gap-2 text-foreground/40"
+            className="mt-8 hidden flex-col items-center gap-2 text-foreground/40 sm:flex"
           >
             <span className="text-xs uppercase tracking-wider">Scroll to explore</span>
             <motion.div
@@ -263,6 +218,7 @@ export const Hero = () => {
           </motion.div>
         </div>
       </div>
+
     </section>
   );
 };

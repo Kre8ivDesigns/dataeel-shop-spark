@@ -11,6 +11,7 @@ import racecardColumnsImage from "@/assets/racecard-guide/racecard-guide-page-03
 import racecardFormatImage from "@/assets/racecard-guide/racecard-guide-page-04.webp";
 import racecardAlgorithmsImage from "@/assets/racecard-guide/racecard-guide-page-05.webp";
 import racecardNoDataImage from "@/assets/racecard-guide/racecard-guide-page-07.webp";
+import racecardScratchedHorsesImage from "@/assets/racecard-guide/lesson-5-scratched-horses.png";
 import { useState } from "react";
 
 const DEFAULT_INTRO_VIDEO_ID = "_W9FDrVAVrY";
@@ -54,9 +55,9 @@ const sections: {
     icon: Sparkles,
     title: "What the RaceCard is for",
     paragraphs: [
-      "DATAEEL™ prediction algorithms are built for several audiences: newcomers to thoroughbred racing, experienced handicappers who want to shorten form study, and players who follow multiple tracks in a day and want a structured read.",
+      "DATAEEL™ prediction algorithms are built for several audiences: newcomers to thoroughbred racing, experienced handicappers who want to shorten Racing Form study, and players who follow multiple tracks in a day and want a structured read.",
       "The aim is to give a straightforward way to think about which horses may finish in the money, keep the game fun and lower-stress, and offer an easy on-ramp to the sport.",
-      "There is also an introductory video, “A Complete Introduction to DATAEEL,” if you prefer to watch before you read.",
+      "There is also an introductory video, “A Complete Introduction to DATAEEL,” if you prefer to watch before reading the instructions below.",
     ],
   },
   {
@@ -72,9 +73,9 @@ const sections: {
     icon: BookOpen,
     title: "Lesson 1 — Understanding the format",
     paragraphs: [
-      "Each EEL RaceCard is printed for one track and race date. At the top you will see the track name, date, and often a Sunny/Cloudy vs Rain edition note where applicable.",
+      "Each EEL RaceCard is printed for one track and race date. At the top you will see the track name, date, and often a Sunny/Cloudy edition. Note: in the future we plan to release a Rain edition for poor weather days.",
       "The large block of text under the race header is the conditions of the race: distance, surface (for example Turf or Dirt), purse, who can enter (age, sex, claiming or allowance rules), and weights. The race number and estimated post time tell you which race you are looking at and when it is expected to run.",
-      "Down the middle of the sheet, opening odds appear for each horse. Those are initial morning-line–style figures set ahead of time; if a horse attracts more money, its odds often shorten (smaller payout if it wins); if it is ignored, odds may lengthen (larger payout).",
+      "Down the middle of the sheet, opening odds appear for each horse. Those are initial morning-line figures set ahead of time by track authorities. If a horse attracts more money from bettors, its odds often shorten (smaller payout if it wins); if a horse is ignored by bettors, odds may lengthen (larger payout).",
       "Each horse has a program number (sometimes with a letter) and a name so you can match the card to the tote, program, and results.",
     ],
     image: {
@@ -88,7 +89,7 @@ const sections: {
     icon: Columns2,
     title: "The two prediction tables",
     paragraphs: [
-      "On a typical page, the left-hand ranked list is Concert™, and the right-hand list is Aptitude™. Same horses, two different orderings — see the next sections for what each measures.",
+      "On the EEL RaceCard, the left-hand ranked list is Concert™, and the right-hand list is Aptitude™. Same horses, two different orderings — see the next sections for what each measures.",
     ],
     image: {
       src: racecardColumnsImage,
@@ -101,9 +102,9 @@ const sections: {
     icon: Columns2,
     title: "Lesson 2 — Concert™ and Aptitude™",
     paragraphs: [
-      "Concert™ draws primarily on how a horse has already performed — its “live” record under race-day pressure. Think of a band on stage: Concert reflects how the last performances went in front of the crowd.",
+      "Concert™ draws primarily on how a horse has already performed — its “live” record under race-day pressure. Think of a musical band on stage: Concert reflects how the last performances went in front of the crowd.",
       "Aptitude™ weighs factors that speak more to current potential and trajectory — including running-style tendencies — so it is oriented toward how the horse may perform looking forward.",
-      "The two numbers are not two versions of the same thing. Concert and Aptitude are separate models with separate inputs; they often disagree on order, and that is expected.",
+      "Concert and Aptitude are separate algorithms with separate inputs; they often disagree on ranking, and that is expected.",
       "Each algorithm ranks horses from top toward bottom: higher on the list means relatively more likely to be in the money under that model; lower means relatively less likely — for that algorithm only.",
     ],
     image: {
@@ -117,8 +118,8 @@ const sections: {
     icon: ArrowRight,
     title: "Lesson 3 — Using Concert™, Aptitude™, or both",
     paragraphs: [
-      "Because the lists can differ, look for overlap when both models put the same horse toward the top — that can be a strong hint. When they disagree on who is best, neither is “wrong”; you choose how much weight to give Concert™ and Aptitude™ for that race, or you can blend both reads if that fits your style.",
-      "Over time, tracking which approach matches how you like to bet can build intuition for which column to weight more on similar races.",
+      "Because the RaceCard lists can differ, look for overlap when both algorithms put the same horse in the top 3 positions — that can be a strong hint. When the algorithm lists disagree on who is best, neither is “wrong”; you choose how much weight to give Concert™ and Aptitude™ for that race, or you can blend both reads if that fits your style.",
+      "Over time, tracking which algorithm is performing for you can build intuition for other similar races. Hint: the Aptitude algorithm is very useful for maiden races.",
     ],
   },
   {
@@ -126,14 +127,29 @@ const sections: {
     icon: AlertCircle,
     title: "Lesson 4 — When there isn’t enough data",
     paragraphs: [
-      "Sometimes Concert™ or Aptitude™ cannot produce a reliable score for a horse — for example in many maiden fields where several runners have little or no meaningful past performance. On the PDF this state is shown with a special marker instead of a numeric score.",
-      "If you see that marker, treat it as “no usable prediction from this algorithm for this horse,” not as proof the horse is bad. Those runners may still be grouped toward the bottom of the list for layout only; order among marked horses is not meaningful.",
+      "Sometimes Concert™ or Aptitude™ cannot produce a reliable score for a horse — for example in many maiden races where several runners have little or no meaningful past performance. On the PDF this state is shown with an x marker instead of a numeric score.",
+      "If you see that marker, treat it as “no usable prediction from this algorithm for this horse,” not as proof the horse is bad. Runners with an x marker will always be grouped toward the bottom of the list for layout only; it does not mean the horse has a poor chance to finish “in the money,” it only means the algorithm cannot give a prediction for the horse.",
       "A horse that wins despite missing data is sometimes called a “sleeper” — the sheet did not have enough history to spotlight it, but the race itself told the story.",
     ],
     image: {
       src: racecardNoDataImage,
       alt: "RaceCard lesson page showing x values where there is not enough data to calculate a prediction.",
       caption: "An x means the algorithm does not have enough data to calculate a prediction.",
+    },
+  },
+  {
+    id: "lesson-5",
+    icon: AlertCircle,
+    title: "Lesson 5 — Scratched Horses: adjusting the RaceCard",
+    paragraphs: [
+      "If a horse is scratched from a race, cross it off the RaceCard. Draw a horizontal line through the horse name, number, opening odds, and algorithm number so you do not include that horse in your read.",
+      "After the scratches are removed, read each algorithm from the remaining horses only. In the example, Outlaw Kid and Biz Biz Buzz were scratched. Due to the scratches, Concert™ picks Talented Man, Determined Kingd, and Matta as the best choices to be in the money.",
+      "In that same example, Aptitude™ picks Bourbon Music, Talented Man, and Determined Kingd as the best choices to be in the money.",
+    ],
+    image: {
+      src: racecardScratchedHorsesImage,
+      alt: "Lesson 5 example showing scratched horses crossed off in the Concert and Aptitude RaceCard tables.",
+      caption: "Cross out scratched horses, then read the remaining horses in each algorithm table.",
     },
   },
 ];

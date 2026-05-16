@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { sanitizeError } from "@/lib/errorHandler";
+import { getInvokeErrorMessage } from "@/lib/edgeFunctionErrors";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserDashboard } from "@/lib/queries/userDashboard";
 import { invoiceListKeys, userDashboardKeys } from "@/lib/queryKeys";
@@ -225,12 +225,15 @@ const Dashboard = () => {
 
   const openCustomerPortal = async () => {
     setPortalLoading(true);
-    const { data, error } = await supabase.functions.invoke("customer-portal");
+    const { data, error, response: invokeResponse } = await supabase.functions.invoke("customer-portal");
     setPortalLoading(false);
     if (error || data?.error) {
+      const description = error
+        ? await getInvokeErrorMessage("customer-portal", error, data, invokeResponse)
+        : data?.error;
       toast({
         title: "Unable to open billing portal",
-        description: data?.error || sanitizeError(error),
+        description,
         variant: "destructive",
       });
     } else if (data?.url) {

@@ -16,12 +16,14 @@ import {
   RefreshCw,
   DollarSign,
   BarChart3,
+  Search,
   Settings,
   Package,
   TrendingUp,
   HelpCircle,
   Inbox,
   Table2,
+  Edit3,
 } from "lucide-react";
 import { sanitizeError } from "@/lib/errorHandler";
 import {
@@ -39,6 +41,22 @@ import { getRacetrackLabel } from "@/lib/racetracks";
 import { PageHero } from "@/components/PageHero";
 import { AdminDeleteUserDialog } from "@/components/admin/AdminDeleteUserDialog";
 import { filterLiveStripeRevenueTransactions } from "@/lib/adminCharts";
+
+const ADMIN_RACECARD_COLUMNS = [
+  "id",
+  "track_name",
+  "track_code",
+  "race_date",
+  "num_races",
+  "file_name",
+  "uploaded_by",
+  "created_at",
+  "updated_at",
+  "metadata",
+  "metadata_updated_at",
+  "digitization_status",
+  "digitization_error",
+].join(",");
 
 const AdminDashboard = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
@@ -66,6 +84,7 @@ const AdminDashboard = () => {
   const [deletingUser, setDeletingUser] = useState(false);
   const [deletingOldTransactions, setDeletingOldTransactions] = useState(false);
   const [deletingFakeUsers, setDeletingFakeUsers] = useState(false);
+  const [newSupportMessages, setNewSupportMessages] = useState(0);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -82,15 +101,17 @@ const AdminDashboard = () => {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const [custRes, balRes, txRes, rcRes] = await Promise.all([
+    const [custRes, balRes, txRes, rcRes, supportRes] = await Promise.all([
       supabase.from("profiles").select("*").order("created_at", { ascending: false }),
       supabase.from("credit_balances").select("user_id, credits, unlimited_credits"),
       supabase.from("transactions").select("*").order("created_at", { ascending: false }),
-      supabase.from("racecards").select("*").order("race_date", { ascending: false }),
+      supabase.from("racecards").select(ADMIN_RACECARD_COLUMNS).order("race_date", { ascending: false }),
+      supabase.from("contact_submissions").select("id", { count: "exact", head: true }).eq("status", "open"),
     ]);
     setCustomers(mergeProfilesWithCredits(custRes.data, balRes.data));
     setTransactions(txRes.data || []);
     setRacecards(rcRes.data || []);
+    setNewSupportMessages(supportRes.count ?? 0);
     setLoading(false);
   }, []);
 
@@ -119,68 +140,125 @@ const AdminDashboard = () => {
 
     setUploading(true);
     let successCount = 0;
+    let failureCount = 0;
+    let skippedCount = 0;
 
-    for (const file of Array.from(files)) {
-      if (file.type !== "application/pdf") {
-        toast({ title: `Skipped ${file.name}`, description: "Only PDF files accepted", variant: "destructive" });
-        continue;
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        toast({ title: `Skipped ${file.name}`, description: "Maximum file size is 10MB", variant: "destructive" });
-        continue;
-      }
+    try {
+      for (const file of Array.from(files)) {
+        const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+        if (!isPdf) {
+          skippedCount++;
+          toast({ title: `Skipped ${file.name}`, description: "Only PDF files accepted", variant: "destructive" });
+          continue;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          skippedCount++;
+          toast({ title: `Skipped ${file.name}`, description: "Maximum file size is 10MB", variant: "destructive" });
+          continue;
+        }
 
-      const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const { data: urlData, error: urlError } = await supabase.functions.invoke("generate-upload-url", {
-        body: { fileName: sanitizedName },
+        try {
+          const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+          const { data: urlData, error: urlError } = await supabase.functions.invoke("generate-upload-url", {
+            body: { fileName: sanitizedName },
+          });
+
+          if (urlError || !urlData?.uploadUrl) {
+            failureCount++;
+            toast({
+              title: `Upload failed: ${file.name}`,
+              description: formatInvokeFailureMessage("generate-upload-url", urlError, urlData),
+              variant: "destructive",
+            });
+            continue;
+          }
+
+          const s3Res = await fetch(urlData.uploadUrl, {
+            method: "PUT",
+            body: file,
+            headers: { "Content-Type": "application/pdf" },
+          });
+          if (!s3Res.ok) {
+            failureCount++;
+            toast({
+              title: `Upload failed: ${file.name}`,
+              description: `S3 error: ${s3Res.status} ${s3Res.statusText}`,
+              variant: "destructive",
+            });
+            continue;
+          }
+
+          const { trackCode, raceDate } = parseRacecardFilename(file.name);
+          const racecardRow = {
+            file_name: file.name,
+            file_url: urlData.s3Key,
+            track_code: trackCode,
+            track_name: getRacetrackLabel(trackCode),
+            race_date: raceDate,
+            digitization_status: "queued",
+            digitization_error: null,
+            digitization_updated_at: new Date().toISOString(),
+            digitized_at: null,
+            textract_job_id: null,
+            uploaded_by: user.id,
+          };
+
+          const { data: existingRacecard, error: existingError } = await supabase
+            .from("racecards")
+            .select("id")
+            .eq("file_name", file.name)
+            .order("updated_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (existingError) {
+            failureCount++;
+            toast({
+              title: `DB lookup failed: ${file.name}`,
+              description: sanitizeError(existingError),
+              variant: "destructive",
+            });
+            continue;
+          }
+
+          const { error: dbError } = existingRacecard
+            ? await supabase.from("racecards").update(racecardRow).eq("id", existingRacecard.id)
+            : await supabase.from("racecards").insert(racecardRow);
+
+          if (dbError) {
+            failureCount++;
+            toast({
+              title: `DB save failed: ${file.name}`,
+              description: sanitizeError(dbError),
+              variant: "destructive",
+            });
+          } else {
+            successCount++;
+          }
+        } catch (err) {
+          failureCount++;
+          toast({
+            title: `Upload failed: ${file.name}`,
+            description:
+              err instanceof TypeError
+                ? "Browser could not upload to S3. Check the S3 bucket CORS rules allow PUT from this site and the Content-Type header."
+                : sanitizeError(err),
+            variant: "destructive",
+          });
+        }
+      }
+    } finally {
+      const summary = [`${successCount} uploaded`];
+      if (failureCount > 0) summary.push(`${failureCount} failed`);
+      if (skippedCount > 0) summary.push(`${skippedCount} skipped`);
+      toast({
+        title: `RaceCard upload finished: ${summary.join(", ")}`,
+        variant: successCount > 0 && failureCount === 0 ? "default" : "destructive",
       });
-
-      if (urlError || !urlData?.uploadUrl) {
-        toast({
-          title: `Upload failed: ${file.name}`,
-          description: formatInvokeFailureMessage("generate-upload-url", urlError, urlData),
-          variant: "destructive",
-        });
-        continue;
-      }
-
-      const s3Res = await fetch(urlData.uploadUrl, {
-        method: "PUT",
-        body: file,
-        headers: { "Content-Type": "application/pdf" },
-      });
-      if (!s3Res.ok) {
-        toast({
-          title: `Upload failed: ${file.name}`,
-          description: `S3 error: ${s3Res.status} ${s3Res.statusText}`,
-          variant: "destructive",
-        });
-        continue;
-      }
-
-      const { trackCode, raceDate } = parseRacecardFilename(file.name);
-
-      const { error: dbError } = await supabase.from("racecards").insert({
-        file_name: file.name,
-        file_url: urlData.s3Key,
-        track_code: trackCode,
-        track_name: getRacetrackLabel(trackCode),
-        race_date: raceDate,
-        digitization_status: "queued",
-        uploaded_by: user.id,
-      });
-
-      if (dbError) {
-        toast({ title: `DB insert failed: ${file.name}`, description: sanitizeError(dbError), variant: "destructive" });
-      } else {
-        successCount++;
-      }
+      setUploading(false);
+      void fetchData();
+      e.target.value = "";
     }
-
-    toast({ title: `Uploaded ${successCount} racecard(s)` });
-    setUploading(false);
-    fetchData();
-    e.target.value = "";
   };
 
   const handleSyncS3 = async () => {
@@ -367,10 +445,18 @@ const AdminDashboard = () => {
   ];
 
   const adminLinks = [
-    { to: "/admin/support", title: "Support inbox", subtitle: "Contact form submissions", icon: Inbox },
+    {
+      to: "/admin/support",
+      title: "Support inbox",
+      subtitle: "Contact form submissions",
+      icon: Inbox,
+      badgeCount: newSupportMessages,
+    },
     { to: "/admin/reports", title: "Reports", subtitle: "Downloads, credit ledger", icon: Table2 },
     { to: "/admin/financials", title: "Financial dashboard", subtitle: "Revenue, charts, CSV", icon: DollarSign },
     { to: "/admin/analytics", title: "Site analytics", subtitle: "Signups, downloads, audit log", icon: BarChart3 },
+    { to: "/admin/seo", title: "SEO tools", subtitle: "Keywords, speed, audits", icon: Search },
+    { to: "/admin/pages", title: "Page editor", subtitle: "Frontend CMS pages", icon: Edit3 },
     { to: "/admin/settings", title: "Settings", subtitle: "Stripe, site, integrations", icon: Settings },
     { to: "/admin/credit-packages", title: "Credit packages", subtitle: "Pricing tiers", icon: Package },
     { to: "/admin/help", title: "Help", subtitle: "Admin documentation", icon: HelpCircle },
@@ -444,8 +530,16 @@ const AdminDashboard = () => {
               <Link key={item.to} to={item.to}>
                 <Card className="bg-card border-border hover:border-primary/40 transition-colors h-full">
                   <CardContent className="flex items-center gap-3 p-4">
-                    <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
+                    <div className="relative w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
                       <item.icon className="h-5 w-5 text-primary" />
+                      {"badgeCount" in item && item.badgeCount > 0 && (
+                        <span
+                          className="absolute -right-2 -top-2 min-w-5 h-5 rounded-full bg-destructive px-1.5 text-[11px] font-bold leading-5 text-destructive-foreground text-center shadow-sm ring-2 ring-card"
+                          aria-label={`${item.badgeCount} new support message${item.badgeCount === 1 ? "" : "s"}`}
+                        >
+                          {item.badgeCount > 99 ? "99+" : item.badgeCount}
+                        </span>
+                      )}
                     </div>
                     <div className="min-w-0">
                       <div className="font-semibold text-foreground text-sm truncate">{item.title}</div>

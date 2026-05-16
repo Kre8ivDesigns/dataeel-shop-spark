@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, RefreshCw, Upload, Trash2, Pencil, Info } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -366,6 +367,23 @@ export function AdminRacecardsTab({
   const [metaRow, setMetaRow] = useState<AdminRacecard | null>(null);
   const [metaDraft, setMetaDraft] = useState("");
   const [metaSaving, setMetaSaving] = useState(false);
+  const [trackFilter, setTrackFilter] = useState("all");
+
+  const trackOptions = useMemo(() => {
+    const tracks = new Map<string, string>();
+    for (const rc of racecards) {
+      const key = rc.track_code || rc.track_name;
+      if (key) tracks.set(key, rc.track_name || rc.track_code);
+    }
+    return [...tracks.entries()]
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [racecards]);
+
+  const filteredRacecards = useMemo(
+    () => (trackFilter === "all" ? racecards : racecards.filter((rc) => (rc.track_code || rc.track_name) === trackFilter)),
+    [racecards, trackFilter],
+  );
 
   const openMetadata = (rc: AdminRacecard) => {
     setMetaRow(rc);
@@ -429,7 +447,20 @@ export function AdminRacecardsTab({
         </Alert>
         <div className="flex items-center justify-between flex-wrap gap-3">
           <CardTitle className="text-foreground">RaceCards</CardTitle>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Select value={trackFilter} onValueChange={setTrackFilter}>
+              <SelectTrigger className="w-full sm:w-56" aria-label="Filter racecards by track">
+                <SelectValue placeholder="Filter by track" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All tracks</SelectItem>
+                {trackOptions.map((track) => (
+                  <SelectItem key={track.value} value={track.value}>
+                    {track.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button variant="outline" onClick={onSync} disabled={syncing}>
               <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
               {syncing ? "Syncing…" : "Sync S3"}
@@ -468,7 +499,7 @@ export function AdminRacecardsTab({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {racecards.map((rc) => (
+            {filteredRacecards.map((rc) => (
               <TableRow key={rc.id}>
                 <TableCell className="font-medium text-foreground">{rc.file_name}</TableCell>
                 <TableCell className="text-foreground">{rc.track_name}</TableCell>
@@ -505,10 +536,10 @@ export function AdminRacecardsTab({
                 </TableCell>
               </TableRow>
             ))}
-            {racecards.length === 0 && (
+            {filteredRacecards.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                  No racecards uploaded yet
+                  {racecards.length === 0 ? "No racecards uploaded yet" : "No racecards match this track"}
                 </TableCell>
               </TableRow>
             )}

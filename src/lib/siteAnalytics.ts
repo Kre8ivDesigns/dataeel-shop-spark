@@ -7,6 +7,7 @@ export type SiteAnalyticsEventName =
   | "engaged_session_10s"
   | "cta_clicked"
   | "racecard_preview_opened"
+  | "signup_completed"
   | "popup_viewed"
   | "popup_dismissed"
   | "popup_converted"

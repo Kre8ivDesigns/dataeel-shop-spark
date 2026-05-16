@@ -4,7 +4,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { describeFunctionInvokeError } from "@/lib/edgeFunctionErrors";
+import { getInvokeErrorMessage } from "@/lib/edgeFunctionErrors";
 import { Button } from "@/components/ui/button";
 import { Download, ExternalLink, FileText, CreditCard, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -42,12 +42,15 @@ const Invoices = () => {
 
   const openCustomerPortal = async () => {
     setPortalLoading(true);
-    const { data, error } = await supabase.functions.invoke("customer-portal");
+    const { data, error, response: invokeResponse } = await supabase.functions.invoke("customer-portal");
     setPortalLoading(false);
     if (error || data?.error) {
+      const description = error
+        ? await getInvokeErrorMessage("customer-portal", error, data, invokeResponse)
+        : data?.error;
       toast({
         title: "Unable to open billing portal",
-        description: data?.error || describeFunctionInvokeError("customer-portal", error),
+        description,
         variant: "destructive",
       });
     } else if (data?.url) {

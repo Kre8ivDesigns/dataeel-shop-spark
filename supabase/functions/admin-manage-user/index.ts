@@ -1,11 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getCorsHeaders } from "../_shared/cors.ts";
+import { getCorsHeaders, getValidatedOrigin } from "../_shared/cors.ts";
 
 type Action =
   | "ban"
   | "unban"
   | "send_password_recovery"
   | "update_profile"
+  | "set_unlimited_credits"
   | "delete_user"
   | "delete_fake_zero_credit_users";
 
@@ -20,8 +21,17 @@ function normalizeUserId(value: unknown): string | null {
   return s;
 }
 
+function resolveBodyUserId(body: { userId?: unknown; user_id?: unknown; id?: unknown }): string | null {
+  return normalizeUserId(body.userId) ?? normalizeUserId(body.user_id) ?? normalizeUserId(body.id);
+}
+
 function looksLikeRandomTwoTokenName(value: unknown): boolean {
   return typeof value === "string" && RANDOM_TWO_TOKEN_NAME_RE.test(value.trim());
+}
+
+function getRecoveryRedirectTo(req: Request): string | undefined {
+  const origin = getValidatedOrigin(req);
+  return origin ? `${origin}/auth?mode=reset` : undefined;
 }
 
 async function deleteFromTable(
@@ -79,14 +89,17 @@ Deno.serve(async (req) => {
 
     const body = await req.json() as {
       action: Action;
-      userId?: string;
+      userId?: unknown;
+      user_id?: unknown;
+      id?: unknown;
       full_name?: string;
+      unlimited?: boolean;
     };
     const { action } = body;
-    const userId = normalizeUserId(body.userId);
+    const userId = resolveBodyUserId(body);
 
     if (action !== "delete_fake_zero_credit_users" && !userId) {
-      return respond({ error: "userId must be a valid UUID string" }, 400);
+      return respond({ error: "userId must be a valid UUID string", detail: "Expected userId, user_id, or id." }, 400);
     }
 
     if (userId === actorId && (action === "ban" || action === "unban")) {
@@ -124,26 +137,61 @@ Deno.serve(async (req) => {
     }
 
     if (action === "send_password_recovery") {
+      const { data: authUserData, error: authUserErr } = await supabaseAdmin.auth.admin.getUserById(userId);
+      if (authUserErr) {
+        console.error("admin-manage-user send_password_recovery: auth user lookup failed", authUserErr.message);
+        return respond({ error: authUserErr.message }, 500);
+      }
+
       const { data: profile, error: pErr } = await supabaseAdmin
         .from("profiles")
         .select("email")
         .eq("user_id", userId)
         .maybeSingle();
-      if (pErr || !profile?.email) {
+      if (pErr) {
+        console.error("admin-manage-user send_password_recovery: profile lookup failed", pErr.message);
+        return respond({ error: pErr.message }, 500);
+      }
+
+      const email = authUserData.user?.email ?? profile?.email ?? null;
+      if (!email) {
         return respond({ error: "Could not resolve user email" }, 400);
       }
+
+      const redirectTo = getRecoveryRedirectTo(req);
       const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
         type: "recovery",
-        email: profile.email,
+        email,
+        options: redirectTo ? { redirectTo } : undefined,
       });
-      if (linkErr) return respond({ error: linkErr.message }, 500);
+
+      if (linkErr) {
+        console.error("admin-manage-user send_password_recovery: generateLink failed", linkErr.message);
+        const { error: resetErr } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
+          redirectTo,
+        });
+        if (resetErr) {
+          console.error("admin-manage-user send_password_recovery: resetPasswordForEmail failed", resetErr.message);
+          return respond({ error: resetErr.message }, 500);
+        }
+
+        await supabaseAdmin.from("audit_log").insert({
+          actor_id: actorId,
+          action: "admin.user.password_recovery_sent",
+          resource: "auth.users",
+          resource_id: userId,
+          detail: { email, delivery_method: "email", link_error: linkErr.message },
+        });
+        return respond({ ok: true, recovery_link: null, delivery_method: "email" });
+      }
+
       const recoveryLink = (linkData as { properties?: { action_link?: string } })?.properties?.action_link ?? null;
       await supabaseAdmin.from("audit_log").insert({
         actor_id: actorId,
         action: "admin.user.password_recovery_sent",
         resource: "auth.users",
         resource_id: userId,
-        detail: { email: profile.email },
+        detail: { email, delivery_method: recoveryLink ? "link" : "unknown" },
       });
       return respond({ ok: true, recovery_link: recoveryLink });
     }
@@ -165,6 +213,53 @@ Deno.serve(async (req) => {
         resource_id: userId,
         detail: { full_name },
       });
+      return respond({ ok: true });
+    }
+
+    if (action === "set_unlimited_credits") {
+      if (typeof body.unlimited !== "boolean") {
+        return respond({ error: "unlimited must be a boolean" }, 400);
+      }
+
+      const { data: balance, error: balanceErr } = await supabaseAdmin
+        .from("credit_balances")
+        .select("credits")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (balanceErr) return respond({ error: balanceErr.message }, 500);
+
+      if (balance) {
+        const { error } = await supabaseAdmin
+          .from("credit_balances")
+          .update({ unlimited_credits: body.unlimited, updated_at: new Date().toISOString() })
+          .eq("user_id", userId);
+        if (error) return respond({ error: error.message }, 500);
+      } else {
+        const { error } = await supabaseAdmin
+          .from("credit_balances")
+          .insert({ user_id: userId, credits: 0, unlimited_credits: body.unlimited });
+        if (error) return respond({ error: error.message }, 500);
+      }
+
+      const balanceAfter = Number(balance?.credits ?? 0);
+      const { error: ledgerErr } = await supabaseAdmin.from("credit_ledger").insert({
+        user_id: userId,
+        delta: 0,
+        balance_after: balanceAfter,
+        entry_type: "admin_grant",
+        ref_id: null,
+        meta: { admin_id: actorId, unlimited_credits: body.unlimited },
+      });
+      if (ledgerErr) return respond({ error: ledgerErr.message }, 500);
+
+      await supabaseAdmin.from("audit_log").insert({
+        actor_id: actorId,
+        action: body.unlimited ? "admin.user.unlimited_credits.enable" : "admin.user.unlimited_credits.disable",
+        resource: "credit_balances",
+        resource_id: userId,
+        detail: { unlimited_credits: body.unlimited },
+      });
+
       return respond({ ok: true });
     }
 

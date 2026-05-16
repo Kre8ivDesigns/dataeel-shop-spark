@@ -13,7 +13,7 @@ function formatPubDate(value?: string): string {
 
 export function DashboardRacingResultsSection() {
   const trackOptions = useMemo(() => getTargetResultsTrackOptions(), []);
-  const [selectedTrack, setSelectedTrack] = useState(trackOptions[0]?.code ?? "GP");
+  const [selectedTrack, setSelectedTrack] = useState("GP");
   const { data, isLoading, isError, refetch, isFetching } = useTrackResultsFeed(selectedTrack, 30);
 
   return (

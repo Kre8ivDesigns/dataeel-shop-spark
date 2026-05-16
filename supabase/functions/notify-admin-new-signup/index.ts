@@ -17,6 +17,8 @@ function jsonResponse(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let out = 0;
@@ -85,10 +87,6 @@ Deno.serve(async (req) => {
   }
 
   const adminTo = Deno.env.get("ADMIN_NOTIFICATION_EMAIL")?.trim();
-  if (!adminTo || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminTo)) {
-    console.error("notify-admin-new-signup: ADMIN_NOTIFICATION_EMAIL is missing or invalid");
-    return jsonResponse({ ok: true, skipped: "admin_email_not_configured" }, 200);
-  }
 
   const encryptionKey = Deno.env.get("APP_SETTINGS_ENCRYPTION_KEY");
   if (!encryptionKey || encryptionKey.length < 64) {
@@ -115,7 +113,16 @@ Deno.serve(async (req) => {
   }
 
   const supabaseAdmin = createClient(supabaseUrl, serviceKey);
-  const smtpKeys = ["smtp_host", "smtp_port", "smtp_user", "smtp_password", "smtp_from", "smtp_from_name", "smtp_reply_to"];
+  const smtpKeys = [
+    "smtp_host",
+    "smtp_port",
+    "smtp_user",
+    "smtp_password",
+    "smtp_from",
+    "smtp_from_name",
+    "smtp_reply_to",
+    "site_public_url",
+  ];
   const { data: smtpRows, error: smtpFetchErr } = await supabaseAdmin
     .from("app_settings")
     .select("key, encrypted_value")
@@ -141,35 +148,130 @@ Deno.serve(async (req) => {
   }
 
   const displayName = profile.full_name.length > 0 ? profile.full_name : "(not provided)";
-  const subject = `New user signup: ${profile.email}`;
-  const textBody = [
-    "A new user registered on DataEel.",
-    "",
-    `Email: ${profile.email}`,
-    `Full name: ${displayName}`,
-    `User ID: ${profile.user_id}`,
-    "",
-    "This message was sent by the notify-admin-new-signup Edge Function (database webhook on public.profiles).",
-  ].join("\n");
+  const sendResults: Record<string, unknown> = {};
 
-  try {
-    await smtpSendMail({
-      host: cfg.smtp_host,
-      port: parseInt(cfg.smtp_port || "587", 10),
-      user: cfg.smtp_user,
-      password: cfg.smtp_password,
-      fromAddress: cfg.smtp_from,
-      fromName: cfg.smtp_from_name || "DataEel",
-      replyTo: cfg.smtp_reply_to || "",
-      to: adminTo,
-      subject,
-      textBody,
-    });
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "SMTP send failed";
-    console.error("notify-admin-new-signup: smtp", msg);
-    return jsonResponse({ error: "SMTP send failed" }, 500);
+  if (adminTo && EMAIL_RE.test(adminTo)) {
+    const subject = `New user signup: ${profile.email}`;
+    const textBody = [
+      "A new user registered on DataEel.",
+      "",
+      `Email: ${profile.email}`,
+      `Full name: ${displayName}`,
+      `User ID: ${profile.user_id}`,
+      "",
+      "This message was sent by the notify-admin-new-signup Edge Function (database webhook on public.profiles).",
+    ].join("\n");
+
+    try {
+      await smtpSendMail({
+        host: cfg.smtp_host,
+        port: parseInt(cfg.smtp_port || "587", 10),
+        user: cfg.smtp_user,
+        password: cfg.smtp_password,
+        fromAddress: cfg.smtp_from,
+        fromName: cfg.smtp_from_name || "DataEel",
+        replyTo: cfg.smtp_reply_to || "",
+        to: adminTo,
+        subject,
+        textBody,
+      });
+      sendResults.adminNotified = true;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "SMTP send failed";
+      console.error("notify-admin-new-signup: admin smtp", msg);
+      sendResults.adminError = "smtp_send_failed";
+    }
+  } else {
+    console.error("notify-admin-new-signup: ADMIN_NOTIFICATION_EMAIL is missing or invalid");
+    sendResults.adminSkipped = "admin_email_not_configured";
   }
 
-  return jsonResponse({ ok: true, notified: true }, 200);
+  const { count: purchaseCount, error: purchaseErr } = await supabaseAdmin
+    .from("transactions")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", profile.user_id)
+    .in("status", ["completed", "paid", "succeeded"]);
+
+  const { data: balanceRow, error: balanceErr } = await supabaseAdmin
+    .from("credit_balances")
+    .select("credits")
+    .eq("user_id", profile.user_id)
+    .maybeSingle();
+
+  if (purchaseErr || balanceErr) {
+    console.error(
+      "notify-admin-new-signup: eligibility check",
+      purchaseErr?.message ?? balanceErr?.message ?? "unknown",
+    );
+    sendResults.feedbackOfferSkipped = "eligibility_check_failed";
+    return jsonResponse({ ok: true, ...sendResults }, 200);
+  }
+
+  const hasNoPurchases = (purchaseCount ?? 0) === 0;
+  const hasNoCredits = Number(balanceRow?.credits ?? 0) <= 0;
+
+  if (hasNoPurchases && hasNoCredits && EMAIL_RE.test(profile.email)) {
+    const { data: offer, error: offerErr } = await supabaseAdmin
+      .from("feedback_credit_offers")
+      .upsert(
+        {
+          user_id: profile.user_id,
+          email: profile.email,
+          source: "signup_no_purchase",
+          sent_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" },
+      )
+      .select("offer_token")
+      .single();
+
+    if (offerErr || !offer?.offer_token) {
+      console.error("notify-admin-new-signup: feedback offer upsert", offerErr?.message ?? "missing token");
+      sendResults.feedbackOfferSkipped = "offer_create_failed";
+      return jsonResponse({ ok: true, ...sendResults }, 200);
+    }
+
+    const siteUrl = (cfg.site_public_url || Deno.env.get("SITE_PUBLIC_URL") || "https://www.dataeel.com").replace(/\/$/, "");
+    const feedbackUrl = `${siteUrl}/feedback?offer=${encodeURIComponent(offer.offer_token)}`;
+    const firstName = profile.full_name.trim().split(/\s+/)[0] || "there";
+    const textBody = [
+      `Hi ${firstName},`,
+      "",
+      "Thanks for visiting DATAEEL and creating an account.",
+      "",
+      "We would genuinely value your feedback before you buy credits. What made you register, and what would make DATAEEL more useful for you?",
+      "",
+      "As thanks for your response, we will add one RaceCard credit to your account after you submit feedback on the website:",
+      feedbackUrl,
+      "",
+      "The credit is available once per account and only before your first purchase.",
+      "",
+      "Thank you,",
+      "The DATAEEL Team",
+    ].join("\n");
+
+    try {
+      await smtpSendMail({
+        host: cfg.smtp_host,
+        port: parseInt(cfg.smtp_port || "587", 10),
+        user: cfg.smtp_user,
+        password: cfg.smtp_password,
+        fromAddress: cfg.smtp_from,
+        fromName: cfg.smtp_from_name || "DataEel",
+        replyTo: cfg.smtp_reply_to || "",
+        to: profile.email,
+        subject: "Tell us what you think and get 1 RaceCard credit",
+        textBody,
+      });
+      sendResults.feedbackOfferSent = true;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "SMTP send failed";
+      console.error("notify-admin-new-signup: feedback smtp", msg);
+      sendResults.feedbackOfferSkipped = "smtp_send_failed";
+    }
+  } else {
+    sendResults.feedbackOfferSkipped = "not_eligible";
+  }
+
+  return jsonResponse({ ok: true, ...sendResults }, 200);
 });

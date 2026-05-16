@@ -17,6 +17,8 @@
  * functions; you can remove obsolete hosts from the fallback when no longer needed.
  */
 const FALLBACK_ORIGINS = [
+  "https://dataeel.com",
+  "https://www.dataeel.com",
   "https://thedataeel.com",
   "https://www.thedataeel.com",
   "https://dataeel-shop-spark-three.vercel.app",
