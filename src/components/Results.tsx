@@ -23,18 +23,11 @@ const cardHighlights = [
     type: "multiple",
   },
   {
-    track: "Unlock the card",
+    track: "1-Credit Equals 1-Card",
     date: "Track card",
     algorithm: "1 Credit",
     results: "Purchase the RaceCard to unlock the full digital card. Owned cards show the View digital card and Re-download actions.",
     type: "multiple",
-  },
-  {
-    track: "Return from dashboard",
-    date: "User dashboard",
-    algorithm: "Owned",
-    results: "Your dashboard keeps purchased RaceCards available, so you can reopen the digital card and review its picks after results post.",
-    type: "winner",
   },
 ];
 
@@ -207,10 +200,10 @@ export const Results = () => {
         >
           <h3 className="text-xl font-semibold text-foreground mb-6 flex items-center gap-2 font-heading">
             <TrendingUp className="h-5 w-5 text-primary" />
-            Digital RaceCard Results Check
+            Current Available RaceCards
           </h3>
 
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2">
             {cardHighlights.map((win, index) => (
               <motion.div
                 key={index}

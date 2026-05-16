@@ -14,6 +14,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { buildRaceRows, metadataListingLine, parseRacecardMetadata } from "@/lib/raceMetadata";
 import { profilesByTrackCode, useRacetrackProfiles } from "@/lib/queries/racetrackProfiles";
 import { extractCanonicalTrackCode, getRacetrackLabel, getRacetrackLocation, getRacetrackWebsite } from "@/lib/racetracks";
+import {
+  DEFAULT_RACECARD_DOWNLOAD_TZ,
+  getRacecardDownloadUiBlock,
+} from "@/lib/racecardDownloadDeadline";
 
 type Racecard = Pick<
   Tables<"racecards">,
@@ -187,6 +191,9 @@ function formatRaceDate(value: string | null | undefined): string {
   }
 }
 
+const RACECARD_DOWNLOAD_TZ =
+  import.meta.env.VITE_RACECARD_DOWNLOAD_TZ ?? DEFAULT_RACECARD_DOWNLOAD_TZ;
+
 const DigitalRaceCard = () => {
   const { racecardId } = useParams();
   const { user, isAdmin } = useAuth();
@@ -306,6 +313,9 @@ const DigitalRaceCard = () => {
   const location = getRacetrackLocation(racecard?.track_code);
   const title = racecard ? (trackProfile?.display_name ?? getRacetrackLabel(racecard.track_code)) : "RaceCard";
   const raceDateDisplay = formatRaceDate(racecard?.race_date);
+  const showDataeelRaceBoxes = racecard
+    ? !getRacecardDownloadUiBlock(racecard.race_date, RACECARD_DOWNLOAD_TZ, Date.now()).blocked
+    : false;
   const loading = racecardLoading || ownershipLoading;
 
   return (
@@ -469,53 +479,55 @@ const DigitalRaceCard = () => {
                           )}
                         </div>
 
-                        {!unlocked ? (
-                          <div className="mt-5 rounded-lg border border-dashed border-border bg-muted/25 p-5 text-sm text-muted-foreground">
-                            <div className="flex items-center gap-2 font-semibold text-foreground">
-                              <Lock className="h-4 w-4 text-primary" />
-                              DATAEEL selections locked
+                        {showDataeelRaceBoxes && (
+                          !unlocked ? (
+                            <div className="mt-5 rounded-lg border border-dashed border-border bg-muted/25 p-5 text-sm text-muted-foreground">
+                              <div className="flex items-center gap-2 font-semibold text-foreground">
+                                <Lock className="h-4 w-4 text-primary" />
+                                DATAEEL selections locked
+                              </div>
+                              <p className="mt-1">Purchase this RaceCard to view the digital Concert and Aptitude selections.</p>
+                              <Button asChild className="mt-4 bg-primary text-primary-foreground font-semibold">
+                                <Link to="/racecards">Purchase RaceCard</Link>
+                              </Button>
                             </div>
-                            <p className="mt-1">Purchase this RaceCard to view the digital Concert and Aptitude selections.</p>
-                            <Button asChild className="mt-4 bg-primary text-primary-foreground font-semibold">
-                              <Link to="/racecards">Purchase RaceCard</Link>
-                            </Button>
-                          </div>
-                        ) : predictionsLoading ? (
-                          <div className="mt-5 rounded-lg bg-muted/30 p-5 text-sm text-muted-foreground">
-                            Loading DATAEEL selections…
-                          </div>
-                        ) : (
-                          <div className="mt-5 grid gap-3 md:grid-cols-2">
-                            {["Concert", "Aptitude"].map((algorithm) => {
-                              const picks = byAlgorithm[algorithm] ?? [];
-                              return (
-                                <div key={algorithm} className="rounded-lg border border-border bg-muted/25 p-4">
-                                  <div className="flex items-center gap-2 text-sm font-bold text-foreground">
-                                    <Trophy className="h-4 w-4 text-primary" />
-                                    {algorithm}
-                                  </div>
-                                  {picks.length === 0 ? (
-                                    <p className="mt-3 text-sm text-muted-foreground">No selections posted yet.</p>
-                                  ) : (
-                                    <div className="mt-3 space-y-2">
-                                      {picks.slice(0, 5).map((pick) => (
-                                        <div key={pick.id} className="flex items-center justify-between gap-3 rounded-md bg-background/50 px-3 py-2 text-sm">
-                                          <div className="min-w-0">
-                                            <div className="font-semibold text-foreground">
-                                              {pick.rank}. {pick.horse_number ? `${pick.horse_number} ` : ""}{pick.horse_name}
-                                            </div>
-                                            <div className="text-xs text-muted-foreground">
-                                              {[pick.odds ? `Odds ${pick.odds}` : null, pick.score != null ? `Score ${pick.score}` : null].filter(Boolean).join(" · ")}
+                          ) : predictionsLoading ? (
+                            <div className="mt-5 rounded-lg bg-muted/30 p-5 text-sm text-muted-foreground">
+                              Loading DATAEEL selections…
+                            </div>
+                          ) : (
+                            <div className="mt-5 grid gap-3 md:grid-cols-2">
+                              {["Concert", "Aptitude"].map((algorithm) => {
+                                const picks = byAlgorithm[algorithm] ?? [];
+                                return (
+                                  <div key={algorithm} className="rounded-lg border border-border bg-muted/25 p-4">
+                                    <div className="flex items-center gap-2 text-sm font-bold text-foreground">
+                                      <Trophy className="h-4 w-4 text-primary" />
+                                      {algorithm}
+                                    </div>
+                                    {picks.length === 0 ? (
+                                      <p className="mt-3 text-sm text-muted-foreground">No selections posted yet.</p>
+                                    ) : (
+                                      <div className="mt-3 space-y-2">
+                                        {picks.slice(0, 5).map((pick) => (
+                                          <div key={pick.id} className="flex items-center justify-between gap-3 rounded-md bg-background/50 px-3 py-2 text-sm">
+                                            <div className="min-w-0">
+                                              <div className="font-semibold text-foreground">
+                                                {pick.rank}. {pick.horse_number ? `${pick.horse_number} ` : ""}{pick.horse_name}
+                                              </div>
+                                              <div className="text-xs text-muted-foreground">
+                                                {[pick.odds ? `Odds ${pick.odds}` : null, pick.score != null ? `Score ${pick.score}` : null].filter(Boolean).join(" · ")}
+                                              </div>
                                             </div>
                                           </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )
                         )}
                         {resultsForRace.length > 0 && (
                           <div className="mt-5 rounded-lg border border-primary/25 bg-primary/5 p-4">
