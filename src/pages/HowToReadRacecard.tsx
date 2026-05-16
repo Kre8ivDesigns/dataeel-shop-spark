@@ -65,7 +65,7 @@ const sections: {
     icon: CircleDot,
     title: "“In the money”",
     paragraphs: [
-      'A horse is “in the money” when it finishes 1st, 2nd, or 3rd. A win is 1st; place is 2nd; show is 3rd — win, place, and show bets all correspond to “being in the money”.',
+      'A horse is “in the money” when it finishes 1st, 2nd, or 3rd. A Win is 1st; Place is 2nd; Show is 3rd — Win, Place, and Show bets all correspond to being "in the money”.',
     ],
   },
   {
@@ -75,7 +75,7 @@ const sections: {
     paragraphs: [
       "Each EEL RaceCard is printed for one track and race date. At the top you will see the track name, date, and often a Sunny/Cloudy edition. Note: in the future we plan to release a Rain edition for poor weather days.",
       "The large block of text under the race header is the conditions of the race: distance, surface (for example Turf or Dirt), purse, who can enter (age, sex, claiming or allowance rules), and weights. The race number and estimated post time tell you which race you are looking at and when it is expected to run.",
-      "Down the middle of the sheet, opening odds appear for each horse. Those are initial morning-line figures set ahead of time by track authorities. If a horse attracts more money from bettors, its odds often shorten (smaller payout if it wins); if a horse is ignored by bettors, odds may lengthen (larger payout).",
+      "Down the middle of the sheet, opening odds appear for each horse. Those are initial morning-line figures set ahead of time by track authorities. If a horse attracts more money from bettors, its odds shorten (smaller payout if it wins); if a horse is ignored by bettors, odds lengthen (larger payout).",
       "Each horse has a program number (sometimes with a letter) and a name so you can match the card to the tote, program, and results.",
     ],
     image: {
@@ -127,7 +127,7 @@ const sections: {
     icon: AlertCircle,
     title: "Lesson 4 — When there isn’t enough data",
     paragraphs: [
-      "Sometimes Concert™ or Aptitude™ cannot produce a reliable score for a horse — for example in many maiden races where several runners have little or no meaningful past performance. On the PDF this state is shown with an x marker instead of a numeric score.",
+      "Sometimes Concert™ or Aptitude™ cannot produce a reliable score for a horse — for example in many maiden races runners have little or no meaningful past performance. On the PDF this state is shown with an x marker instead of a numeric score.",
       "If you see that marker, treat it as “no usable prediction from this algorithm for this horse,” not as proof the horse is bad. Runners with an x marker will always be grouped toward the bottom of the list for layout only; it does not mean the horse has a poor chance to finish “in the money,” it only means the algorithm cannot give a prediction for the horse.",
       "A horse that wins despite missing data is sometimes called a “sleeper” — the sheet did not have enough history to spotlight it, but the race itself told the story.",
     ],
@@ -174,10 +174,10 @@ const HowToReadRacecard = () => {
         badge="Guide"
         title={
           <>
-            How to read the <span className="text-neon">RaceCard</span>
+            How to read the <span className="text-neon">DATA<strong>EEL</strong> RaceCard</span>
           </>
         }
-        subtitle="A plain-language walkthrough of the EEL RaceCard layout, what Concert™ and Aptitude™ mean, and how to interpret rankings — adapted from DATAEEL instructional materials."
+        subtitle="A plain-language walkthrough of the EEL RaceCard layout, what Concert™ and Aptitude™ mean, and how to interpret rankings — adapted from the DATA<strong>EEL</strong> instructional materials located in the final pages of any RaceCard."
         align="left"
         actions={
           <>
