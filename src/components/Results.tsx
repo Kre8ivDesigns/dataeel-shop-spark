@@ -9,8 +9,8 @@ import { buildTickerLoopItems, tickerDurationSeconds } from "@/lib/breakingNewsT
 
 const stats = [
   { number: "2", label: "Algorithms", sublabel: "Concert™ & Aptitude™", icon: Layers },
-  { number: "28+", label: "Tracks", sublabel: "U.S. & Canada (marketing scope)", icon: MapPin },
-  { number: "1", label: "Credit / day", sublabel: "Typical full-card unlock", icon: Sparkles },
+  { number: "28+", label: "Tracks", sublabel: "U.S. & Canada (per season)", icon: MapPin },
+  { number: "1", label: "Credit / day", sublabel: "Just 1 Credit to play an entire day at 1 racetrack", icon: Sparkles },
   { number: "PDF", label: "Instant", sublabel: "Download after unlock", icon: FileDown },
 ];
 
@@ -26,7 +26,7 @@ const cardHighlights = [
     track: "1-Credit Equals 1-Card",
     date: "Race Track Card",
     algorithm: "1 Credit",
-    results: "Purchase the RaceCard to unlock the full digital card. Owned cards show the View digital card and Re-download actions.",
+    results: "One credit unlocks a RaceCard for download (viewing and printing). Redownload RaceCards until race day has passed.",
     type: "multiple",
   },
 ];
@@ -106,7 +106,7 @@ export const Results = () => {
             <span className="text-neon">In Action</span>
           </h2>
           <p className="section-subtitle">
-            Our algorithms provide insight for picking winners and more complex selections across major tracks.
+            Our algorithms provide insight for picking winners across all major thoroughbred race tracks.
             We are connecting RaceCards to official result charts so you can compare how Concert™ and Aptitude™
             performed after races are final. Results are informational — not guarantees for future races; see our{" "}
             <Link to="/disclaimer" className="text-primary underline underline-offset-2 hover:text-neon">
@@ -156,10 +156,10 @@ export const Results = () => {
           <div className="flex flex-col border-b border-border/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2 font-heading text-lg font-semibold text-foreground">
               <TrendingUp className="h-5 w-5 text-primary" />
-              Recent DATAEEL Hits
+              Recent DATAEEL Successes
             </div>
             <span className="mt-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:mt-0">
-              Winners • Exactas • Trifectas
+              Winners • Exactas • Trifectas • Daily Doubles
             </span>
           </div>
           <div className="overflow-hidden py-4">
@@ -240,10 +240,10 @@ export const Results = () => {
 
           <div className="text-center mt-8">
             <p className="mb-4 text-xs text-muted-foreground">
-              Official result checks use Equibase Full Charts. Data provided by Equibase Company LLC.
+              Official results and data provided by Equibase Company LLC.
             </p>
             <p className="mb-4 text-sm text-foreground/70">
-              Registration is FREE. Purchase a RaceCard to unlock the full digital card for your selected racetrack and race date.
+              Registration is FREE. Purchase a RaceCard to play your selected race track and race date.
             </p>
             <Button
               variant="outline"

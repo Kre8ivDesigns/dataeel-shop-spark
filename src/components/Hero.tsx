@@ -141,7 +141,7 @@ export const Hero = () => {
             className="mx-auto mb-3 max-w-2xl text-base text-foreground/70 sm:text-lg md:mb-4 md:text-xl"
           >
             Algorithm-powered RaceCards for 28+ tracks. See the Concert™ and Aptitude™ picks in a
-            simple PDF before you spend hours buried in past performances.
+            simple PDF file. Just spend your time planning your betting strategy.
           </motion.p>
 
           {/* Tagline */}

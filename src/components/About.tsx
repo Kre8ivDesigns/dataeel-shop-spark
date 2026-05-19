@@ -63,7 +63,7 @@ export const About = () => {
               DATA<strong className="text-foreground">EEL</strong>™ provides horse racing
               predictions powered by two proprietary algorithms—Concert™ and Aptitude™—that
               analyze race data from Equibase® to generate simplified predictions for
-              everyday bettors. No complicated handicapping required.
+              everyday bettors. No complicated handicapping required. Spend your time planning your betting strategy.
             </p>
 
             {/* Equibase Badge */}

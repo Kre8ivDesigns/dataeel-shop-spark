@@ -119,7 +119,7 @@ export const HowItWorks = () => {
             </Button>
           </Link>
           <p className="text-sm text-muted-foreground mt-4">
-            Preview first · free account when you are ready · 1 credit per RaceCard
+            Preview first. What Race Days Are Available. free account when you are ready · 1 credit per RaceCard
           </p>
         </motion.div>
       </div>
