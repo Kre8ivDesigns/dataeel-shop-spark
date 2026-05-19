@@ -11,7 +11,7 @@ const stats = [
   { number: "2", label: "Algorithms", sublabel: "Concert™ & Aptitude™", icon: Layers },
   { number: "28+", label: "Tracks", sublabel: "U.S. & Canada (per season)", icon: MapPin },
   { number: "1", label: "Credit / day", sublabel: "Just 1 Credit to play an entire day at 1 racetrack", icon: Sparkles },
-  { number: "PDF", label: "Instant", sublabel: "Download after unlock", icon: FileDown },
+  { number: "PDF", label: "Instant", sublabel: "Download after purchase", icon: FileDown },
 ];
 
 const cardHighlights = [

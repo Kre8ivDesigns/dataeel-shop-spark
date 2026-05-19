@@ -417,13 +417,18 @@ const Dashboard = () => {
               </motion.div>
 
               <DashboardRacingResultsSection />
-              <DashboardUpcomingRacecardsColumn
-                loading={loading}
-                upcomingForDisplay={upcomingForDisplay}
-                ownedUpcomingRacecardIds={ownedUpcomingRacecardIds}
-                credits={credits}
-                unlimitedCredits={unlimitedCredits}
-              />
+              <div
+                id="dashboard-racecards"
+                className="scroll-mt-28 rounded-xl transition-shadow target:ring-2 target:ring-primary target:ring-offset-4 target:ring-offset-background"
+              >
+                <DashboardUpcomingRacecardsColumn
+                  loading={loading}
+                  upcomingForDisplay={upcomingForDisplay}
+                  ownedUpcomingRacecardIds={ownedUpcomingRacecardIds}
+                  credits={credits}
+                  unlimitedCredits={unlimitedCredits}
+                />
+              </div>
               <DashboardPurchasesAndCredits
                 loading={loading}
                 recentPurchases={recentPurchases}

@@ -20,7 +20,7 @@ export function DashboardRacingResultsSection() {
     <section className="mb-8">
       <div className="mb-4 space-y-2">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-2 sm:gap-x-3">
-          <h2 className="text-lg font-semibold text-foreground font-heading shrink-0">Race results by track</h2>
+          <h2 className="text-lg font-semibold text-foreground font-heading shrink-0">Equibase Race results by track</h2>
           <select
             value={selectedTrack}
             onChange={(event) => setSelectedTrack(event.target.value)}

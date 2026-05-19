@@ -12,6 +12,7 @@ import {
   Inbox,
   Table2,
   LayoutDashboard,
+  FileText,
   Coins,
   ShoppingCart,
   Search,
@@ -150,19 +151,27 @@ export const Header = ({ topOffsetClassName = "top-0" }: HeaderProps) => {
                       </span>
                     </div>
                     <Link
-                      to="/dashboard#recent-downloads"
+                      to="/dashboard"
                       onClick={() => setIsUserMenuOpen(false)}
-                      className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-primary hover:bg-muted transition-colors"
                     >
-                      <LayoutDashboard className="h-4 w-4" />
-                      Dashboard &amp; RaceCard downloads
+                      <LayoutDashboard className="h-4 w-4 shrink-0" />
+                      Dashboard
+                    </Link>
+                    <Link
+                      to="/dashboard#dashboard-racecards"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-primary hover:bg-muted transition-colors"
+                    >
+                      <FileText className="h-4 w-4 shrink-0" />
+                      RaceCards
                     </Link>
                     <Link
                       to="/buy-credits"
                       onClick={() => setIsUserMenuOpen(false)}
-                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-pink-400 hover:bg-muted hover:text-pink-300 transition-colors"
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-primary hover:bg-muted hover:text-primary transition-colors"
                     >
-                      <ShoppingCart className="h-4 w-4 text-pink-400 shrink-0" />
+                      <ShoppingCart className="h-4 w-4 text-primary shrink-0" />
                       Buy credits
                     </Link>
                     {isAdmin && (
@@ -285,13 +294,20 @@ export const Header = ({ topOffsetClassName = "top-0" }: HeaderProps) => {
                         </span>
                       </span>
                     </p>
-                    <Link to="/dashboard#recent-downloads" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button variant="outline" className="w-full border-secondary text-foreground gap-2">
-                        <LayoutDashboard className="h-4 w-4" /> Dashboard &amp; RaceCard downloads
+                    <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button variant="outline" className="w-full border-secondary text-primary gap-2">
+                        <LayoutDashboard className="h-4 w-4" />
+                        Dashboard
+                      </Button>
+                    </Link>
+                    <Link to="/dashboard#dashboard-racecards" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button variant="outline" className="w-full border-secondary text-primary gap-2">
+                        <FileText className="h-4 w-4" />
+                        RaceCards
                       </Button>
                     </Link>
                     <Link to="/buy-credits" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button variant="outline" className="w-full border-pink-400/50 text-pink-400 gap-2 hover:bg-muted hover:text-pink-300">
+                      <Button variant="outline" className="w-full border-primary/50 text-primary gap-2 hover:bg-muted hover:text-primary">
                         <ShoppingCart className="h-4 w-4" /> Buy credits
                       </Button>
                     </Link>

@@ -1,59 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, FileText, MapPin, Sparkles, Infinity as InfinityIcon, Trophy } from "lucide-react";
+import { ArrowRight, FileText, MapPin, Sparkles, Infinity as InfinityIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-racing.jpg";
-import { supabase } from "@/integrations/supabase/client";
-
-const FALLBACK_NEWS = [
-  "Concert algorithm picks Winner in race#1, race#2, race#3, race#6, race#7; Belmont At Big A May1, 2026",
-  "Concert algorithm picks Winner in race#1, race#2, race#3, race#6, race#7; Belmont At Big A May1, 2026",
-  "Concert algorithm hits PICK 3 in race#3; Belmont At Big A May1, 2026",
-  "Concert algorithm hits DAILY DOUBLE in race#2 and in race#3 and in race#7; Belmont At Big A May1, 2026",
-  "Aptitude algorithm picks Winner in race#1, race#2, race#4, race#6; Parx Racing May1, 2026",
-  "Aptitude algorithm picks Winner in race#1, race#2, race#4, race#6; Parx Racing May1, 2026",
-  "Aptitude algorithm hits TRIFECTA in race#8; Laurel Park May1, 2026",
-  "Aptitude algorithm hits EXACTA in race#4 and in race#8; Laurel Park May1, 2026",
-  "Concert algorithm hits PICK 3 in race#8; Belterra Park May1, 2026",
-  "Concert algorithm hits TRIFECTA in race#4; Santa Anita Apr30, 2026",
-  "Concert algorithm hits TRIFECTA in race#7; Belmont At Big A Apr30, 2026",
-  "Concert algorithm hits TRIFECTA in race#6; Tampa Bay Downs Apr29, 2026",
-  "Concert algorithm hits SUPERFECTA in race#6; Tampa Bay Downs Apr29, 2026",
-  "Aptitude algorithm hits TRIFECTA in race#3; Mountaineer Park Apr27, 2026",
-  "Aptitude algorithm picks Winner in race#3, race#5, race#6, race#7, race#8; Tampa Bay Downs Apr26, 2026",
-  "Aptitude algorithm picks Winner in race#3, race#5, race#6, race#7, race#8; Tampa Bay Downs Apr26, 2026",
-  "Aptitude algorithm hits PICK 3 in race#7 and in race#8; Tampa Bay Downs Apr26, 2026",
-  "Aptitude algorithm hits DAILY DOUBLE in race#6 and in race#7 and in race#8; Tampa Bay Downs Apr26, 2026",
-  "Concert algorithm hits PICK 3 in race#5; Oaklawn Park Apr26, 2026",
-  "Concert algorithm hits EXACTA in race#1 and in race#2; Camarero Race Track Apr26, 2026",
-  "Aptitude algorithm hits EXACTA in race#6 and in race#7; Camarero Race Track Apr26, 2026",
-  "Concert algorithm picks Winner in race#3, race#4, race#6, race#10; Gulfstream Park Apr25, 2026",
-  "Concert algorithm picks Winner in race#3, race#4, race#6, race#10; Gulfstream Park Apr25, 2026",
-  "Concert algorithm hits EXACTA in race#3 and in race#4; Gulfstream Park Apr25, 2026",
-  "Aptitude algorithm picks Winner in race#3, race#4, race#8, race#11; Gulfstream Park Apr25, 2026",
-  "Aptitude algorithm picks Winner in race#3, race#4, race#8, race#11; Gulfstream Park Apr25, 2026",
-  "Concert algorithm hits TRIFECTA in race#7; Laurel Park Apr25, 2026",
-  "Concert algorithm hits SUPERFECTA in race#7; Laurel Park Apr25, 2026",
-  "Aptitude algorithm hits TRIFECTA in race#2; Churchill Downs Apr25, 2026",
-  "Aptitude algorithm hits TRIFECTA in race#2; Tampa Bay Downs Apr25, 2026",
-  "Concert algorithm hits PICK 3 in race#8; Santa Anita Apr25, 2026",
-  "Concert algorithm picks Winner in race#1, race#3, race#4, race#7; Keeneland Apr24, 2026",
-  "Concert algorithm picks Winner in race#1, race#3, race#4, race#7; Keeneland Apr24, 2026",
-  "Concert algorithm hits TRIFECTA in race#1; Santa Anita Apr24, 2026",
-  "Concert algorithm hits QUINELLA in race#5 and in race#6; Camarero Race Track Apr24, 2026",
-  "Concert algorithm hits EXACTA in race#5 and in race#6; Camarero Race Track Apr24, 2026",
-  "Concert algorithm hits TRIFECTA in race#6; Camarero Race Track Apr24, 2026",
-  "Concert algorithm hits EXACTA in race#2 and in race#9; Charles Town Apr24, 2026",
-  "Aptitude algorithm picks Winner in race#1, race#2, race#5, race#6; Oaklawn Park Apr23, 2026",
-  "Aptitude algorithm picks Winner in race#1, race#2, race#5, race#6; Oaklawn Park Apr23, 2026",
-  "Concert algorithm picks Winner in race#1, race#2, race#5, race#6; Charles Town Apr23, 2026",
-  "Concert algorithm picks Winner in race#1, race#2, race#5, race#6; Charles Town Apr23, 2026",
-  "Aptitude algorithm picks Winner in race#1, race#2, race#4, race#6; Charles Town Apr23, 2026",
-  "Aptitude algorithm picks Winner in race#1, race#2, race#4, race#6; Charles Town Apr23, 2026",
-  "Concert algorithm hits EXACTA in race#1 and in race#6; Charles Town Apr23, 2026",
-  "Aptitude algorithm hits TRIFECTA in race#5; Hawthorne Apr23, 2026",
-];
 
 const trustBadges = [
   { icon: Sparkles, label: "Concert™ & Aptitude™" },
@@ -61,35 +10,7 @@ const trustBadges = [
   { icon: InfinityIcon, label: "Credits never expire" },
 ];
 
-function countHitType(items: string[], pattern: RegExp): number {
-  return items.filter((item) => pattern.test(item)).length;
-}
-
 export const Hero = () => {
-  const [resultItems, setResultItems] = useState<string[]>(FALLBACK_NEWS);
-  const resultSummary = useMemo(
-    () => [
-      { label: "Recent hit notes", value: resultItems.length },
-      { label: "Winner calls", value: countHitType(resultItems, /\bwinner\b/i) },
-      { label: "Exotics posted", value: countHitType(resultItems, /\b(?:exacta|trifecta|superfecta|pick\s*3|daily double)\b/i) },
-    ],
-    [resultItems],
-  );
-
-  useEffect(() => {
-    supabase
-      .from("breaking_news_items")
-      .select("text")
-      .eq("active", true)
-      .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        if (data && data.length > 0) {
-          setResultItems(data.map((r) => r.text));
-        }
-      });
-  }, []);
-
   return (
     <section className="relative mt-[calc(var(--header-height)+2rem)] flex min-h-[calc(100svh-var(--header-height)-2rem)] items-center justify-center overflow-hidden sm:mt-[calc(var(--header-height)+2.25rem)] sm:min-h-[calc(100svh-var(--header-height)-2.25rem)]">
       {/* Background */}
@@ -110,19 +31,6 @@ export const Hero = () => {
       {/* Content */}
       <div className="relative z-10 container mx-auto px-4 pb-10 pt-[75px] sm:pb-14 lg:pb-16">
         <div className="max-w-4xl mx-auto text-center">
-          <motion.div
-            initial={false}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="mx-auto mb-4 inline-flex max-w-full flex-wrap items-center justify-center gap-1.5 rounded-full border border-primary/30 bg-card/70 px-3 py-2 text-xs text-foreground/80 shadow-[0_0_28px_hsl(var(--primary)/0.12)] backdrop-blur-sm sm:mb-6 sm:gap-2 sm:px-4 sm:text-sm"
-          >
-            <Trophy className="h-4 w-4 text-primary" />
-            <span className="font-semibold text-foreground">Recent results snapshot:</span>
-            <span>{resultSummary[1].value} winner calls</span>
-            <span aria-hidden="true" className="text-muted-foreground">/</span>
-            <span>{resultSummary[2].value} exotics posted</span>
-          </motion.div>
-
           {/* Main Headline */}
           <motion.h1
             initial={false}

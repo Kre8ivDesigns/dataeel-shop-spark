@@ -81,7 +81,7 @@ export function AbrNewsSection() {
               US racing news
             </h2>
             <p className="text-muted-foreground mt-2 text-sm md:text-base max-w-xl">
-              US racing headlines (America’s Best Racing “The Sport”; if that feed is empty, Thoroughbred Daily News).
+              US racing headlines (America’s Best Racing “The Sport” and Thoroughbred Daily News).
               Links open in a new tab.
             </p>
           </div>

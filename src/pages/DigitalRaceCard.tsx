@@ -289,6 +289,7 @@ const DigitalRaceCard = () => {
     () => (unlocked ? findPickNotifications(predictions, raceResults) : []),
     [predictions, raceResults, unlocked],
   );
+  const showWinnerSummary = unlocked && !predictionsLoading && !resultsLoading && raceResults.length > 0;
   const raceRows = useMemo(() => {
     if (!unlocked) {
       const resultRaceNumbers = Array.from(
@@ -313,6 +314,7 @@ const DigitalRaceCard = () => {
   const location = getRacetrackLocation(racecard?.track_code);
   const title = racecard ? (trackProfile?.display_name ?? getRacetrackLabel(racecard.track_code)) : "RaceCard";
   const raceDateDisplay = formatRaceDate(racecard?.race_date);
+  const digitizationStatus = digitalRacecard?.digitization_status;
   const showDataeelRaceBoxes = racecard
     ? !getRacecardDownloadUiBlock(racecard.race_date, RACECARD_DOWNLOAD_TZ, Date.now()).blocked
     : false;
@@ -330,8 +332,8 @@ const DigitalRaceCard = () => {
       <Header />
       <main className="pb-16">
         <PageHero
-          backTo="/racecards"
-          backLabel="Back to RaceCards"
+          backTo="/dashboard"
+          backLabel="Back to Dashboard"
           badge="Digital RaceCard"
           title={
             <>
@@ -344,7 +346,7 @@ const DigitalRaceCard = () => {
             trackWebsite ? (
               <Button asChild variant="outline" className="gap-2 shrink-0 lg:mt-6">
                 <a href={trackWebsite} target="_blank" rel="noopener noreferrer">
-                  Track website
+                  Race Track Website
                   <ExternalLink className="h-4 w-4" />
                 </a>
               </Button>
@@ -386,7 +388,7 @@ const DigitalRaceCard = () => {
                     </div>
                     <h1 className="mt-3 font-heading text-2xl font-bold text-foreground">{title}</h1>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Public race schedule, local track conditions, and member-gated DATAEEL analysis.
+                      Public race schedule, local track conditions, and purchased RaceCard data.
                     </p>
                   </div>
                   {!unlocked && (
@@ -410,7 +412,7 @@ const DigitalRaceCard = () => {
                 <TrackWeatherBadge trackCode={racecard.track_code} profile={trackProfile} />
               </section>
 
-              {pickNotifications.length > 0 && (
+              {showWinnerSummary && (
                 <section className="rounded-xl border border-primary/45 bg-primary/10 p-5 shadow-[0_0_28px_hsl(var(--primary)/0.12)]">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="flex gap-3">
@@ -422,28 +424,32 @@ const DigitalRaceCard = () => {
                           Winning results
                         </div>
                         <h2 className="mt-1 font-heading text-xl font-bold text-foreground">
-                          DATAEEL picks matched official payouts
+                          {pickNotifications.length > 0 ? "DATAEEL Successes" : "No winners"}
                         </h2>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          Official results are posted for this card and these selections matched the finish order.
-                        </p>
+                        {pickNotifications.length === 0 && (
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            No DATAEEL winner calls matched the posted official results for this RaceCard.
+                          </p>
+                        )}
                       </div>
                     </div>
-                    <div className="flex flex-wrap gap-2 lg:max-w-[55%] lg:justify-end">
-                      {pickNotifications.map((hit) => (
-                        <div
-                          key={hit.key}
-                          className="rounded-full border border-primary/35 bg-background/70 px-3 py-1.5 text-sm font-semibold text-foreground"
-                        >
-                          {hit.algorithm} {hit.hitType} Race {hit.raceNumber}:{" "}
-                          <span className="text-primary">
-                            {hit.horses
-                              .map((horse) => `${horse.horseNumber ? `${horse.horseNumber} ` : ""}${horse.horseName}`)
-                              .join(" / ")}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+                    {pickNotifications.length > 0 && (
+                      <div className="flex flex-wrap gap-2 lg:max-w-[55%] lg:justify-end">
+                        {pickNotifications.map((hit) => (
+                          <div
+                            key={hit.key}
+                            className="rounded-full border border-primary/35 bg-background/70 px-3 py-1.5 text-sm font-semibold text-foreground"
+                          >
+                            {hit.algorithm} {hit.hitType} Race {hit.raceNumber}:{" "}
+                            <span className="text-primary">
+                              {hit.horses
+                                .map((horse) => `${horse.horseNumber ? `${horse.horseNumber} ` : ""}${horse.horseName}`)
+                                .join(" / ")}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </section>
               )}
@@ -456,9 +462,9 @@ const DigitalRaceCard = () => {
                       : resultsLoading
                       ? "Loading race results..."
                       : unlocked
-                      ? racecard.digitization_status === "not_started" || racecard.digitization_status === "queued"
+                      ? digitizationStatus === "not_started" || digitizationStatus === "queued"
                         ? "This RaceCard has not been digitized yet. Results will appear here once they are posted."
-                        : racecard.digitization_status === "needs_review"
+                        : digitizationStatus === "needs_review"
                         ? "This RaceCard needs digitization review before digital selections can be shown."
                         : "Digital selections and race results are not posted for this RaceCard yet."
                       : "Race details are not posted yet. Check the official track website for the latest schedule."}
@@ -476,14 +482,6 @@ const DigitalRaceCard = () => {
                               {[race.post_time_display, race.type, race.distance].filter(Boolean).join(" · ") || "Race details posted with the RaceCard"}
                             </p>
                           </div>
-                          {trackWebsite && (
-                            <Button asChild variant="ghost" size="sm" className="gap-1.5 text-primary">
-                              <a href={trackWebsite} target="_blank" rel="noopener noreferrer">
-                                Official track
-                                <ExternalLink className="h-3.5 w-3.5" />
-                              </a>
-                            </Button>
-                          )}
                         </div>
 
                         {showDataeelRaceBoxes && (
