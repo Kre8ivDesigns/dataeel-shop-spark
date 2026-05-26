@@ -12,7 +12,6 @@ import {
   Inbox,
   Table2,
   LayoutDashboard,
-  FileText,
   Coins,
   ShoppingCart,
   Search,
@@ -156,15 +155,7 @@ export const Header = ({ topOffsetClassName = "top-0" }: HeaderProps) => {
                       className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-primary hover:bg-muted transition-colors"
                     >
                       <LayoutDashboard className="h-4 w-4 shrink-0" />
-                      Dashboard
-                    </Link>
-                    <Link
-                      to="/dashboard#dashboard-racecards"
-                      onClick={() => setIsUserMenuOpen(false)}
-                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-primary hover:bg-muted transition-colors"
-                    >
-                      <FileText className="h-4 w-4 shrink-0" />
-                      RaceCards
+                      Dashboard/RaceCards
                     </Link>
                     <Link
                       to="/buy-credits"
@@ -297,13 +288,7 @@ export const Header = ({ topOffsetClassName = "top-0" }: HeaderProps) => {
                     <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
                       <Button variant="outline" className="w-full border-secondary text-primary gap-2">
                         <LayoutDashboard className="h-4 w-4" />
-                        Dashboard
-                      </Button>
-                    </Link>
-                    <Link to="/dashboard#dashboard-racecards" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button variant="outline" className="w-full border-secondary text-primary gap-2">
-                        <FileText className="h-4 w-4" />
-                        RaceCards
+                        Dashboard/RaceCards
                       </Button>
                     </Link>
                     <Link to="/buy-credits" onClick={() => setIsMobileMenuOpen(false)}>

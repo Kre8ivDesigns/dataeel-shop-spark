@@ -160,7 +160,7 @@ const AdminDashboard = () => {
         try {
           const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
           const { data: urlData, error: urlError } = await supabase.functions.invoke("generate-upload-url", {
-            body: { fileName: sanitizedName },
+            body: { fileName: sanitizedName, originalFileName: file.name },
           });
 
           if (urlError || !urlData?.uploadUrl) {

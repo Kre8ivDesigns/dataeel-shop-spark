@@ -3,7 +3,7 @@
  * `racecards.file_url` must hold this S3 object key after upload.
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { S3Client, PutObjectCommand } from "https://esm.sh/@aws-sdk/client-s3@3";
+import { DeleteObjectCommand, S3Client, PutObjectCommand } from "https://esm.sh/@aws-sdk/client-s3@3";
 import { getSignedUrl } from "https://esm.sh/@aws-sdk/s3-request-presigner@3";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { getAwsS3Env, missingAwsS3EnvKeys } from "../_shared/awsS3Env.ts";
@@ -11,6 +11,10 @@ import { getAwsS3Env, missingAwsS3EnvKeys } from "../_shared/awsS3Env.ts";
 function errMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
   return String(err);
+}
+
+function sanitizeFileName(fileName: string): string {
+  return fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
 Deno.serve(async (req) => {
@@ -59,10 +63,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { fileName } = await req.json();
-    if (!fileName) {
+    const { fileName, originalFileName } = await req.json();
+    if (!fileName || typeof fileName !== "string") {
       return new Response(JSON.stringify({ error: "Missing fileName" }), { status: 400, headers });
     }
+
+    const sanitizedFileName = sanitizeFileName(fileName);
+    const racecardFileName = typeof originalFileName === "string" && originalFileName.trim()
+      ? originalFileName
+      : fileName;
 
     const aws = getAwsS3Env();
     if (!aws) {
@@ -87,7 +96,39 @@ Deno.serve(async (req) => {
       },
     });
 
-    const s3Key = `racecards/${crypto.randomUUID()}-${fileName}`;
+    const { data: existingRacecard, error: existingError } = await supabaseAdmin
+      .from("racecards")
+      .select("file_url")
+      .eq("file_name", racecardFileName)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existingError) {
+      console.error("generate-upload-url existing racecard lookup failed:", existingError.message);
+      return new Response(
+        JSON.stringify({ error: "Existing RaceCard lookup failed", detail: existingError.message }),
+        { status: 500, headers },
+      );
+    }
+
+    if (existingRacecard?.file_url) {
+      try {
+        await s3.send(new DeleteObjectCommand({
+          Bucket: aws.bucket,
+          Key: existingRacecard.file_url,
+        }));
+      } catch (deleteError) {
+        const msg = errMessage(deleteError);
+        console.error("generate-upload-url existing S3 delete failed:", msg);
+        return new Response(
+          JSON.stringify({ error: "Existing RaceCard delete failed", detail: msg.slice(0, 2000) }),
+          { status: 502, headers },
+        );
+      }
+    }
+
+    const s3Key = `racecards/${crypto.randomUUID()}-${sanitizedFileName}`;
 
     const command = new PutObjectCommand({
       Bucket: aws.bucket,
