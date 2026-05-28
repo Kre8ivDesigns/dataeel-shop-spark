@@ -106,7 +106,7 @@ export const Results = () => {
             <span className="text-neon">In Action</span>
           </h2>
           <p className="section-subtitle">
-            Our algorithms provide insight for picking winners across all major thoroughbred race tracks.
+            ur algorithms provide insight for picking winners across all major thoroughbred racetracks.
             We are connecting RaceCards to official result charts so you can compare how Concert™ and Aptitude™
             performed after races are final. Results are informational — not guarantees for future races; see our{" "}
             <Link to="/disclaimer" className="text-primary underline underline-offset-2 hover:text-neon">
