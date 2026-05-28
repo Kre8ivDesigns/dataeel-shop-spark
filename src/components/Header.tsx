@@ -138,7 +138,7 @@ export const Header = ({ topOffsetClassName = "top-0" }: HeaderProps) => {
                     className="absolute right-0 mt-2 w-56 bg-card border border-border rounded-lg shadow-lg overflow-hidden z-50"
                   >
                     <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border text-xs text-muted-foreground">
-                      <Coins className="h-3.5 w-3.5 shrink-0 text-primary" />
+                      <Coins className="h-3.5 w-3.5 shrink-0 text-success" />
                       <span>
                         <span className="font-semibold tabular-nums text-foreground">
                           {creditsLoading
@@ -160,9 +160,9 @@ export const Header = ({ topOffsetClassName = "top-0" }: HeaderProps) => {
                     <Link
                       to="/buy-credits"
                       onClick={() => setIsUserMenuOpen(false)}
-                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-primary hover:bg-muted hover:text-primary transition-colors"
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-success hover:bg-muted hover:text-success transition-colors"
                     >
-                      <ShoppingCart className="h-4 w-4 text-primary shrink-0" />
+                      <ShoppingCart className="h-4 w-4 text-success shrink-0" />
                       Buy credits
                     </Link>
                     {isAdmin && (
@@ -274,7 +274,7 @@ export const Header = ({ topOffsetClassName = "top-0" }: HeaderProps) => {
                 {user ? (
                   <>
                     <p className="text-xs text-muted-foreground flex items-center gap-2 px-1 pb-1">
-                      <Coins className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <Coins className="h-3.5 w-3.5 text-success shrink-0" />
                       <span>
                         <span className="font-semibold tabular-nums text-foreground">
                           {creditsLoading
@@ -292,7 +292,7 @@ export const Header = ({ topOffsetClassName = "top-0" }: HeaderProps) => {
                       </Button>
                     </Link>
                     <Link to="/buy-credits" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button variant="outline" className="w-full border-primary/50 text-primary gap-2 hover:bg-muted hover:text-primary">
+                      <Button variant="outline" className="w-full border-success/50 text-success gap-2 hover:bg-muted hover:text-success">
                         <ShoppingCart className="h-4 w-4" /> Buy credits
                       </Button>
                     </Link>
