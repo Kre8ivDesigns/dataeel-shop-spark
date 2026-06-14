@@ -119,6 +119,35 @@ export type Database = {
         }
         Relationships: []
       }
+      racecard_download_events: {
+        Row: {
+          created_at: string
+          id: string
+          racecard_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          racecard_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          racecard_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "racecard_download_events_racecard_id_fkey"
+            columns: ["racecard_id"]
+            isOneToOne: false
+            referencedRelation: "racecards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       racecard_downloads: {
         Row: {
           created_at: string

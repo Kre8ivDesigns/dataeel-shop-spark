@@ -177,6 +177,16 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Append-only audit log: record every download issuance (first download AND
+    // re-downloads) with the user and timestamp. Best-effort — a logging failure
+    // must never block a successful download.
+    const { error: logError } = await supabaseAdmin
+      .from("racecard_download_events")
+      .insert({ user_id: user.id, racecard_id: racecardId });
+    if (logError) {
+      console.error("download-racecard: failed to log download event:", logError);
+    }
+
     return new Response(
       JSON.stringify({
         signedUrl,

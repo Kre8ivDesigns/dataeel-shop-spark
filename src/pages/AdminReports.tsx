@@ -32,6 +32,8 @@ type LedgerRow = Tables<"credit_ledger">;
 
 type DownloadJoin = {
   racecard_id: string;
+  user_id: string;
+  created_at: string;
   racecards: { track_name: string; track_code: string; race_date: string; file_name: string } | null;
 };
 
@@ -48,26 +50,30 @@ const AdminReports = () => {
     setLedgerError(null);
     const [ledRes, dlRes] = await Promise.all([
       supabase.from("credit_ledger").select("*").order("created_at", { ascending: false }).limit(500),
-      supabase.from("racecard_downloads")
-        .select("racecard_id, racecards(track_name, track_code, race_date, file_name)"),
+      supabase.from("racecard_download_events")
+        .select("racecard_id, user_id, created_at, racecards(track_name, track_code, race_date, file_name)")
+        .order("created_at", { ascending: false }),
     ]);
     if (dlRes.error) toast.error(sanitizeError(dlRes.error));
-    setDownloads((dlRes.data as DownloadJoin[]) ?? []);
+    const downloadRows = (dlRes.data as DownloadJoin[]) ?? [];
+    setDownloads(downloadRows);
 
     if (ledRes.error) {
       const msg = sanitizeError(ledRes.error);
       setLedgerError(msg);
       toast.error(msg);
       setLedger([]);
-      setProfiles([]);
-      setLoading(false);
-      return;
+    } else {
+      setLedger(ledRes.data ?? []);
     }
 
-    const rows = ledRes.data ?? [];
-    setLedger(rows);
-
-    const ids = [...new Set(rows.map((r) => r.user_id))];
+    const ledgerRows = ledRes.error ? [] : (ledRes.data ?? []);
+    const ids = [
+      ...new Set([
+        ...ledgerRows.map((r) => r.user_id),
+        ...downloadRows.map((d) => d.user_id),
+      ]),
+    ];
     if (ids.length === 0) {
       setProfiles([]);
     } else {
@@ -111,6 +117,23 @@ const AdminReports = () => {
       .sort((a, b) => b.count - a.count);
   }, [downloads]);
 
+  const byUser = useMemo(() => {
+    const m = new Map<string, { count: number; lastAt: string }>();
+    for (const d of downloads) {
+      const cur = m.get(d.user_id) ?? { count: 0, lastAt: d.created_at };
+      cur.count += 1;
+      if (d.created_at > cur.lastAt) cur.lastAt = d.created_at;
+      m.set(d.user_id, cur);
+    }
+    return Array.from(m.entries())
+      .map(([user_id, v]) => ({
+        user_id,
+        email: emailByUser[user_id] ?? user_id,
+        ...v,
+      }))
+      .sort((a, b) => b.count - a.count);
+  }, [downloads, emailByUser]);
+
   const byTrack = useMemo(() => {
     const m = new Map<string, number>();
     for (const d of downloads) {
@@ -121,6 +144,39 @@ const AdminReports = () => {
       .map(([track_name, count]) => ({ track_name, count }))
       .sort((a, b) => b.count - a.count);
   }, [downloads]);
+
+  const downloadCsv = (filename: string, lines: string[]) => {
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const csvCell = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+
+  const exportDownloadLogCsv = () => {
+    const headers = ["downloaded_at", "user_id", "email", "track_name", "race_date", "file_name", "racecard_id"];
+    const lines = [
+      headers.join(","),
+      ...downloads.map((d) =>
+        [
+          d.created_at,
+          d.user_id,
+          emailByUser[d.user_id] ?? "",
+          d.racecards?.track_name ?? "",
+          d.racecards?.race_date ?? "",
+          d.racecards?.file_name ?? "",
+          d.racecard_id,
+        ]
+          .map(csvCell)
+          .join(","),
+      ),
+    ];
+    downloadCsv("racecard-download-log.csv", lines);
+  };
 
   const exportLedgerCsv = () => {
     const headers = [
@@ -176,12 +232,70 @@ const AdminReports = () => {
           sectionClassName="pb-8"
         />
         <div className="container mx-auto px-4 max-w-[1400px]">
-          <Tabs defaultValue="downloads">
+          <Tabs defaultValue="users">
             <TabsList className="mb-6 flex flex-wrap h-auto gap-1">
+              <TabsTrigger value="users">By user</TabsTrigger>
               <TabsTrigger value="downloads">By racecard</TabsTrigger>
               <TabsTrigger value="tracks">By track</TabsTrigger>
               <TabsTrigger value="ledger">Credit ledger</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="users">
+              <Card className="bg-card border-border">
+                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <CardTitle className="text-foreground">Downloads by user</CardTitle>
+                    <CardDescription>
+                      Every download event is logged with the user and timestamp (including repeat
+                      downloads). Export the full log for the complete date/time history.
+                    </CardDescription>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 shrink-0"
+                    onClick={exportDownloadLogCsv}
+                    disabled={!downloads.length}
+                  >
+                    <Download className="h-4 w-4" />
+                    Export full log
+                  </Button>
+                </CardHeader>
+                <CardContent className="overflow-x-auto">
+                  {loading ? (
+                    <LoaderRow />
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>User</TableHead>
+                          <TableHead className="text-right">Downloads</TableHead>
+                          <TableHead>Last download</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {byUser.map((u) => (
+                          <TableRow key={u.user_id}>
+                            <TableCell className="text-foreground text-xs">{u.email}</TableCell>
+                            <TableCell className="text-right font-mono-data">{u.count}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                              {new Date(u.lastAt).toLocaleString()}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {byUser.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                              No download data
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
 
             <TabsContent value="downloads">
               <Card className="bg-card border-border">
