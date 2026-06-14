@@ -10,18 +10,21 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Activity,
   AlertTriangle,
   Brain,
   Download,
   Globe2,
+  Info,
   Loader2,
   Megaphone,
   MonitorSmartphone,
   MousePointerClick,
   Printer,
   Route,
+  Sparkles,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -43,6 +46,7 @@ import {
   summarizeSiteAnalytics,
   type AnalyticsIssue,
   type DeviceSummary,
+  type DiagnosisFinding,
   type SiteAnalyticsEventRow,
   type SourceSummary,
   type TransactionAnalyticsRow,
@@ -127,27 +131,116 @@ function issueVariant(issue: AnalyticsIssue): "default" | "secondary" | "destruc
   return "outline";
 }
 
+function diagnosisVariant(
+  severity: DiagnosisFinding["severity"],
+): "default" | "secondary" | "destructive" | "outline" {
+  if (severity === "high") return "destructive";
+  if (severity === "medium") return "secondary";
+  if (severity === "good") return "default";
+  return "outline";
+}
+
+/** Render inline **bold** without a markdown dependency. */
+function renderInline(text: string, keyPrefix: string) {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return (
+        <strong key={`${keyPrefix}-b-${i}`} className="font-semibold text-foreground">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return <span key={`${keyPrefix}-t-${i}`}>{part}</span>;
+  });
+}
+
+/** Minimal markdown for AI output: headings, bullets, and bold. */
+function MarkdownLite({ text }: { text: string }) {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  return (
+    <div className="space-y-2 text-sm leading-relaxed text-muted-foreground">
+      {lines.map((raw, i) => {
+        const line = raw.trimEnd();
+        const key = `md-${i}`;
+        if (!line.trim()) return <div key={key} className="h-1" />;
+        const heading = /^(#{1,4})\s+(.*)$/.exec(line);
+        if (heading) {
+          return (
+            <h3 key={key} className="pt-2 text-sm font-semibold text-foreground">
+              {renderInline(heading[2], key)}
+            </h3>
+          );
+        }
+        const bullet = /^\s*[-*]\s+(.*)$/.exec(line);
+        if (bullet) {
+          return (
+            <div key={key} className="flex gap-2 pl-1">
+              <span className="text-primary">•</span>
+              <span>{renderInline(bullet[1], key)}</span>
+            </div>
+          );
+        }
+        const numbered = /^\s*(\d+)\.\s+(.*)$/.exec(line);
+        if (numbered) {
+          return (
+            <div key={key} className="flex gap-2 pl-1">
+              <span className="font-mono-data text-primary">{numbered[1]}.</span>
+              <span>{renderInline(numbered[2], key)}</span>
+            </div>
+          );
+        }
+        return <p key={key}>{renderInline(line, key)}</p>;
+      })}
+    </div>
+  );
+}
+
+function MetricInfo({ label, text }: { label: string; text: string }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={`What does "${label}" mean?`}
+          className="analytics-print-hide -mr-1 -mt-1 shrink-0 rounded-full p-1 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <Info className="h-4 w-4" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72">
+        <p className="mb-1 text-sm font-semibold text-foreground">{label}</p>
+        <p className="text-xs leading-relaxed text-muted-foreground">{text}</p>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function MetricCard({
   icon: Icon,
   label,
   value,
   detail,
   tone = "default",
+  info,
 }: {
   icon: typeof Users;
   label: string;
   value: string | number;
   detail: string;
   tone?: "default" | "primary" | "danger";
+  info?: string;
 }) {
   const valueClass =
     tone === "danger" ? "text-destructive" : tone === "primary" ? "text-primary" : "text-foreground";
   return (
     <Card className={`border-border ${tone === "danger" ? "bg-destructive/10 border-destructive/30" : "bg-card"}`}>
       <CardHeader className="pb-2">
-        <CardDescription className="flex items-center gap-2">
-          <Icon className={`h-4 w-4 ${tone === "danger" ? "text-destructive" : ""}`} /> {label}
-        </CardDescription>
+        <div className="flex items-start justify-between gap-2">
+          <CardDescription className="flex items-center gap-2">
+            <Icon className={`h-4 w-4 ${tone === "danger" ? "text-destructive" : ""}`} /> {label}
+          </CardDescription>
+          {info ? <MetricInfo label={label} text={info} /> : null}
+        </div>
         <CardTitle className={`text-2xl font-mono-data ${valueClass}`}>{value}</CardTitle>
       </CardHeader>
       <CardContent className="text-xs text-muted-foreground">{detail}</CardContent>
@@ -193,8 +286,14 @@ const AdminAnalytics = () => {
   const [fbConfigured, setFbConfigured] = useState<boolean | null>(null);
   const [fbLoading, setFbLoading] = useState(false);
   const [fbError, setFbError] = useState<string | null>(null);
+  const [fbRange, setFbRange] = useState<"7" | "30">("30");
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+  const [aiModel, setAiModel] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   const days = parseInt(range, 10);
+  const fbDays = parseInt(fbRange, 10);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -250,7 +349,7 @@ const AdminAnalytics = () => {
     setFbLoading(true);
     setFbError(null);
     supabase.functions
-      .invoke<FbAdsResponse>("facebook-ads-insights", { body: { days } })
+      .invoke<FbAdsResponse>("facebook-ads-insights", { body: { days: fbDays } })
       .then(({ data, error }) => {
         if (cancelled) return;
         if (error) {
@@ -269,7 +368,7 @@ const AdminAnalytics = () => {
     return () => {
       cancelled = true;
     };
-  }, [isAdmin, days]);
+  }, [isAdmin, fbDays]);
 
   const profFiltered = useMemo(() => filterSince(profiles, days), [profiles, days]);
   const dlFiltered = useMemo(() => filterSince(downloads, days), [downloads, days]);
@@ -297,6 +396,79 @@ const AdminAnalytics = () => {
   const handlePrintReport = () => {
     window.print();
   };
+
+  // Compact, token-light snapshot of the funnel for the AI analyst.
+  const aiMetricsPayload = useMemo(
+    () => ({
+      visitors: analytics.visitors,
+      newVisitors: analytics.newVisitors,
+      returningVisitors: analytics.returningVisitors,
+      sessions: analytics.sessions,
+      bounceRatePct: analytics.bounceRate,
+      avgPagesPerSession: analytics.avgPagesPerSession,
+      racecardDownloads: dlFiltered.length,
+      signupFunnel: analytics.signupFunnel,
+      racecardsFunnel: analytics.racecardsFunnel,
+      purchaseFunnel: {
+        pricingVisitors: analytics.pricingVisitors,
+        buyCreditsVisitors: analytics.buyCreditsVisitors,
+        checkoutStarts: analytics.checkoutStarts,
+        completedPurchases: analytics.completedPurchases,
+        pricingToBuyRatePct: analytics.pricingToBuyRate,
+        checkoutStartRatePct: analytics.checkoutStartRate,
+        checkoutCompletionRatePct: analytics.checkoutCompletionRate,
+      },
+      utmCoverage: analytics.utmCoverage,
+      deviceBreakdown: analytics.deviceBreakdown,
+      topSources: analytics.topSources.slice(0, 5).map((s) => ({
+        source: s.source,
+        medium: s.medium,
+        visitors: s.visitors,
+        bounceRatePct: s.bounceRate,
+        checkoutStarts: s.checkoutStarts,
+      })),
+      topLandingPages: analytics.topLandingPages.slice(0, 5),
+      topExitPages: analytics.topExitPages,
+      heuristicFindings: analytics.diagnosis.findings.map((f) => ({
+        area: f.area,
+        severity: f.severity,
+        title: f.title,
+      })),
+    }),
+    [analytics, dlFiltered.length],
+  );
+
+  const runAiAnalysis = useCallback(async () => {
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke<{
+        analysis?: string;
+        model?: string;
+        error?: string;
+      }>("ai-admin", {
+        body: { action: "analyze_funnel", metrics: aiMetricsPayload, days },
+      });
+      if (error || !data?.analysis) {
+        setAiError(data?.error || error?.message || "Could not generate analysis.");
+        setAiAnalysis(null);
+        return;
+      }
+      setAiAnalysis(data.analysis);
+      setAiModel(data.model ?? null);
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : "Could not generate analysis.");
+    } finally {
+      setAiLoading(false);
+    }
+  }, [aiMetricsPayload, days]);
+
+  // Invalidate a stale analysis when the date range changes.
+  useEffect(() => {
+    setAiAnalysis(null);
+    setAiModel(null);
+    setAiError(null);
+  }, [days]);
 
   const combinedChart = useMemo(() => {
     const signupsByDay = countByDay(profFiltered);
@@ -415,26 +587,141 @@ const AdminAnalytics = () => {
               ) : null}
 
               <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-                <MetricCard icon={Users} label="Visitors" value={analytics.visitors} detail="Unique browsers in selected range" />
-                <MetricCard icon={UserPlus} label="New visitors" value={analytics.newVisitors} detail={`${analytics.returningVisitors} returning visitors`} tone="primary" />
-                <MetricCard icon={Activity} label="Bounce rate" value={formatPercent(analytics.bounceRate)} detail={`${analytics.avgPagesPerSession} pages per session`} tone={analytics.bounceRate >= 55 ? "danger" : "default"} />
-                <MetricCard icon={Globe2} label="Top source" value={analytics.topSources[0]?.source ?? "None"} detail={analytics.topSources[0] ? `${analytics.topSources[0].medium} - ${analytics.topSources[0].visitors} visitors` : "No traffic source data"} />
-                <MetricCard icon={MousePointerClick} label="Pricing to buy" value={formatPercent(analytics.pricingToBuyRate)} detail={`${analytics.pricingVisitors} pricing visitors`} />
-                <MetricCard icon={Route} label="Checkout starts" value={analytics.checkoutStarts} detail={`${formatPercent(analytics.checkoutStartRate)} of Buy Credits visitors`} />
-                <MetricCard icon={UserPlus} label="Signup events" value={signupEventCount} detail="Tracked frontend signup completions" tone="primary" />
-                <MetricCard icon={Download} label="Racecard downloads" value={dlFiltered.length} detail="In selected range" tone="primary" />
-                <MetricCard icon={Globe2} label="Attributed traffic" value={formatPercent(analytics.utmCoverage.percentAttributed)} detail={`${analytics.utmCoverage.directVisitors} direct visitors`} tone={analytics.utmCoverage.percentAttributed < 40 ? "danger" : "default"} />
-                <MetricCard icon={Route} label="RaceCards intent" value={analytics.racecardsFunnel.racecardsVisitors} detail={`${analytics.racecardsFunnel.joinClicks} join clicks from RaceCards`} />
-                <MetricCard icon={MousePointerClick} label="CTA clicks" value={analytics.topCtaClicks.reduce((sum, item) => sum + item.clicks, 0)} detail="Tracked buttons and links" />
-                <MetricCard icon={AlertTriangle} label="Errors" value={errors.length} detail="From latest 80 audit rows" tone={errors.length > 0 ? "danger" : "default"} />
+                <MetricCard icon={Users} label="Visitors" value={analytics.visitors} detail="Unique browsers in selected range" info="The total number of unique people (devices/browsers) who came to your site in this date range. Each person is counted once no matter how many times they visited. This includes both first-time visitors and people coming back, so Visitors = New + Returning." />
+                <MetricCard icon={UserPlus} label="New visitors" value={analytics.newVisitors} detail={`${analytics.returningVisitors} returning visitors`} tone="primary" info="How many of your visitors were here for the very first time during this date range. Everyone else is a 'returning' visitor — someone we'd seen before. A healthy New-visitor count means you're attracting fresh traffic; lots of returning visitors means people find it worth coming back." />
+                <MetricCard icon={Activity} label="Bounce rate" value={formatPercent(analytics.bounceRate)} detail={`${analytics.avgPagesPerSession} pages per session`} tone={analytics.bounceRate >= 55 ? "danger" : "default"} info="The share of visits where someone looked at a single page and left without clicking or scrolling much. A high bounce rate usually means the first screen isn't grabbing people. Lower is better." />
+                <MetricCard icon={Globe2} label="Top source" value={analytics.topSources[0]?.source ?? "None"} detail={analytics.topSources[0] ? `${analytics.topSources[0].medium} - ${analytics.topSources[0].visitors} visitors` : "No traffic source data"} info="Where most of your visitors came from — for example Google, Facebook, a direct link, or a referring site. 'Direct' means we couldn't tell the source (someone typed the address or the link had no tracking tag)." />
+                <MetricCard icon={MousePointerClick} label="Pricing to buy" value={formatPercent(analytics.pricingToBuyRate)} detail={`${analytics.pricingVisitors} pricing visitors`} info="Of the people who viewed the Pricing page, the percentage who went on to the Buy Credits page. It shows how convincing your pricing page is at moving people toward a purchase." />
+                <MetricCard icon={Route} label="Checkout starts" value={analytics.checkoutStarts} detail={`${formatPercent(analytics.checkoutStartRate)} of Buy Credits visitors`} info="How many people actually began the checkout (payment) process, and what share of Buy Credits visitors that represents. A big drop here means people reach the buy page but hesitate before paying." />
+                <MetricCard icon={UserPlus} label="Signup events" value={signupEventCount} detail="Tracked frontend signup completions" tone="primary" info="The number of people who successfully finished creating an account in this range, as recorded by the site's own tracking when the signup completes." />
+                <MetricCard icon={Download} label="Racecard downloads" value={dlFiltered.length} detail="In selected range" tone="primary" info="How many racecards were downloaded in this date range. Each download spends a credit (or is free for unlimited accounts) and is the core action that earns revenue." />
+                <MetricCard icon={Globe2} label="Attributed traffic" value={formatPercent(analytics.utmCoverage.percentAttributed)} detail={`${analytics.utmCoverage.directVisitors} direct visitors`} tone={analytics.utmCoverage.percentAttributed < 40 ? "danger" : "default"} info="The percentage of visitors we can trace to a known source (ad, email, social, referral) because the link had tracking tags. The rest are 'direct/unknown'. Low attribution means you can't tell what marketing is working — add UTM tags to your links." />
+                <MetricCard icon={Route} label="RaceCards intent" value={analytics.racecardsFunnel.racecardsVisitors} detail={`${analytics.racecardsFunnel.joinClicks} join clicks from RaceCards`} info="How many visitors browsed the RaceCards page — a strong signal of buying intent — and how many of them clicked a join/sign-up button from there." />
+                <MetricCard icon={MousePointerClick} label="CTA clicks" value={analytics.topCtaClicks.reduce((sum, item) => sum + item.clicks, 0)} detail="Tracked buttons and links" info="The total number of clicks on tracked call-to-action buttons and links (like 'Sign up' or 'Buy credits'). It shows how much visitors are actually engaging with your key prompts." />
+                <MetricCard icon={AlertTriangle} label="Errors" value={errors.length} detail="From latest 80 audit rows" tone={errors.length > 0 ? "danger" : "default"} info="The number of error events found in the most recent 80 audit-log entries — things like failed actions or denied requests. Anything above zero is worth a look, as errors can quietly block signups or purchases." />
               </div>
 
               <Card className="bg-card border-border mb-8">
                 <CardHeader>
                   <CardTitle className="text-foreground text-lg flex items-center gap-2">
-                    <Megaphone className="h-5 w-5 text-primary" /> Facebook Ads
+                    <Brain className="h-5 w-5 text-primary" /> Retention &amp; conversion diagnosis
                   </CardTitle>
-                  <CardDescription>Spend, reach, and conversions from the Meta Marketing API for the selected range</CardDescription>
+                  <CardDescription>
+                    High-level read on why visitors may not be returning, registering, or purchasing —
+                    derived from first-party behavior in the selected range.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
+                    <p className="text-sm font-medium text-foreground">{analytics.diagnosis.headline}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      End-to-end visitor → purchase conversion:{" "}
+                      <span className="font-mono-data text-foreground">
+                        {formatPercent(analytics.diagnosis.visitorToPurchaseRate)}
+                      </span>{" "}
+                      ({analytics.completedPurchases} purchases from {analytics.visitors} visitors)
+                    </p>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {analytics.diagnosis.findings.map((finding: DiagnosisFinding) => (
+                      <div
+                        key={`${finding.area}-${finding.title}`}
+                        className="rounded-lg border border-border bg-background/60 p-4"
+                      >
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">{finding.area}</Badge>
+                            <Badge variant={diagnosisVariant(finding.severity)}>{finding.severity}</Badge>
+                          </div>
+                          <span className="font-mono-data text-xs text-muted-foreground">{finding.metric}</span>
+                        </div>
+                        <h3 className="text-sm font-semibold text-foreground">{finding.title}</h3>
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{finding.finding}</p>
+                        <p className="mt-2 text-xs leading-relaxed text-foreground">
+                          <span className="font-medium text-primary">Fix: </span>
+                          {finding.action}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card border-border mb-8">
+                <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <CardTitle className="text-foreground text-lg flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-primary" /> Expert AI analysis
+                    </CardTitle>
+                    <CardDescription>
+                      Deep narrative review from an AI acting as a 30-year SEO, UI/UX, and product-management
+                      lead — interpreting the metrics above and recommending prioritized fixes.
+                    </CardDescription>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-2 shrink-0 analytics-print-hide"
+                    onClick={() => void runAiAnalysis()}
+                    disabled={aiLoading}
+                  >
+                    {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                    {aiAnalysis ? "Regenerate" : "Generate analysis"}
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {aiError ? (
+                    <Alert variant="destructive" className="mb-4">
+                      <AlertTitle>Could not generate analysis</AlertTitle>
+                      <AlertDescription>{aiError}</AlertDescription>
+                    </Alert>
+                  ) : null}
+                  {aiLoading ? (
+                    <div className="flex items-center justify-center gap-2 py-10 text-muted-foreground">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      Consulting the model…
+                    </div>
+                  ) : aiAnalysis ? (
+                    <div className="space-y-3">
+                      <MarkdownLite text={aiAnalysis} />
+                      {aiModel ? (
+                        <p className="pt-2 text-xs text-muted-foreground">Generated by {aiModel}</p>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <p className="py-8 text-center text-sm text-muted-foreground">
+                      Click <span className="font-medium text-foreground">Generate analysis</span> to have the AI
+                      review the current range and explain why visitors may not be retaining, registering, or
+                      purchasing.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card border-border mb-8">
+                <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <CardTitle className="text-foreground text-lg flex items-center gap-2">
+                      <Megaphone className="h-5 w-5 text-primary" /> Facebook Ads
+                    </CardTitle>
+                    <CardDescription>Spend, reach, and conversions from the Meta Marketing API</CardDescription>
+                  </div>
+                  <div className="analytics-print-hide inline-flex rounded-md border border-border p-0.5">
+                    {(["7", "30"] as const).map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setFbRange(value)}
+                        className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
+                          fbRange === value
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {value} days
+                      </button>
+                    ))}
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {fbLoading ? (

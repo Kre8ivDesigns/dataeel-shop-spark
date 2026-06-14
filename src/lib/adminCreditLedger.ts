@@ -35,6 +35,30 @@ export function creditLedgerDetailFromMeta(meta: Json | null | undefined): strin
   return "";
 }
 
+export type LedgerRacecard = { track_name: string; race_date: string; file_name: string };
+
+/** Compact label for a racecard a credit was spent on, e.g. "Belmont · 2026-06-14". */
+export function ledgerRacecardLabel(rc: LedgerRacecard | undefined): string {
+  if (!rc) return "";
+  return [rc.track_name, rc.race_date].filter(Boolean).join(" · ");
+}
+
+/**
+ * Details-column text for a ledger row: for download deductions, name the racecard
+ * the credit was spent on (looked up by ref_id), then append any meta note.
+ */
+export function creditLedgerDetail(
+  row: { entry_type: string; ref_id: string | null; meta: Json | null },
+  racecardById: Record<string, LedgerRacecard>,
+): string {
+  const metaNote = creditLedgerDetailFromMeta(row.meta);
+  if (row.entry_type === "download_deduction" && row.ref_id) {
+    const label = ledgerRacecardLabel(racecardById[row.ref_id]);
+    if (label) return metaNote ? `${label} — ${metaNote}` : label;
+  }
+  return metaNote;
+}
+
 /** Δ column: emphasize zero-delta unlimited rows without hiding the number. */
 export function formatLedgerDelta(delta: number, meta: Json | null | undefined): string {
   const m = metaRecord(meta);

@@ -5,14 +5,17 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   BarChart3,
+  Book,
   Bot,
+  Compass,
   CreditCard,
+  Database,
   FileText,
   HelpCircle,
   Inbox,
-  Package,
   Settings,
   ShieldCheck,
   Table2,
@@ -76,6 +79,7 @@ const adminSections: GuideCard[] = [
     description: "Admin tools for publishing and maintaining RaceCard PDF inventory.",
     items: [
       "Upload PDFs from the Dashboard RaceCards tab; the app generates an upload URL, stores the file, parses metadata, and inserts the RaceCard row.",
+      "File names are sanitized on upload, and uploading a card for a track/date that already exists replaces the previous file and row.",
       "Use S3 sync when PDFs already exist in storage and need to be reflected in Supabase.",
       "Review digitization status, metadata JSON, track/date fields, and public availability before expecting cards to appear correctly on /racecards.",
       "Public RaceCard detail pages show locked previews first, then unlock picks, predictions, and results for admins or purchasers when data exists.",
@@ -94,9 +98,10 @@ const adminSections: GuideCard[] = [
     title: "Reports",
     description: "Operational reporting for downloads, track demand, and credit movement.",
     items: [
-      "Use By racecard to see download totals for each RaceCard PDF.",
-      "Use By track to understand which tracks drive the most downloads.",
-      "Use Credit ledger to audit credit grants, purchases, downloads, balance changes, and export CSV records.",
+      "Every RaceCard download is logged with the customer and a timestamp, including repeat downloads.",
+      "Use By user to see who downloaded what, By racecard for per-PDF totals, and By track for track demand.",
+      "Use Credit ledger to audit credit grants, purchases, downloads, and balance changes.",
+      "Export the full download log or the credit ledger to CSV for finance or support follow-up.",
     ],
   },
   {
@@ -110,11 +115,13 @@ const adminSections: GuideCard[] = [
   },
   {
     title: "Site analytics",
-    description: "First-party visitor, source, and purchase-funnel analytics.",
+    description: "First-party traffic, source, and purchase-funnel analytics, plus paid-ads performance.",
     items: [
-      "Monitor visitors, new versus returning users, bounce rate, top traffic source, pricing-to-buy flow, checkout starts, and RaceCard downloads.",
-      "Read the AI analysis panel as deterministic funnel diagnosis from first-party behavior, not an external model response.",
-      "If analytics are unavailable, apply the site_analytics_events migration to the active Supabase database.",
+      "Pick a date range (including Last 7 days) to focus visitors, sources, signup/RaceCards/purchase funnels, the CTA click map, and UTM coverage.",
+      "Use the AI funnel analyst for a plain-English read of the current funnel with specific suggestions, and Print report for a share-ready snapshot.",
+      "Connect Facebook (Meta) Ads to see spend, reach, conversions, and cost per signup beside the first-party funnel; until connected the panel shows 'not connected'.",
+      "Facebook Ads uses Meta Marketing API credentials set as server secrets (META_ACCESS_TOKEN, META_AD_ACCOUNT_ID) — there is no key to paste in the browser.",
+      "If analytics are unavailable, apply the site_analytics_events and fb_ads_insights migrations to the active Supabase database.",
     ],
   },
   {
@@ -186,6 +193,15 @@ const workflows: Workflow[] = [
     ],
   },
   {
+    title: "Connect Facebook (Meta) Ads",
+    steps: [
+      "Have your technical contact set META_ACCESS_TOKEN (a long-lived token with ads_read) and META_AD_ACCOUNT_ID (e.g. act_1234567890) as Supabase secrets.",
+      "Open Admin -> Site analytics and pick a date range; the Facebook Ads panel fills in automatically once credentials are present.",
+      "Tag ad links with UTM parameters so cost-per-signup attributes spend to the right source.",
+      "Treat the Meta token like a key: never paste it into pages, email, or screenshots, and rotate it if exposed.",
+    ],
+  },
+  {
     title: "Respond to support",
     steps: [
       "Open Admin -> Support inbox.",
@@ -204,6 +220,64 @@ const operationsChecklist = [
   "Check audit log errors after settings, webhook, admin user, or payment changes.",
   "Keep RaceCard dates, track codes, file names, metadata, and S3 objects consistent so browse filters and download records stay readable.",
   "Apply required Supabase migrations when admin pages report missing tables.",
+];
+
+type RouteRef = {
+  screen: string;
+  path: string;
+  summary: string;
+};
+
+const consoleMap: RouteRef[] = [
+  { screen: "Dashboard", path: "/admin", summary: "Home base: top-line stats plus searchable tables of customers, RaceCards, and transactions." },
+  { screen: "Settings", path: "/admin/settings", summary: "API keys, SMTP, broadcast email, breaking-news ticker, AI assistant, racetrack profiles, and webhooks." },
+  { screen: "Credit packages", path: "/admin/credit-packages", summary: "Create, edit, price, and retire the credit bundles customers buy." },
+  { screen: "Financial dashboard", path: "/admin/financials", summary: "Revenue charts, transaction analysis, refunds, and trends over time." },
+  { screen: "Site analytics", path: "/admin/analytics", summary: "Visitors, sources, funnels, CTA map, UTM coverage, AI analyst, Facebook Ads, and a print report." },
+  { screen: "Reports", path: "/admin/reports", summary: "RaceCard downloads by user, racecard, and track, plus the credit ledger — all exportable to CSV." },
+  { screen: "Support inbox", path: "/admin/support", summary: "Contact-form submissions and support requests from customers." },
+  { screen: "Pages", path: "/admin/pages", summary: "List of editable site pages; publish or unpublish, and open the editor." },
+  { screen: "Page editor", path: "/admin/page-editor", summary: "Drag-and-drop visual editor for page content (GrapesJS)." },
+  { screen: "SEO tools", path: "/admin/seo", summary: "Audit pages, research keywords, and generate meta descriptions." },
+  { screen: "Help center", path: "/admin/help", summary: "This guide — how the platform works and how to run it." },
+];
+
+type SystemRef = {
+  subject: string;
+  system: string;
+  note: string;
+};
+
+const systemsMap: SystemRef[] = [
+  { subject: "Customer logins & profiles", system: "Supabase (Auth)", note: "The admin role is set here. Passwords and 2FA are managed by Supabase Auth." },
+  { subject: "Credit balances & ledger", system: "Supabase (Database)", note: "Surfaced in Reports. Updated automatically after purchases." },
+  { subject: "Payments, invoices, refunds", system: "Stripe", note: "Checkout, the billing portal, and invoices are Stripe. The site reflects what Stripe reports." },
+  { subject: "RaceCard PDF files", system: "AWS S3", note: "Customers receive temporary, expiring download links; files are never public." },
+  { subject: "RaceCard catalog entries", system: "Supabase (Database)", note: "The list customers browse — populated by syncing the S3 bucket." },
+  { subject: "Settings & secrets", system: "Supabase (encrypted)", note: "SMTP, API keys, and Stripe secrets are stored encrypted and edited in Settings." },
+  { subject: "Editable page content", system: "Supabase (Database)", note: "Created in the Page editor; unpublished pages fall back to built-in versions." },
+  { subject: "Email sending", system: "SMTP (your provider)", note: "Configured in Settings -> SMTP. Powers alerts and broadcasts." },
+  { subject: "Facebook Ads metrics", system: "Meta Marketing API", note: "Pulled via server secrets and cached for the analytics page." },
+];
+
+type GlossaryTerm = {
+  term: string;
+  definition: string;
+};
+
+const glossary: GlossaryTerm[] = [
+  { term: "RaceCard", definition: "A digitized horse-racing prediction sheet (a PDF) that customers unlock and download." },
+  { term: "Credit", definition: "The in-site currency. Customers buy credits and spend them to unlock RaceCards." },
+  { term: "Credit package", definition: "A purchasable bundle of credits at a set price, linked to a Stripe price." },
+  { term: "Unlimited credits", definition: "An account flag that unlocks cards without spending credits — for staff or comps." },
+  { term: "Admin role", definition: "The permission that unlocks the /admin console. Set in the database, not from a screen." },
+  { term: "Edge Function", definition: "A small Supabase server program that runs tasks like checkout, email, and feeds." },
+  { term: "Conversion funnel", definition: "A step-by-step count (visit -> signup -> purchase) showing where people drop off." },
+  { term: "CTA", definition: "Call to action — a button or link you want visitors to click. The CTA map counts these." },
+  { term: "UTM", definition: "Tags added to a link (e.g. on an ad) so analytics can tell which campaign sent a visitor." },
+  { term: "AI funnel analyst", definition: "An on-demand AI summary that reads your funnel numbers and suggests what to fix." },
+  { term: "Download log", definition: "The record of every RaceCard download, by customer and time — the basis of the Reports tabs." },
+  { term: "Download window", definition: "The period a RaceCard can be downloaded — until midnight on race day, in the track's time zone." },
 ];
 
 const dependencyNotes = [
@@ -287,6 +361,7 @@ const AdminHelp = () => {
               <TabsTrigger value="admin">Admin sections</TabsTrigger>
               <TabsTrigger value="workflows">Workflows</TabsTrigger>
               <TabsTrigger value="operations">Operations</TabsTrigger>
+              <TabsTrigger value="reference">Reference</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6">
@@ -375,6 +450,94 @@ const AdminHelp = () => {
                       </li>
                     ))}
                   </ul>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="reference" className="space-y-6">
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle className="text-foreground flex items-center gap-2">
+                    <Compass className="h-5 w-5 text-primary" />
+                    Admin console map
+                  </CardTitle>
+                  <CardDescription>Where each admin screen lives. The address is what appears in the browser bar.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[170px]">Screen</TableHead>
+                          <TableHead className="w-[190px]">Address</TableHead>
+                          <TableHead>What you do there</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {consoleMap.map((row) => (
+                          <TableRow key={row.path}>
+                            <TableCell className="font-medium text-foreground">{row.screen}</TableCell>
+                            <TableCell>
+                              <code className="rounded bg-primary/10 px-1.5 py-0.5 text-xs text-primary">{row.path}</code>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">{row.summary}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle className="text-foreground flex items-center gap-2">
+                    <Database className="h-5 w-5 text-primary" />
+                    Where everything lives
+                  </CardTitle>
+                  <CardDescription>Which system backs each part of the platform — useful when something looks off.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[230px]">If you're dealing with…</TableHead>
+                          <TableHead className="w-[170px]">It lives in</TableHead>
+                          <TableHead>Notes</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {systemsMap.map((row) => (
+                          <TableRow key={row.subject}>
+                            <TableCell className="font-medium text-foreground">{row.subject}</TableCell>
+                            <TableCell className="text-primary">{row.system}</TableCell>
+                            <TableCell className="text-muted-foreground">{row.note}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle className="text-foreground flex items-center gap-2">
+                    <Book className="h-5 w-5 text-primary" />
+                    Glossary
+                  </CardTitle>
+                  <CardDescription>Key terms in plain language.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {glossary.map((entry) => (
+                      <div key={entry.term} className="rounded-lg border border-border bg-background/40 p-3">
+                        <dt className="text-sm font-semibold text-foreground">{entry.term}</dt>
+                        <dd className="mt-1 text-sm leading-relaxed text-muted-foreground">{entry.definition}</dd>
+                      </div>
+                    ))}
+                  </dl>
                 </CardContent>
               </Card>
             </TabsContent>

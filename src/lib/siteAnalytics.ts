@@ -69,6 +69,29 @@ export type AnalyticsIssue = {
   severity: "high" | "medium" | "low";
 };
 
+export type DiagnosisArea = "Retention" | "Registration" | "Purchasing" | "Acquisition";
+
+export type DiagnosisSeverity = "high" | "medium" | "low" | "good";
+
+export type DiagnosisFinding = {
+  area: DiagnosisArea;
+  severity: DiagnosisSeverity;
+  title: string;
+  /** Plain-English read on what the data shows and why it is happening. */
+  finding: string;
+  /** Recommended action to address the finding. */
+  action: string;
+  /** Headline metric for the finding. */
+  metric: string;
+};
+
+export type RetentionConversionDiagnosis = {
+  headline: string;
+  /** Share of visitors that completed a purchase, end to end. */
+  visitorToPurchaseRate: number;
+  findings: DiagnosisFinding[];
+};
+
 export type SourceSummary = {
   key: string;
   source: string;
@@ -150,6 +173,7 @@ export type AnalyticsSummary = {
   utmCoverage: UtmCoverageSummary;
   topExitPages: { path: string; exits: number }[];
   issues: AnalyticsIssue[];
+  diagnosis: RetentionConversionDiagnosis;
 };
 
 const VISITOR_STORAGE_KEY = "dataeel.analytics.visitor";
@@ -600,10 +624,178 @@ export function summarizeSiteAnalytics(
       .sort((a, b) => b.exits - a.exits)
       .slice(0, 6),
     issues: [],
+    diagnosis: { headline: "", visitorToPurchaseRate: 0, findings: [] },
   };
 
   summary.issues = buildAnalyticsIssues(summary);
+  summary.diagnosis = buildRetentionConversionDiagnosis(summary);
   return summary;
+}
+
+const SEVERITY_ORDER: Record<DiagnosisSeverity, number> = { high: 0, medium: 1, low: 2, good: 3 };
+
+/**
+ * Produces a high-level, executive read on why the site may be failing to retain
+ * visitors, convert registrations, or close purchases. Pure heuristics over the
+ * already-computed summary metrics — no extra data required.
+ */
+export function buildRetentionConversionDiagnosis(
+  summary: Omit<AnalyticsSummary, "diagnosis">,
+): RetentionConversionDiagnosis {
+  const { visitors, sessions } = summary;
+  const visitorToPurchaseRate = percent(summary.completedPurchases, visitors);
+
+  // Low-volume guard: percentages are noise on tiny samples.
+  if (visitors < 10 || sessions < 10) {
+    return {
+      headline: "Not enough traffic in this range to diagnose retention or conversion reliably.",
+      visitorToPurchaseRate,
+      findings: [
+        {
+          area: "Acquisition",
+          severity: "low",
+          title: "Sample size is too small",
+          finding: `Only ${visitors} visitors across ${sessions} sessions, so a single user swings every rate.`,
+          action: "Widen the date range or drive more traffic before acting on these percentages.",
+          metric: `${visitors} visitors`,
+        },
+      ],
+    };
+  }
+
+  const findings: DiagnosisFinding[] = [];
+
+  // ---- Retention -------------------------------------------------------------
+  const returningShare = percent(summary.returningVisitors, visitors);
+  if (returningShare < 15) {
+    findings.push({
+      area: "Retention",
+      severity: "high",
+      title: "Almost no one comes back",
+      finding: `Only ${returningShare}% of visitors return — ${summary.newVisitors} of ${visitors} are first-time. The first visit isn't giving people a reason to come back.`,
+      action: "Capture an email early (sample racecard, free pick, or results alert) and create a reason to return daily — fresh cards, prior-day results, or a streak.",
+      metric: `${returningShare}% returning`,
+    });
+  } else if (returningShare < 30) {
+    findings.push({
+      area: "Retention",
+      severity: "medium",
+      title: "Return rate is soft",
+      finding: `${returningShare}% of visitors return. There is interest, but not yet a strong habit loop.`,
+      action: "Add a recurring hook — daily card drop notification or saved tracks — and prompt opt-in before users leave.",
+      metric: `${returningShare}% returning`,
+    });
+  }
+
+  if (summary.bounceRate >= 55) {
+    findings.push({
+      area: "Retention",
+      severity: summary.bounceRate >= 70 ? "high" : "medium",
+      title: "Most sessions bounce on the first screen",
+      finding: `${summary.bounceRate}% of sessions leave without a second page or any engagement (avg ${summary.avgPagesPerSession} pages/session).`,
+      action: "Lead with the payoff above the fold — a real racecard preview plus a one-line 'how it works' — and place the primary CTA before the scroll.",
+      metric: `${summary.bounceRate}% bounce`,
+    });
+  } else if (summary.avgPagesPerSession < 2) {
+    findings.push({
+      area: "Retention",
+      severity: "medium",
+      title: "Sessions stay shallow",
+      finding: `Visitors view only ${summary.avgPagesPerSession} pages per session on average, so few reach pricing or racecards.`,
+      action: "Add clear next-step links from the landing page into racecards and pricing, and cross-link related content.",
+      metric: `${summary.avgPagesPerSession} pages/session`,
+    });
+  }
+
+  // ---- Registration ----------------------------------------------------------
+  const intentRate = percent(summary.signupFunnel.starts, visitors);
+  if (summary.signupFunnel.starts < Math.max(3, Math.round(visitors * 0.03))) {
+    findings.push({
+      area: "Registration",
+      severity: "high",
+      title: "Few visitors even start registration",
+      finding: `Only ${summary.signupFunnel.starts} of ${visitors} visitors began signup (${intentRate}%). The jump from browsing to "create account" isn't compelling or visible enough.`,
+      action: "Spell out what an account unlocks next to each CTA, and lower the perceived cost — show a free or low-credit first racecard so signing up feels worth it.",
+      metric: `${intentRate}% start signup`,
+    });
+  }
+
+  const signupCompletion = percent(summary.signupFunnel.completions, summary.signupFunnel.starts);
+  if (summary.signupFunnel.starts >= 5 && signupCompletion < 50) {
+    const failureNote =
+      summary.signupFunnel.failures > 0 ? ` ${summary.signupFunnel.failures} signup failures were recorded.` : "";
+    findings.push({
+      area: "Registration",
+      severity: "high",
+      title: "Registrations are abandoned mid-flow",
+      finding: `${summary.signupFunnel.starts} visitors started signup but only ${summary.signupFunnel.completions} finished (${signupCompletion}%).${failureNote}`,
+      action: "Shorten the form, offer Google/social sign-in, verify the email-confirmation step works, and show inline errors so users can recover.",
+      metric: `${signupCompletion}% finish signup`,
+    });
+  }
+
+  // ---- Purchasing ------------------------------------------------------------
+  if (summary.pricingVisitors >= 5 && summary.pricingToBuyRate < 35) {
+    findings.push({
+      area: "Purchasing",
+      severity: "medium",
+      title: "Pricing visitors stall before choosing a package",
+      finding: `Only ${summary.pricingToBuyRate}% of pricing visitors reach Buy Credits. The value of credits or how racecards work may be unclear.`,
+      action: "Sharpen package CTA contrast, show what one credit buys, and answer the top objection right on the pricing card.",
+      metric: `${summary.pricingToBuyRate}% pricing → buy`,
+    });
+  }
+  if (summary.buyCreditsVisitors >= 5 && summary.checkoutStartRate < 45) {
+    findings.push({
+      area: "Purchasing",
+      severity: "high",
+      title: "Buy Credits page loses ready buyers",
+      finding: `Only ${summary.checkoutStartRate}% of Buy Credits visitors start checkout. Something between intent and the pay button is causing hesitation.`,
+      action: "Pre-select a recommended package, add trust/Stripe-secure signals, and remove any login wall before the purchase button.",
+      metric: `${summary.checkoutStartRate}% reach checkout`,
+    });
+  }
+  if (summary.checkoutStarts >= 3 && summary.checkoutCompletionRate < 60) {
+    findings.push({
+      area: "Purchasing",
+      severity: "high",
+      title: "Checkouts don't become purchases",
+      finding: `${summary.checkoutStarts} checkout starts produced ${summary.completedPurchases} purchases (${summary.checkoutCompletionRate}%). Payment or post-checkout friction is leaking buyers.`,
+      action: "Check Stripe failures and webhook delays, add more payment methods, and confirm users land somewhere clear after paying.",
+      metric: `${summary.checkoutCompletionRate}% checkout → paid`,
+    });
+  }
+
+  // ---- Positive notes when an area has data and looks healthy -----------------
+  if (returningShare >= 30 && visitors >= 20) {
+    findings.push({
+      area: "Retention",
+      severity: "good",
+      title: "Visitors are coming back",
+      finding: `${returningShare}% returning visitors is a healthy repeat rate. Retention is not the bottleneck right now.`,
+      action: "Protect this — keep the daily card cadence and reward returning users.",
+      metric: `${returningShare}% returning`,
+    });
+  }
+  if (summary.checkoutStarts >= 3 && summary.checkoutCompletionRate >= 60) {
+    findings.push({
+      area: "Purchasing",
+      severity: "good",
+      title: "Checkout converts well",
+      finding: `${summary.checkoutCompletionRate}% of checkout starts complete. The payment step itself is working.`,
+      action: "Focus effort upstream — get more qualified visitors into the funnel.",
+      metric: `${summary.checkoutCompletionRate}% checkout → paid`,
+    });
+  }
+
+  const sorted = [...findings].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
+  const top = sorted.find((f) => f.severity !== "good");
+
+  const headline = top
+    ? `Biggest drag right now: ${top.area.toLowerCase()} — ${top.title.toLowerCase()}.`
+    : "No major retention or conversion blocker stands out — reinforce what's working and keep gathering data.";
+
+  return { headline, visitorToPurchaseRate, findings: sorted.slice(0, 6) };
 }
 
 function buildAnalyticsIssues(summary: Omit<AnalyticsSummary, "issues">): AnalyticsIssue[] {

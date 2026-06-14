@@ -1,8 +1,53 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { decryptSettingValue } from "../_shared/decrypt_setting.ts";
+import {
+  completeAnthropic,
+  completeOpenAI,
+  completeOpenRouter,
+  resolveOpenRouterModelsFromEnv,
+} from "../racing-assistant/llm_providers.ts";
 
 type Provider = "openrouter" | "anthropic" | "openai";
+
+const DEFAULT_PROVIDER: Provider = "openrouter";
+
+function getOpenRouterKeyFromEnv(): string {
+  return (Deno.env.get("OPENROUTER_API_KEY") || "").trim();
+}
+
+function hasProviderApiKey(settings: Record<string, string>, p: Provider): boolean {
+  if (p === "openrouter") {
+    return !!getOpenRouterKeyFromEnv() || !!(settings.openrouter_api_key || "").trim();
+  }
+  if (p === "anthropic") return !!(settings.anthropic_api_key || "").trim();
+  return !!(settings.openai_api_key || "").trim();
+}
+
+/** Prefer admin-selected provider; fall back to the first provider with a usable key. */
+function resolveChatProvider(settings: Record<string, string>): Provider {
+  let p = (settings.ai_chat_provider || DEFAULT_PROVIDER).trim().toLowerCase() as Provider;
+  if (p !== "openrouter" && p !== "anthropic" && p !== "openai") p = DEFAULT_PROVIDER;
+  if (hasProviderApiKey(settings, p)) return p;
+  for (const c of ["anthropic", "openai", "openrouter"] as Provider[]) {
+    if (hasProviderApiKey(settings, c)) return c;
+  }
+  return p;
+}
+
+const FUNNEL_ANALYST_SYSTEM_PROMPT =
+  "You are a growth advisor with 30 years of combined, hands-on experience as an SEO strategist, " +
+  "UI/UX designer, and product manager, now acting as the lead growth expert for a paid horse-racing " +
+  "racecard product (visitors browse free racecards, register an account, buy credits, and spend a " +
+  "credit to download a racecard). You are given first-party funnel analytics. Give a sharp, specific, " +
+  "executive-level analysis of WHY the site may be failing to retain visitors, convert registrations, " +
+  "or drive purchases. Be concrete and prioritized — no generic filler. Structure your answer as: " +
+  "1) Headline verdict (2-3 sentences naming the single biggest blocker). " +
+  "2) Retention, 3) Registration, 4) Purchasing — each with the likely root cause tied to the numbers " +
+  "and 2-3 concrete, testable fixes ranked by expected impact. " +
+  "5) The top 3 experiments to run next, highest ROI first. " +
+  "Reference the actual metrics provided. Use short markdown headings and bullet points. " +
+  "If the data volume is too small to be reliable, say so plainly and explain what to collect.";
 
 const AI_KEYS = [
   "ai_chat_provider",
@@ -239,6 +284,76 @@ Deno.serve(async (req) => {
         estimated_cost_usd: Math.round(estimated_cost_usd * 1e6) / 1e6,
         by_provider,
       });
+    }
+
+    if (action === "analyze_funnel") {
+      const metrics = (body as { metrics?: unknown }).metrics;
+      if (!metrics || typeof metrics !== "object") {
+        return respond({ error: "Missing metrics payload" }, 400);
+      }
+
+      const settings = await loadAiSettings(supabaseAdmin, encryptionKey);
+      const provider = resolveChatProvider(settings);
+      if (!hasProviderApiKey(settings, provider)) {
+        return respond(
+          { error: "No AI provider is configured. Add an API key in Admin → Settings → AI." },
+          503,
+        );
+      }
+
+      const rangeDays = typeof body.days === "number" && body.days > 0 ? body.days : 90;
+      const userMessage =
+        `Date range analyzed: last ${rangeDays} days.\n\n` +
+        `First-party funnel metrics (JSON):\n${JSON.stringify(metrics, null, 2)}\n\n` +
+        "Analyze why this site may be underperforming on retention, registration, and purchasing, " +
+        "and give prioritized, testable recommendations.";
+
+      try {
+        let text = "";
+        let model = "";
+        if (provider === "anthropic") {
+          const anModel = (settings.anthropic_model || "").trim() || "claude-3-5-haiku-20241022";
+          const r = await completeAnthropic(
+            (settings.anthropic_api_key || "").trim(),
+            anModel,
+            [],
+            userMessage,
+            FUNNEL_ANALYST_SYSTEM_PROMPT,
+          );
+          text = r.text;
+          model = r.model;
+        } else if (provider === "openai") {
+          const oaModel = (settings.openai_model || "").trim() || "gpt-4o-mini";
+          const r = await completeOpenAI(
+            (settings.openai_api_key || "").trim(),
+            oaModel,
+            [],
+            userMessage,
+            FUNNEL_ANALYST_SYSTEM_PROMPT,
+          );
+          text = r.text;
+          model = r.model;
+        } else {
+          const orKey = getOpenRouterKeyFromEnv() || (settings.openrouter_api_key || "").trim();
+          const orModels = resolveOpenRouterModelsFromEnv((settings.openrouter_model || "").trim());
+          const r = await completeOpenRouter(
+            orKey,
+            orModels,
+            [],
+            userMessage,
+            FUNNEL_ANALYST_SYSTEM_PROMPT,
+          );
+          text = r.text;
+          model = r.model;
+        }
+
+        if (!text.trim()) return respond({ error: "Empty response from model" }, 502);
+        return respond({ analysis: text, provider, model });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Provider error";
+        console.error("[ai-admin] analyze_funnel:", msg);
+        return respond({ error: msg.slice(0, 280) }, 502);
+      }
     }
 
     return respond({ error: `Unknown action: ${action}` }, 400);

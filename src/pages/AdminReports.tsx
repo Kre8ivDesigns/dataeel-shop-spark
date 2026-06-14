@@ -18,12 +18,14 @@ import { Download, Loader2 } from "lucide-react";
 import { PageHero } from "@/components/PageHero";
 import { sanitizeError } from "@/lib/errorHandler";
 import {
-  creditLedgerDetailFromMeta,
+  creditLedgerDetail,
   creditLedgerEntryTypeLabel,
   creditLedgerUserDisplay,
   emailByUserIdFromProfiles,
   formatLedgerBalance,
   formatLedgerDelta,
+  ledgerRacecardLabel,
+  type LedgerRacecard,
 } from "@/lib/adminCreditLedger";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
@@ -44,6 +46,7 @@ const AdminReports = () => {
   const [ledger, setLedger] = useState<LedgerRow[]>([]);
   const [downloads, setDownloads] = useState<DownloadJoin[]>([]);
   const [profiles, setProfiles] = useState<{ user_id: string; email: string }[]>([]);
+  const [ledgerRacecards, setLedgerRacecards] = useState<Record<string, LedgerRacecard>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -68,6 +71,44 @@ const AdminReports = () => {
     }
 
     const ledgerRows = ledRes.error ? [] : (ledRes.data ?? []);
+
+    // Racecards referenced by download deductions, so the ledger Details column can
+    // name which racecard each credit was spent on. Prefer the already-joined event
+    // rows, then fill any gaps with a direct racecards lookup.
+    const racecardMap: Record<string, LedgerRacecard> = {};
+    for (const d of downloadRows) {
+      if (d.racecards) {
+        racecardMap[d.racecard_id] = {
+          track_name: d.racecards.track_name,
+          race_date: d.racecards.race_date,
+          file_name: d.racecards.file_name,
+        };
+      }
+    }
+    const missingRacecardIds = [
+      ...new Set(
+        ledgerRows
+          .filter((r) => r.entry_type === "download_deduction" && r.ref_id && !racecardMap[r.ref_id])
+          .map((r) => r.ref_id as string),
+      ),
+    ];
+    if (missingRacecardIds.length > 0) {
+      const rcRes = await supabase
+        .from("racecards")
+        .select("id, track_name, race_date, file_name")
+        .in("id", missingRacecardIds);
+      if (!rcRes.error) {
+        for (const rc of rcRes.data ?? []) {
+          racecardMap[rc.id] = {
+            track_name: rc.track_name,
+            race_date: rc.race_date,
+            file_name: rc.file_name,
+          };
+        }
+      }
+    }
+    setLedgerRacecards(racecardMap);
+
     const ids = [
       ...new Set([
         ...ledgerRows.map((r) => r.user_id),
@@ -187,6 +228,7 @@ const AdminReports = () => {
       "balance_after",
       "entry_type",
       "ref_id",
+      "racecard",
       "meta",
     ];
     const lines = [
@@ -200,6 +242,9 @@ const AdminReports = () => {
           r.balance_after,
           r.entry_type,
           r.ref_id ?? "",
+          r.entry_type === "download_deduction" && r.ref_id
+            ? ledgerRacecardLabel(ledgerRacecards[r.ref_id])
+            : "",
           JSON.stringify(r.meta ?? {}),
         ]
           .map((c) => `"${String(c).replace(/"/g, '""')}"`)
@@ -439,7 +484,7 @@ const AdminReports = () => {
                               {creditLedgerEntryTypeLabel(r.entry_type)}
                             </TableCell>
                             <TableCell className="text-xs text-muted-foreground max-w-[220px]">
-                              {creditLedgerDetailFromMeta(r.meta) || "—"}
+                              {creditLedgerDetail(r, ledgerRacecards) || "—"}
                             </TableCell>
                           </TableRow>
                         ))}
