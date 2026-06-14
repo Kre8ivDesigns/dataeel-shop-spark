@@ -17,6 +17,7 @@ import {
   Download,
   Globe2,
   Loader2,
+  Megaphone,
   MonitorSmartphone,
   MousePointerClick,
   Printer,
@@ -48,10 +49,30 @@ import {
 } from "@/lib/siteAnalytics";
 
 const RANGE_OPTIONS = [
+  { value: "7", label: "Last 7 days" },
   { value: "30", label: "Last 30 days" },
   { value: "90", label: "Last 90 days" },
   { value: "365", label: "Last 12 months" },
 ] as const;
+
+type FbAdsRow = {
+  date: string;
+  account_currency: string | null;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  reach: number;
+  ctr: number;
+  cpc: number;
+  purchases: number;
+  purchase_value: number;
+};
+
+type FbAdsResponse = {
+  configured: boolean;
+  rows?: FbAdsRow[];
+  error?: string;
+};
 
 type AuditRow = {
   id: string;
@@ -86,6 +107,18 @@ function describeTableFetchError(tableName: string, err: { code?: string; messag
 
 function formatPercent(value: number): string {
   return `${value.toFixed(value % 1 === 0 ? 0 : 1)}%`;
+}
+
+function formatMoney(value: number, currency: string | null): string {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: currency || "USD",
+      maximumFractionDigits: 2,
+    }).format(value);
+  } catch {
+    return `${(currency || "USD")} ${value.toFixed(2)}`;
+  }
 }
 
 function issueVariant(issue: AnalyticsIssue): "default" | "secondary" | "destructive" | "outline" {
@@ -156,6 +189,10 @@ const AdminAnalytics = () => {
   const [auditError, setAuditError] = useState<string | null>(null);
   const [analyticsError, setAnalyticsError] = useState<string | null>(null);
   const [errors, setErrors] = useState<AuditRow[]>([]);
+  const [fbAds, setFbAds] = useState<FbAdsRow[]>([]);
+  const [fbConfigured, setFbConfigured] = useState<boolean | null>(null);
+  const [fbLoading, setFbLoading] = useState(false);
+  const [fbError, setFbError] = useState<string | null>(null);
 
   const days = parseInt(range, 10);
 
@@ -174,6 +211,7 @@ const AdminAnalytics = () => {
           "created_at,event_name,visitor_id,session_id,user_id,path,page_title,referrer,referrer_host,source,medium,campaign,content,term,device_type,is_new_visitor,first_seen_at,properties",
         )
         .gte("created_at", since.toISOString())
+        .order("created_at", { ascending: false })
         .limit(5000),
       supabase.from("audit_log").select("*").order("created_at", { ascending: false }).limit(80),
     ]);
@@ -205,6 +243,33 @@ const AdminAnalytics = () => {
   useEffect(() => {
     if (isAdmin) fetchAll();
   }, [isAdmin, fetchAll]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    let cancelled = false;
+    setFbLoading(true);
+    setFbError(null);
+    supabase.functions
+      .invoke<FbAdsResponse>("facebook-ads-insights", { body: { days } })
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          setFbConfigured(null);
+          setFbError(error.message);
+          setFbAds([]);
+          return;
+        }
+        setFbConfigured(data?.configured ?? false);
+        setFbError(data?.error ?? null);
+        setFbAds(data?.rows ?? []);
+      })
+      .finally(() => {
+        if (!cancelled) setFbLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdmin, days]);
 
   const profFiltered = useMemo(() => filterSince(profiles, days), [profiles, days]);
   const dlFiltered = useMemo(() => filterSince(downloads, days), [downloads, days]);
@@ -258,6 +323,39 @@ const AdminAnalytics = () => {
         pageViews: vmap.get(date) ?? 0,
       }));
   }, [profFiltered, dlFiltered, siteEvents, days]);
+
+  const fbTotals = useMemo(() => {
+    const currency = fbAds.find((row) => row.account_currency)?.account_currency ?? null;
+    const spend = fbAds.reduce((sum, row) => sum + row.spend, 0);
+    const impressions = fbAds.reduce((sum, row) => sum + row.impressions, 0);
+    const clicks = fbAds.reduce((sum, row) => sum + row.clicks, 0);
+    const purchases = fbAds.reduce((sum, row) => sum + row.purchases, 0);
+    const purchaseValue = fbAds.reduce((sum, row) => sum + row.purchase_value, 0);
+    const signups = analytics.signupFunnel.completions;
+    return {
+      currency,
+      spend,
+      impressions,
+      clicks,
+      purchases,
+      purchaseValue,
+      ctr: impressions > 0 ? (clicks / impressions) * 100 : 0,
+      cpc: clicks > 0 ? spend / clicks : 0,
+      roas: spend > 0 ? purchaseValue / spend : 0,
+      costPerSignup: signups > 0 ? spend / signups : 0,
+    };
+  }, [fbAds, analytics.signupFunnel.completions]);
+
+  const fbChart = useMemo(
+    () =>
+      fbAds.map((row) => ({
+        date: row.date,
+        spend: Math.round(row.spend * 100) / 100,
+        clicks: row.clicks,
+        purchases: row.purchases,
+      })),
+    [fbAds],
+  );
 
   if (!isAdmin) return null;
 
@@ -330,6 +428,65 @@ const AdminAnalytics = () => {
                 <MetricCard icon={MousePointerClick} label="CTA clicks" value={analytics.topCtaClicks.reduce((sum, item) => sum + item.clicks, 0)} detail="Tracked buttons and links" />
                 <MetricCard icon={AlertTriangle} label="Errors" value={errors.length} detail="From latest 80 audit rows" tone={errors.length > 0 ? "danger" : "default"} />
               </div>
+
+              <Card className="bg-card border-border mb-8">
+                <CardHeader>
+                  <CardTitle className="text-foreground text-lg flex items-center gap-2">
+                    <Megaphone className="h-5 w-5 text-primary" /> Facebook Ads
+                  </CardTitle>
+                  <CardDescription>Spend, reach, and conversions from the Meta Marketing API for the selected range</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {fbLoading ? (
+                    <div className="flex justify-center py-10">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    </div>
+                  ) : fbError ? (
+                    <Alert variant="destructive">
+                      <AlertTitle>Could not load Facebook Ads</AlertTitle>
+                      <AlertDescription>{fbError}</AlertDescription>
+                    </Alert>
+                  ) : fbConfigured === false ? (
+                    <Alert>
+                      <AlertTitle>Facebook Ads not connected</AlertTitle>
+                      <AlertDescription>
+                        Add the <code>META_ACCESS_TOKEN</code> and <code>META_AD_ACCOUNT_ID</code> Edge Function secrets
+                        (Supabase Dashboard → Project Settings → Edge Functions → Secrets), then reload this page.
+                      </AlertDescription>
+                    </Alert>
+                  ) : fbAds.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-6 text-center">No Facebook Ads activity in this range.</p>
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                        <MetricCard icon={Megaphone} label="Ad spend" value={formatMoney(fbTotals.spend, fbTotals.currency)} detail={`${fbTotals.impressions.toLocaleString()} impressions`} tone="primary" />
+                        <MetricCard icon={MousePointerClick} label="Link clicks" value={fbTotals.clicks.toLocaleString()} detail={`${formatPercent(fbTotals.ctr)} CTR · ${formatMoney(fbTotals.cpc, fbTotals.currency)} CPC`} />
+                        <MetricCard icon={Route} label="Pixel purchases" value={fbTotals.purchases} detail={`${formatMoney(fbTotals.purchaseValue, fbTotals.currency)} value · ${fbTotals.roas.toFixed(2)}x ROAS`} />
+                        <MetricCard icon={UserPlus} label="Cost / signup" value={analytics.signupFunnel.completions > 0 ? formatMoney(fbTotals.costPerSignup, fbTotals.currency) : "-"} detail={`${analytics.signupFunnel.completions} tracked signups (all sources)`} />
+                      </div>
+                      <div className="h-72">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={fbChart}>
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                            <XAxis dataKey="date" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                            <YAxis yAxisId="left" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                            <YAxis yAxisId="right" orientation="right" allowDecimals={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                            <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} />
+                            <Legend />
+                            <Line yAxisId="left" type="monotone" dataKey="spend" name={`Spend (${fbTotals.currency || "USD"})`} stroke="hsl(var(--primary))" dot={false} strokeWidth={2} />
+                            <Line yAxisId="right" type="monotone" dataKey="clicks" name="Clicks" stroke="hsl(var(--info))" dot={false} strokeWidth={2} />
+                            <Line yAxisId="right" type="monotone" dataKey="purchases" name="Purchases" stroke="hsl(var(--muted-foreground))" dot={false} strokeWidth={2} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Cost per signup divides Facebook spend by all tracked signups; attribute more precisely by tagging ad URLs with
+                        {" "}<code>utm_source=facebook&amp;utm_medium=paid</code> and cross-referencing the Visitor sources table.
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
               <div className="grid xl:grid-cols-2 gap-6 mb-8">
                 <Card className="bg-card border-border">

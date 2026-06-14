@@ -117,3 +117,7 @@ verify_jwt = true
 
 [functions.ai-admin]
 verify_jwt = true
+
+# Admin-only Meta Marketing API pull (token lives in Edge Function secrets)
+[functions.facebook-ads-insights]
+verify_jwt = true
