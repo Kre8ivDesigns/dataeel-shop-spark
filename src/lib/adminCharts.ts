@@ -79,16 +79,31 @@ export function exportTransactionsCsv(
     credits: number;
     amount: number;
     status: string;
+    stripe_payment_intent_id?: string | null;
+    stripe_session_id?: string | null;
     user_id: string;
     user_display_name?: string;
   }[],
 ): string {
-  const header = ["id", "created_at", "package_name", "credits", "amount", "status", "user", "user_id"];
+  const header = [
+    "id",
+    "stripe_payment_intent_id",
+    "stripe_session_id",
+    "created_at",
+    "package_name",
+    "credits",
+    "amount",
+    "status",
+    "user",
+    "user_id",
+  ];
   const lines = [header.join(",")];
   for (const r of rows) {
     lines.push(
       [
         r.id,
+        r.stripe_payment_intent_id ?? "",
+        r.stripe_session_id ?? "",
         r.created_at,
         JSON.stringify(r.package_name),
         r.credits,

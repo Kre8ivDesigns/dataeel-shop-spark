@@ -48,6 +48,7 @@ type Tx = {
   credits: number;
   amount: number;
   status: string;
+  stripe_payment_intent_id: string | null;
   stripe_session_id: string | null;
   user_id: string;
   user_display_name?: string;
@@ -66,6 +67,20 @@ const PERIODS = [
   { value: "365", label: "Last 12 months" },
   { value: "0", label: "All time" },
 ] as const;
+
+function getTransactionDisplayId(tx: Tx): string {
+  return tx.stripe_payment_intent_id ?? tx.stripe_session_id ?? tx.id;
+}
+
+function getTransactionTitle(tx: Tx): string {
+  return [
+    tx.stripe_payment_intent_id ? `Payment intent: ${tx.stripe_payment_intent_id}` : null,
+    tx.stripe_session_id ? `Checkout session: ${tx.stripe_session_id}` : null,
+    `App transaction: ${tx.id}`,
+  ]
+    .filter((line): line is string => line !== null)
+    .join("\n");
+}
 
 const AdminFinancials = () => {
   const [loading, setLoading] = useState(true);
@@ -346,6 +361,7 @@ const AdminFinancials = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Date</TableHead>
+                        <TableHead>Transaction ID</TableHead>
                         <TableHead>Package</TableHead>
                         <TableHead>Credits</TableHead>
                         <TableHead>Amount</TableHead>
@@ -358,6 +374,12 @@ const AdminFinancials = () => {
                         <TableRow key={t.id}>
                           <TableCell className="text-muted-foreground whitespace-nowrap">
                             {new Date(t.created_at).toLocaleString()}
+                          </TableCell>
+                          <TableCell
+                            className="font-mono text-xs text-muted-foreground max-w-[220px] truncate"
+                            title={getTransactionTitle(t)}
+                          >
+                            {getTransactionDisplayId(t)}
                           </TableCell>
                           <TableCell className="font-medium text-foreground">{t.package_name}</TableCell>
                           <TableCell className="font-mono-data text-primary">{t.credits}</TableCell>
@@ -380,7 +402,7 @@ const AdminFinancials = () => {
                       ))}
                       {completedInRange.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
+                          <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
                             No transactions in this range
                           </TableCell>
                         </TableRow>

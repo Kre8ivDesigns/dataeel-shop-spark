@@ -30,12 +30,15 @@ describe("exportTransactionsCsv", () => {
         credits: 10,
         amount: 42,
         status: "completed",
+        stripe_payment_intent_id: "pi_live_123",
+        stripe_session_id: "cs_live_123",
         user_id: "user-1",
         user_display_name: "Ada Lovelace",
       },
     ]);
 
-    expect(csv).toContain("user,user_id");
+    expect(csv).toContain("id,stripe_payment_intent_id,stripe_session_id");
+    expect(csv).toContain("tx_1,pi_live_123,cs_live_123");
     expect(csv).toContain('"Ada Lovelace",user-1');
   });
 });
