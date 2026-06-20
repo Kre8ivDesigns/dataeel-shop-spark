@@ -14,6 +14,14 @@ export function paymentIntentIdFromSession(session: Stripe.Checkout.Session | nu
   return null;
 }
 
+export function customerIdFromSession(session: Stripe.Checkout.Session | null | undefined): string | null {
+  if (!session || typeof session !== "object") return null;
+  const customer = session.customer;
+  if (typeof customer === "string") return customer;
+  if (customer && typeof customer === "object" && "id" in customer) return customer.id;
+  return null;
+}
+
 /** Expanded PaymentIntent status when `payment_intent` is expanded on the Session. */
 export function paymentIntentStatusFromSession(session: Stripe.Checkout.Session | null | undefined): string | null {
   if (!session || typeof session !== "object") return null;
@@ -126,6 +134,7 @@ async function fulfillCheckoutSessionCompletedInner(
   const credits = parseInt(session.metadata?.credits || "0", 10);
   const packageName = session.metadata?.package_name || "Unknown";
   const amount = (session.amount_total || 0) / 100;
+  const customerId = customerIdFromSession(session);
 
   if (!userId || (!isUnlimited && credits <= 0)) {
     console.error(
@@ -133,6 +142,20 @@ async function fulfillCheckoutSessionCompletedInner(
       session.id,
     );
     return { outcome: "skipped_metadata" };
+  }
+
+  if (customerId) {
+    const { error: profileUpdateError } = await supabaseAdmin
+      .from("profiles")
+      .update({ stripe_customer_id: customerId })
+      .eq("user_id", userId)
+      .is("stripe_customer_id", null);
+    if (profileUpdateError) {
+      console.warn(
+        "[fulfillCheckoutSessionCompleted] could not persist stripe_customer_id:",
+        profileUpdateError.message,
+      );
+    }
   }
 
   const { data: insertedTx, error: txError } = await supabaseAdmin
@@ -282,4 +305,3 @@ async function fulfillCheckoutSessionCompletedInner(
 
   return { outcome: "fulfilled" };
 }
-

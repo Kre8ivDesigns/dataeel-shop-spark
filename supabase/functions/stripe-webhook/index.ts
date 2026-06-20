@@ -318,6 +318,17 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
       userId = prof?.user_id ?? undefined;
     }
 
+    if (userId && customerId) {
+      const { error: profileUpdateError } = await supabaseAdmin
+        .from("profiles")
+        .update({ stripe_customer_id: customerId })
+        .eq("user_id", userId)
+        .is("stripe_customer_id", null);
+      if (profileUpdateError) {
+        console.warn("[stripe-webhook] could not persist stripe_customer_id:", profileUpdateError.message);
+      }
+    }
+
     if (credits <= 0 && inv.lines?.data?.length) {
       const line = inv.lines.data[0];
       const priceObj = line.price;

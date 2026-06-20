@@ -53,6 +53,13 @@ function isDeletedCustomer(customer: Stripe.Customer | Stripe.DeletedCustomer): 
   return "deleted" in customer && customer.deleted === true;
 }
 
+async function findStripeCustomerIdsByEmail(stripe: Stripe, email: string): Promise<string[]> {
+  const trimmedEmail = email.trim();
+  if (!trimmedEmail) return [];
+  const customers = await stripe.customers.list({ email: trimmedEmail, limit: 10 });
+  return customers.data.map((customer) => customer.id);
+}
+
 function getRecoveryRedirectTo(req: Request): string | undefined {
   const origin = getValidatedOrigin(req);
   return origin ? `${origin}/auth?mode=reset` : undefined;
@@ -299,39 +306,6 @@ Deno.serve(async (req) => {
       const rawStripeCustomerId = typeof profile.stripe_customer_id === "string"
         ? profile.stripe_customer_id.trim()
         : "";
-      if (!rawStripeCustomerId) {
-        return respond({ ok: true, disconnected: false, reason: "no_stripe_customer_id" });
-      }
-
-      const stripeCustomerId = normalizeStripeCustomerId(rawStripeCustomerId);
-      if (!stripeCustomerId) {
-        const { error: updateErr } = await supabaseAdmin
-          .from("profiles")
-          .update({ stripe_customer_id: null, updated_at: new Date().toISOString() })
-          .eq("user_id", userId);
-        if (updateErr) return respond({ error: updateErr.message }, 500);
-
-        await supabaseAdmin.from("audit_log").insert({
-          actor_id: actorId,
-          action: "admin.user.stripe_customer.disconnect",
-          resource: "profiles",
-          resource_id: userId,
-          detail: {
-            email: profile.email,
-            stripe_customer_id: rawStripeCustomerId,
-            invalid_stripe_customer_id: true,
-            stripe_deleted: false,
-          },
-        });
-
-        return respond({
-          ok: true,
-          disconnected: true,
-          stripe_customer_id: rawStripeCustomerId,
-          stripe_deleted: false,
-          invalid_stripe_customer_id: true,
-        });
-      }
 
       const stripeConfig = await resolveStripeConfig(supabaseAdmin);
       if (!stripeConfig.secretKey) {
@@ -339,20 +313,34 @@ Deno.serve(async (req) => {
       }
 
       const stripe = new Stripe(stripeConfig.secretKey, { apiVersion: "2025-08-27.basil" });
-      let stripeDeleted = false;
-      let stripeAlreadyMissing = false;
+      const stripeCustomerId = normalizeStripeCustomerId(rawStripeCustomerId);
+      const invalidStripeCustomerId = rawStripeCustomerId !== "" && !stripeCustomerId;
+      const lookupIds = stripeCustomerId
+        ? [stripeCustomerId]
+        : await findStripeCustomerIdsByEmail(stripe, profile.email);
+      const uniqueCustomerIds = [...new Set(lookupIds)];
 
-      try {
-        const customer = await stripe.customers.retrieve(stripeCustomerId);
-        if (isDeletedCustomer(customer)) {
-          stripeAlreadyMissing = true;
-        } else {
-          await stripe.customers.del(stripeCustomerId);
-          stripeDeleted = true;
+      let stripeDeletedCount = 0;
+      let stripeAlreadyMissingCount = 0;
+      const deletedCustomerIds: string[] = [];
+      const missingCustomerIds: string[] = [];
+
+      for (const customerId of uniqueCustomerIds) {
+        try {
+          const customer = await stripe.customers.retrieve(customerId);
+          if (isDeletedCustomer(customer)) {
+            stripeAlreadyMissingCount++;
+            missingCustomerIds.push(customerId);
+          } else {
+            await stripe.customers.del(customerId);
+            stripeDeletedCount++;
+            deletedCustomerIds.push(customerId);
+          }
+        } catch (err) {
+          if (!isStripeMissingCustomer(err)) throw err;
+          stripeAlreadyMissingCount++;
+          missingCustomerIds.push(customerId);
         }
-      } catch (err) {
-        if (!isStripeMissingCustomer(err)) throw err;
-        stripeAlreadyMissing = true;
       }
 
       const { error: updateErr } = await supabaseAdmin
@@ -368,19 +356,27 @@ Deno.serve(async (req) => {
         resource_id: userId,
         detail: {
           email: profile.email,
-          stripe_customer_id: stripeCustomerId,
+          stripe_customer_id: rawStripeCustomerId || null,
           stripe_mode: stripeConfig.mode,
-          stripe_deleted: stripeDeleted,
-          stripe_already_missing: stripeAlreadyMissing,
+          matched_by_email: !stripeCustomerId,
+          invalid_stripe_customer_id: invalidStripeCustomerId,
+          stripe_deleted_count: stripeDeletedCount,
+          stripe_already_missing_count: stripeAlreadyMissingCount,
+          deleted_stripe_customer_ids: deletedCustomerIds,
+          missing_stripe_customer_ids: missingCustomerIds,
         },
       });
 
       return respond({
         ok: true,
-        disconnected: true,
-        stripe_customer_id: stripeCustomerId,
-        stripe_deleted: stripeDeleted,
-        stripe_already_missing: stripeAlreadyMissing,
+        disconnected: uniqueCustomerIds.length > 0 || rawStripeCustomerId !== "",
+        stripe_customer_id: rawStripeCustomerId || null,
+        matched_by_email: !stripeCustomerId,
+        invalid_stripe_customer_id: invalidStripeCustomerId,
+        stripe_deleted: stripeDeletedCount > 0,
+        stripe_deleted_count: stripeDeletedCount,
+        stripe_already_missing: stripeAlreadyMissingCount > 0,
+        stripe_already_missing_count: stripeAlreadyMissingCount,
       });
     }
 

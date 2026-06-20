@@ -106,6 +106,8 @@ export function AdminUserDetailSheet({
       delivery_method?: string | null;
       disconnected?: boolean;
       stripe_deleted?: boolean;
+      stripe_deleted_count?: number;
+      matched_by_email?: boolean;
     };
   };
 
@@ -204,10 +206,10 @@ export function AdminUserDetailSheet({
   };
 
   const handleDisconnectStripeCustomer = async () => {
-    if (!customer?.stripe_customer_id) return;
+    if (!customer) return;
     if (
       !confirm(
-        `Cancel the Stripe connection for ${customer.email}? This deletes the Stripe customer in the active Stripe mode, clears the stored customer ID, and leaves DATAEEL credits and transaction history in place.`,
+        `Cancel the Stripe connection for ${customer.email}? This deletes Stripe customer record(s) found in the active Stripe mode, clears the stored customer ID, and leaves DATAEEL credits and transaction history in place.`,
       )
     ) {
       return;
@@ -223,14 +225,20 @@ export function AdminUserDetailSheet({
 
     toast({
       title: res.disconnected ? "Stripe connection cancelled" : "No Stripe connection found",
-      description: res.stripe_deleted
-        ? "The Stripe customer was deleted and the local customer ID was cleared."
-        : "The local customer ID was cleared.",
+      description:
+        res.stripe_deleted_count && res.stripe_deleted_count > 1
+          ? `${res.stripe_deleted_count} Stripe customer records were deleted.`
+          : res.stripe_deleted
+            ? "The Stripe customer was deleted and the local customer ID was cleared."
+            : res.matched_by_email
+              ? "No Stripe customer was found for this email in the active Stripe mode."
+              : "The local customer ID was cleared.",
     });
     onUpdated();
   };
 
   if (!customer) return null;
+  const canAttemptStripeDisconnect = Boolean(customer.stripe_customer_id || unlimitedPlan || userTx.length > 0);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -286,14 +294,16 @@ export function AdminUserDetailSheet({
               <p className="text-xs text-muted-foreground mt-1">
                 {customer.stripe_customer_id
                   ? `Connected as ${customer.stripe_customer_id}.`
-                  : "No Stripe customer is connected to this account."}
+                  : canAttemptStripeDisconnect
+                    ? "No local Stripe customer ID is stored. Cancellation will search Stripe by this customer's email."
+                    : "No Stripe customer is connected to this account."}
               </p>
             </div>
             <Button
               type="button"
               variant="outline"
               className="border-destructive/50 text-destructive hover:bg-destructive/10"
-              disabled={busy !== null || !customer.stripe_customer_id}
+              disabled={busy !== null || !canAttemptStripeDisconnect}
               onClick={() => void handleDisconnectStripeCustomer()}
             >
               {busy === "stripe" ? "Cancelling…" : "Cancel Stripe connection"}
