@@ -9,7 +9,7 @@ type Action =
   | "send_password_recovery"
   | "update_profile"
   | "set_unlimited_credits"
-  | "disconnect_stripe_customer"
+  | "cancel_stripe_subscription"
   | "delete_user"
   | "delete_fake_zero_credit_users";
 
@@ -40,24 +40,15 @@ function normalizeStripeCustomerId(value: unknown): string | null {
   return s;
 }
 
-function isStripeMissingCustomer(error: unknown): boolean {
-  if (!error || typeof error !== "object") return false;
-  const stripeError = error as { code?: unknown; message?: unknown };
-  return (
-    stripeError.code === "resource_missing" ||
-    (typeof stripeError.message === "string" && stripeError.message.includes("No such customer"))
-  );
-}
-
-function isDeletedCustomer(customer: Stripe.Customer | Stripe.DeletedCustomer): customer is Stripe.DeletedCustomer {
-  return "deleted" in customer && customer.deleted === true;
-}
-
 async function findStripeCustomerIdsByEmail(stripe: Stripe, email: string): Promise<string[]> {
   const trimmedEmail = email.trim();
   if (!trimmedEmail) return [];
   const customers = await stripe.customers.list({ email: trimmedEmail, limit: 10 });
   return customers.data.map((customer) => customer.id);
+}
+
+function isCancellableSubscription(subscription: Stripe.Subscription): boolean {
+  return ["active", "trialing", "past_due", "unpaid", "paused", "incomplete"].includes(subscription.status);
 }
 
 function getRecoveryRedirectTo(req: Request): string | undefined {
@@ -294,7 +285,7 @@ Deno.serve(async (req) => {
       return respond({ ok: true });
     }
 
-    if (action === "disconnect_stripe_customer") {
+    if (action === "cancel_stripe_subscription") {
       const { data: profile, error: profileErr } = await supabaseAdmin
         .from("profiles")
         .select("email, stripe_customer_id")
@@ -320,39 +311,78 @@ Deno.serve(async (req) => {
         : await findStripeCustomerIdsByEmail(stripe, profile.email);
       const uniqueCustomerIds = [...new Set(lookupIds)];
 
-      let stripeDeletedCount = 0;
-      let stripeAlreadyMissingCount = 0;
-      const deletedCustomerIds: string[] = [];
-      const missingCustomerIds: string[] = [];
+      let canceledSubscriptionCount = 0;
+      const canceledSubscriptionIds: string[] = [];
+      const nonCancellableSubscriptionIds: string[] = [];
 
       for (const customerId of uniqueCustomerIds) {
-        try {
-          const customer = await stripe.customers.retrieve(customerId);
-          if (isDeletedCustomer(customer)) {
-            stripeAlreadyMissingCount++;
-            missingCustomerIds.push(customerId);
-          } else {
-            await stripe.customers.del(customerId);
-            stripeDeletedCount++;
-            deletedCustomerIds.push(customerId);
+        const subscriptions = await stripe.subscriptions.list({
+          customer: customerId,
+          status: "all",
+          limit: 100,
+        });
+
+        for (const subscription of subscriptions.data) {
+          if (!isCancellableSubscription(subscription)) {
+            nonCancellableSubscriptionIds.push(subscription.id);
+            continue;
           }
-        } catch (err) {
-          if (!isStripeMissingCustomer(err)) throw err;
-          stripeAlreadyMissingCount++;
-          missingCustomerIds.push(customerId);
+          await stripe.subscriptions.cancel(subscription.id);
+          canceledSubscriptionCount++;
+          canceledSubscriptionIds.push(subscription.id);
         }
       }
 
-      const { error: updateErr } = await supabaseAdmin
-        .from("profiles")
-        .update({ stripe_customer_id: null, updated_at: new Date().toISOString() })
-        .eq("user_id", userId);
-      if (updateErr) return respond({ error: updateErr.message }, 500);
+      if (!stripeCustomerId && uniqueCustomerIds[0]) {
+        const { error: updateErr } = await supabaseAdmin
+          .from("profiles")
+          .update({ stripe_customer_id: uniqueCustomerIds[0], updated_at: new Date().toISOString() })
+          .eq("user_id", userId)
+          .is("stripe_customer_id", null);
+        if (updateErr) return respond({ error: updateErr.message }, 500);
+      }
+
+      if (canceledSubscriptionCount > 0) {
+        const { data: balance, error: balanceErr } = await supabaseAdmin
+          .from("credit_balances")
+          .select("credits")
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (balanceErr) return respond({ error: balanceErr.message }, 500);
+
+        if (balance) {
+          const { error } = await supabaseAdmin
+            .from("credit_balances")
+            .update({ unlimited_credits: false, updated_at: new Date().toISOString() })
+            .eq("user_id", userId);
+          if (error) return respond({ error: error.message }, 500);
+        } else {
+          const { error } = await supabaseAdmin
+            .from("credit_balances")
+            .insert({ user_id: userId, credits: 0, unlimited_credits: false });
+          if (error) return respond({ error: error.message }, 500);
+        }
+
+        const { error: ledgerErr } = await supabaseAdmin.from("credit_ledger").insert({
+          user_id: userId,
+          delta: 0,
+          balance_after: Number(balance?.credits ?? 0),
+          entry_type: "admin_grant",
+          ref_id: null,
+          meta: {
+            admin_id: actorId,
+            unlimited_credits: false,
+            stripe_subscription_cancelled: true,
+            stripe_subscription_ids: canceledSubscriptionIds,
+          },
+        });
+        if (ledgerErr) return respond({ error: ledgerErr.message }, 500);
+      }
 
       await supabaseAdmin.from("audit_log").insert({
         actor_id: actorId,
-        action: "admin.user.stripe_customer.disconnect",
-        resource: "profiles",
+        action: "admin.user.stripe_subscription.cancel",
+        resource: "stripe.subscriptions",
         resource_id: userId,
         detail: {
           email: profile.email,
@@ -360,23 +390,24 @@ Deno.serve(async (req) => {
           stripe_mode: stripeConfig.mode,
           matched_by_email: !stripeCustomerId,
           invalid_stripe_customer_id: invalidStripeCustomerId,
-          stripe_deleted_count: stripeDeletedCount,
-          stripe_already_missing_count: stripeAlreadyMissingCount,
-          deleted_stripe_customer_ids: deletedCustomerIds,
-          missing_stripe_customer_ids: missingCustomerIds,
+          stripe_customer_ids: uniqueCustomerIds,
+          canceled_subscription_count: canceledSubscriptionCount,
+          canceled_subscription_ids: canceledSubscriptionIds,
+          non_cancellable_subscription_ids: nonCancellableSubscriptionIds,
+          unlimited_credits_removed: canceledSubscriptionCount > 0,
         },
       });
 
       return respond({
         ok: true,
-        disconnected: uniqueCustomerIds.length > 0 || rawStripeCustomerId !== "",
+        cancelled: canceledSubscriptionCount > 0,
         stripe_customer_id: rawStripeCustomerId || null,
         matched_by_email: !stripeCustomerId,
         invalid_stripe_customer_id: invalidStripeCustomerId,
-        stripe_deleted: stripeDeletedCount > 0,
-        stripe_deleted_count: stripeDeletedCount,
-        stripe_already_missing: stripeAlreadyMissingCount > 0,
-        stripe_already_missing_count: stripeAlreadyMissingCount,
+        stripe_customer_count: uniqueCustomerIds.length,
+        canceled_subscription_count: canceledSubscriptionCount,
+        non_cancellable_subscription_count: nonCancellableSubscriptionIds.length,
+        unlimited_credits_removed: canceledSubscriptionCount > 0,
       });
     }
 

@@ -104,10 +104,11 @@ export function AdminUserDetailSheet({
       ok?: boolean;
       recovery_link?: string | null;
       delivery_method?: string | null;
-      disconnected?: boolean;
-      stripe_deleted?: boolean;
-      stripe_deleted_count?: number;
+      cancelled?: boolean;
+      canceled_subscription_count?: number;
       matched_by_email?: boolean;
+      stripe_customer_count?: number;
+      unlimited_credits_removed?: boolean;
     };
   };
 
@@ -205,11 +206,11 @@ export function AdminUserDetailSheet({
     onUpdated();
   };
 
-  const handleDisconnectStripeCustomer = async () => {
+  const handleCancelStripeSubscription = async () => {
     if (!customer) return;
     if (
       !confirm(
-        `Cancel the Stripe connection for ${customer.email}? This deletes Stripe customer record(s) found in the active Stripe mode, clears the stored customer ID, and leaves DATAEEL credits and transaction history in place.`,
+        `Cancel active Stripe subscription(s) for ${customer.email}? This keeps the Stripe customer record, cancels subscription billing immediately, and removes unlimited DATAEEL access if a subscription is cancelled.`,
       )
     ) {
       return;
@@ -217,28 +218,32 @@ export function AdminUserDetailSheet({
 
     setBusy("stripe");
     const res = await invokeManage({
-      action: "disconnect_stripe_customer",
+      action: "cancel_stripe_subscription",
       userId: customer.user_id,
     });
     setBusy(null);
     if (!res?.ok) return;
 
+    if (res.unlimited_credits_removed) {
+      setUnlimitedPlan(false);
+    }
+
     toast({
-      title: res.disconnected ? "Stripe connection cancelled" : "No Stripe connection found",
+      title: res.cancelled ? "Stripe subscription cancelled" : "No active Stripe subscription found",
       description:
-        res.stripe_deleted_count && res.stripe_deleted_count > 1
-          ? `${res.stripe_deleted_count} Stripe customer records were deleted.`
-          : res.stripe_deleted
-            ? "The Stripe customer was deleted and the local customer ID was cleared."
+        res.canceled_subscription_count && res.canceled_subscription_count > 1
+          ? `${res.canceled_subscription_count} Stripe subscriptions were cancelled and unlimited access was removed.`
+          : res.cancelled
+            ? "The Stripe subscription was cancelled and unlimited access was removed."
             : res.matched_by_email
-              ? "No Stripe customer was found for this email in the active Stripe mode."
-              : "The local customer ID was cleared.",
+              ? "Stripe was searched by email, but no active subscription was found in the active Stripe mode."
+              : "No active subscription was found for the stored Stripe customer.",
     });
     onUpdated();
   };
 
   if (!customer) return null;
-  const canAttemptStripeDisconnect = Boolean(customer.stripe_customer_id || unlimitedPlan || userTx.length > 0);
+  const canAttemptStripeSubscriptionCancel = Boolean(customer.stripe_customer_id || unlimitedPlan || userTx.length > 0);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -290,11 +295,11 @@ export function AdminUserDetailSheet({
 
           <div className="rounded-lg border border-border p-4 space-y-3">
             <div>
-              <p className="text-sm font-medium text-foreground">Stripe customer connection</p>
+              <p className="text-sm font-medium text-foreground">Stripe subscription</p>
               <p className="text-xs text-muted-foreground mt-1">
                 {customer.stripe_customer_id
-                  ? `Connected as ${customer.stripe_customer_id}.`
-                  : canAttemptStripeDisconnect
+                  ? `Stripe customer ${customer.stripe_customer_id}.`
+                  : canAttemptStripeSubscriptionCancel
                     ? "No local Stripe customer ID is stored. Cancellation will search Stripe by this customer's email."
                     : "No Stripe customer is connected to this account."}
               </p>
@@ -303,10 +308,10 @@ export function AdminUserDetailSheet({
               type="button"
               variant="outline"
               className="border-destructive/50 text-destructive hover:bg-destructive/10"
-              disabled={busy !== null || !canAttemptStripeDisconnect}
-              onClick={() => void handleDisconnectStripeCustomer()}
+              disabled={busy !== null || !canAttemptStripeSubscriptionCancel}
+              onClick={() => void handleCancelStripeSubscription()}
             >
-              {busy === "stripe" ? "Cancelling…" : "Cancel Stripe connection"}
+              {busy === "stripe" ? "Cancelling…" : "Cancel Stripe subscription"}
             </Button>
           </div>
 
