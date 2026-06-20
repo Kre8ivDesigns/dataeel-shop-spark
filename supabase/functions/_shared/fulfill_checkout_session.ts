@@ -74,6 +74,19 @@ export type FulfillCheckoutCompletedOutcome =
   | { outcome: "transaction_error"; error: unknown }
   | { outcome: "fulfillment_error"; error: unknown };
 
+function isMissingStripeSubscriptionIdColumn(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const e = error as { code?: unknown; message?: unknown; details?: unknown; hint?: unknown };
+  const text = [e.message, e.details, e.hint]
+    .filter((part): part is string => typeof part === "string")
+    .join(" ")
+    .toLowerCase();
+  return (
+    text.includes("stripe_subscription_id") &&
+    (e.code === "42703" || e.code === "PGRST204" || text.includes("column") || text.includes("schema cache"))
+  );
+}
+
 /**
  * Ensures payment intent is expanded, then records the transaction and grants credits / unlimited.
  * Idempotent: duplicate stripe_session_id returns duplicate outcome (no second grant).
@@ -185,21 +198,38 @@ async function fulfillCheckoutSessionCompletedInner(
     }
   }
 
-  const { data: insertedTx, error: txError } = await supabaseAdmin
+  const transactionInsert = {
+    user_id: userId,
+    stripe_session_id: session.id,
+    stripe_payment_intent_id: paymentIntentId,
+    stripe_subscription_id: subscriptionId,
+    amount,
+    credits: isUnlimited ? 0 : credits,
+    package_name: packageName,
+    status: "completed",
+    unlimited_credits: isUnlimited,
+  };
+
+  let { data: insertedTx, error: txError } = await supabaseAdmin
     .from("transactions")
-    .insert({
-      user_id: userId,
-      stripe_session_id: session.id,
-      stripe_payment_intent_id: paymentIntentId,
-      stripe_subscription_id: subscriptionId,
-      amount,
-      credits: isUnlimited ? 0 : credits,
-      package_name: packageName,
-      status: "completed",
-      unlimited_credits: isUnlimited,
-    })
+    .insert(transactionInsert)
     .select("id")
     .single();
+
+  if (txError && isMissingStripeSubscriptionIdColumn(txError)) {
+    const { stripe_subscription_id: _stripeSubscriptionId, ...legacyTransactionInsert } = transactionInsert;
+    console.warn(
+      "[fulfillCheckoutSessionCompleted] transactions.stripe_subscription_id missing; retrying legacy insert",
+      session.id,
+    );
+    const retry = await supabaseAdmin
+      .from("transactions")
+      .insert(legacyTransactionInsert)
+      .select("id")
+      .single();
+    insertedTx = retry.data;
+    txError = retry.error;
+  }
 
   if (txError) {
     if (txError.code === "23505") {

@@ -388,7 +388,7 @@ Deno.serve(async (req) => {
       if (transactionId && !transactionId.startsWith("cs_") && !transactionId.startsWith("sub_") && !transactionId.startsWith("pi_")) {
         const { data: txRow, error: txErr } = await supabaseAdmin
           .from("transactions")
-          .select("id, user_id, stripe_session_id, stripe_payment_intent_id, stripe_subscription_id")
+          .select("id, user_id, stripe_session_id, stripe_payment_intent_id")
           .eq("id", transactionId)
           .maybeSingle();
         if (txErr) return respond({ error: txErr.message }, 500);
@@ -398,7 +398,6 @@ Deno.serve(async (req) => {
             return respond({ error: "Transaction does not belong to the requested user" }, 400);
           }
           stripeSessionId = normalizeNonEmptyString(txRow.stripe_session_id) ?? stripeSessionId;
-          stripeSubscriptionId = normalizeStripeSubscriptionId(txRow.stripe_subscription_id) ?? stripeSubscriptionId;
           paymentIntentId = normalizeNonEmptyString(txRow.stripe_payment_intent_id) ?? paymentIntentId;
         }
       }

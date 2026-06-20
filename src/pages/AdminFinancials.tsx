@@ -23,6 +23,7 @@ import { AlertCircle, Download, Loader2, TrendingUp, CreditCard, Receipt } from 
 import { PageHero } from "@/components/PageHero";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
+import { getInvokeErrorMessage } from "@/lib/edgeFunctionErrors";
 import {
   Area,
   AreaChart,
@@ -213,9 +214,10 @@ const AdminFinancials = () => {
     setCancellingTransactionId(null);
 
     if (error || data?.error) {
+      const description = await getInvokeErrorMessage("admin-manage-user", error, data);
       toast({
         title: "Subscription cancellation failed",
-        description: typeof data?.error === "string" ? data.error : error?.message ?? "Unknown error",
+        description,
         variant: "destructive",
       });
       return;

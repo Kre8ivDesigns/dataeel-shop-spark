@@ -90,7 +90,7 @@ function isValidPostgresDate(iso: string): boolean {
 
 async function markRacecardProcessing(
   supabaseAdmin: ReturnType<typeof createClient>,
-  params: { s3Key: string; jobId: string; now: string },
+  params: { s3Key: string; jobId: string | null; now: string },
 ): Promise<RacecardRow | null> {
   const updateValues = {
     digitization_status: "processing",
@@ -214,8 +214,22 @@ Deno.serve(async (req) => {
       return jsonResponse(200, { ok: true, racecard_id: racecard.id }, cors);
     }
 
-    const racecard = await findRacecard(supabaseAdmin, { s3Key, jobId });
-    if (!racecard) return jsonResponse(404, { error: "racecard_not_found", retryable: true }, cors);
+    let racecard = await findRacecard(supabaseAdmin, { s3Key, jobId });
+    if (!racecard && s3Key) {
+      racecard = await markRacecardProcessing(supabaseAdmin, { s3Key, jobId, now });
+    }
+    if (!racecard) {
+      console.warn(
+        "racecard-digitization-webhook orphan callback:",
+        JSON.stringify({ action, has_s3_key: Boolean(s3Key), has_job_id: Boolean(jobId) }),
+      );
+      return jsonResponse(200, {
+        ok: true,
+        skipped: true,
+        reason: "racecard_not_found",
+        retryable: false,
+      }, cors);
+    }
 
     if (action === "failed") {
       await supabaseAdmin
