@@ -1,5 +1,7 @@
+import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, getValidatedOrigin } from "../_shared/cors.ts";
+import { resolveStripeConfig } from "../_shared/stripe_config.ts";
 
 type Action =
   | "ban"
@@ -7,12 +9,14 @@ type Action =
   | "send_password_recovery"
   | "update_profile"
   | "set_unlimited_credits"
+  | "disconnect_stripe_customer"
   | "delete_user"
   | "delete_fake_zero_credit_users";
 
 /** auth-js validateUUID() only accepts lowercase hex; DB/PostgREST may return mixed case. */
 const UUID_STRING_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const RANDOM_TWO_TOKEN_NAME_RE = /^[A-Za-z]{16,32}\s+[A-Za-z]{16,32}$/;
+const STRIPE_CUSTOMER_ID_RE = /^cus_[A-Za-z0-9]+$/;
 
 function normalizeUserId(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -27,6 +31,26 @@ function resolveBodyUserId(body: { userId?: unknown; user_id?: unknown; id?: unk
 
 function looksLikeRandomTwoTokenName(value: unknown): boolean {
   return typeof value === "string" && RANDOM_TWO_TOKEN_NAME_RE.test(value.trim());
+}
+
+function normalizeStripeCustomerId(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const s = value.trim();
+  if (!STRIPE_CUSTOMER_ID_RE.test(s)) return null;
+  return s;
+}
+
+function isStripeMissingCustomer(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const stripeError = error as { code?: unknown; message?: unknown };
+  return (
+    stripeError.code === "resource_missing" ||
+    (typeof stripeError.message === "string" && stripeError.message.includes("No such customer"))
+  );
+}
+
+function isDeletedCustomer(customer: Stripe.Customer | Stripe.DeletedCustomer): customer is Stripe.DeletedCustomer {
+  return "deleted" in customer && customer.deleted === true;
 }
 
 function getRecoveryRedirectTo(req: Request): string | undefined {
@@ -261,6 +285,103 @@ Deno.serve(async (req) => {
       });
 
       return respond({ ok: true });
+    }
+
+    if (action === "disconnect_stripe_customer") {
+      const { data: profile, error: profileErr } = await supabaseAdmin
+        .from("profiles")
+        .select("email, stripe_customer_id")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (profileErr) return respond({ error: profileErr.message }, 500);
+      if (!profile) return respond({ error: "Profile not found" }, 404);
+
+      const rawStripeCustomerId = typeof profile.stripe_customer_id === "string"
+        ? profile.stripe_customer_id.trim()
+        : "";
+      if (!rawStripeCustomerId) {
+        return respond({ ok: true, disconnected: false, reason: "no_stripe_customer_id" });
+      }
+
+      const stripeCustomerId = normalizeStripeCustomerId(rawStripeCustomerId);
+      if (!stripeCustomerId) {
+        const { error: updateErr } = await supabaseAdmin
+          .from("profiles")
+          .update({ stripe_customer_id: null, updated_at: new Date().toISOString() })
+          .eq("user_id", userId);
+        if (updateErr) return respond({ error: updateErr.message }, 500);
+
+        await supabaseAdmin.from("audit_log").insert({
+          actor_id: actorId,
+          action: "admin.user.stripe_customer.disconnect",
+          resource: "profiles",
+          resource_id: userId,
+          detail: {
+            email: profile.email,
+            stripe_customer_id: rawStripeCustomerId,
+            invalid_stripe_customer_id: true,
+            stripe_deleted: false,
+          },
+        });
+
+        return respond({
+          ok: true,
+          disconnected: true,
+          stripe_customer_id: rawStripeCustomerId,
+          stripe_deleted: false,
+          invalid_stripe_customer_id: true,
+        });
+      }
+
+      const stripeConfig = await resolveStripeConfig(supabaseAdmin);
+      if (!stripeConfig.secretKey) {
+        return respond({ error: "Stripe is not configured" }, 503);
+      }
+
+      const stripe = new Stripe(stripeConfig.secretKey, { apiVersion: "2025-08-27.basil" });
+      let stripeDeleted = false;
+      let stripeAlreadyMissing = false;
+
+      try {
+        const customer = await stripe.customers.retrieve(stripeCustomerId);
+        if (isDeletedCustomer(customer)) {
+          stripeAlreadyMissing = true;
+        } else {
+          await stripe.customers.del(stripeCustomerId);
+          stripeDeleted = true;
+        }
+      } catch (err) {
+        if (!isStripeMissingCustomer(err)) throw err;
+        stripeAlreadyMissing = true;
+      }
+
+      const { error: updateErr } = await supabaseAdmin
+        .from("profiles")
+        .update({ stripe_customer_id: null, updated_at: new Date().toISOString() })
+        .eq("user_id", userId);
+      if (updateErr) return respond({ error: updateErr.message }, 500);
+
+      await supabaseAdmin.from("audit_log").insert({
+        actor_id: actorId,
+        action: "admin.user.stripe_customer.disconnect",
+        resource: "profiles",
+        resource_id: userId,
+        detail: {
+          email: profile.email,
+          stripe_customer_id: stripeCustomerId,
+          stripe_mode: stripeConfig.mode,
+          stripe_deleted: stripeDeleted,
+          stripe_already_missing: stripeAlreadyMissing,
+        },
+      });
+
+      return respond({
+        ok: true,
+        disconnected: true,
+        stripe_customer_id: stripeCustomerId,
+        stripe_deleted: stripeDeleted,
+        stripe_already_missing: stripeAlreadyMissing,
+      });
     }
 
     if (action === "delete_fake_zero_credit_users") {

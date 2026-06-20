@@ -100,7 +100,13 @@ export function AdminUserDetailSheet({
       });
       return null;
     }
-    return data as { ok?: boolean; recovery_link?: string | null; delivery_method?: string | null };
+    return data as {
+      ok?: boolean;
+      recovery_link?: string | null;
+      delivery_method?: string | null;
+      disconnected?: boolean;
+      stripe_deleted?: boolean;
+    };
   };
 
   const handleSaveProfile = async () => {
@@ -197,6 +203,33 @@ export function AdminUserDetailSheet({
     onUpdated();
   };
 
+  const handleDisconnectStripeCustomer = async () => {
+    if (!customer?.stripe_customer_id) return;
+    if (
+      !confirm(
+        `Cancel the Stripe connection for ${customer.email}? This deletes the Stripe customer in the active Stripe mode, clears the stored customer ID, and leaves DATAEEL credits and transaction history in place.`,
+      )
+    ) {
+      return;
+    }
+
+    setBusy("stripe");
+    const res = await invokeManage({
+      action: "disconnect_stripe_customer",
+      userId: customer.user_id,
+    });
+    setBusy(null);
+    if (!res?.ok) return;
+
+    toast({
+      title: res.disconnected ? "Stripe connection cancelled" : "No Stripe connection found",
+      description: res.stripe_deleted
+        ? "The Stripe customer was deleted and the local customer ID was cleared."
+        : "The local customer ID was cleared.",
+    });
+    onUpdated();
+  };
+
   if (!customer) return null;
 
   return (
@@ -245,6 +278,26 @@ export function AdminUserDetailSheet({
                 {busy === "unlimited" ? "…" : "Assign unlimited plan"}
               </Button>
             )}
+          </div>
+
+          <div className="rounded-lg border border-border p-4 space-y-3">
+            <div>
+              <p className="text-sm font-medium text-foreground">Stripe customer connection</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {customer.stripe_customer_id
+                  ? `Connected as ${customer.stripe_customer_id}.`
+                  : "No Stripe customer is connected to this account."}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="border-destructive/50 text-destructive hover:bg-destructive/10"
+              disabled={busy !== null || !customer.stripe_customer_id}
+              onClick={() => void handleDisconnectStripeCustomer()}
+            >
+              {busy === "stripe" ? "Cancelling…" : "Cancel Stripe connection"}
+            </Button>
           </div>
 
           <div className="space-y-2">
