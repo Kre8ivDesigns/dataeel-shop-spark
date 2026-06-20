@@ -51,6 +51,7 @@ type Tx = {
   status: string;
   stripe_payment_intent_id: string | null;
   stripe_session_id: string | null;
+  unlimited_credits: boolean;
   user_id: string;
   user_display_name?: string;
 };
@@ -449,16 +450,20 @@ const AdminFinancials = () => {
                             {t.user_display_name ?? t.user_id}
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="border-destructive/40 text-destructive hover:bg-destructive/10"
-                              disabled={cancellingTransactionId === t.id}
-                              onClick={() => void handleCancelSubscription(t)}
-                            >
-                              {cancellingTransactionId === t.id ? "Cancelling..." : "Cancel sub"}
-                            </Button>
+                            {t.unlimited_credits ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="border-destructive/40 text-destructive hover:bg-destructive/10"
+                                disabled={cancellingTransactionId === t.id}
+                                onClick={() => void handleCancelSubscription(t)}
+                              >
+                                {cancellingTransactionId === t.id ? "Cancelling..." : "Cancel sub"}
+                              </Button>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">One-time</span>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}

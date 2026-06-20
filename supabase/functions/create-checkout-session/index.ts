@@ -3,6 +3,52 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, getValidatedOrigin } from "../_shared/cors.ts";
 import { resolveStripeConfig } from "../_shared/stripe_config.ts";
 
+function stripeProductId(price: Stripe.Price): string {
+  return typeof price.product === "string" ? price.product : price.product.id;
+}
+
+function priceMatchesCheckoutMode(price: Stripe.Price, isUnlimited: boolean): boolean {
+  return isUnlimited ? price.recurring?.interval === "month" : price.recurring == null;
+}
+
+async function resolveCheckoutPriceId(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  stripe: Stripe,
+  pkg: {
+    id: string;
+    stripe_price_id: string;
+    unlimited_credits: boolean;
+  },
+): Promise<string> {
+  const isUnlimited = Boolean(pkg.unlimited_credits);
+  const existingPrice = await stripe.prices.retrieve(pkg.stripe_price_id);
+  if (priceMatchesCheckoutMode(existingPrice, isUnlimited)) {
+    return existingPrice.id;
+  }
+  if (existingPrice.unit_amount == null) {
+    throw new Error("Stripe price must have a fixed unit amount");
+  }
+
+  const productId = stripeProductId(existingPrice);
+  const replacement = await stripe.prices.create({
+    product: productId,
+    unit_amount: existingPrice.unit_amount,
+    currency: existingPrice.currency,
+    recurring: isUnlimited ? { interval: "month" } : undefined,
+  });
+
+  await stripe.prices.update(existingPrice.id, { active: false });
+  const { error: updateErr } = await supabaseAdmin
+    .from("credit_packages")
+    .update({ stripe_price_id: replacement.id, updated_at: new Date().toISOString() })
+    .eq("id", pkg.id);
+  if (updateErr) {
+    console.warn("[create-checkout-session] Could not persist replacement Stripe price:", updateErr.message);
+  }
+
+  return replacement.id;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: getCorsHeaders(req) });
@@ -84,29 +130,23 @@ Deno.serve(async (req) => {
         .update({ stripe_customer_id: customerId })
         .eq("user_id", user.id);
     }
+    if (!customerId) {
+      return new Response(JSON.stringify({ error: "Could not resolve Stripe customer" }), { status: 500, headers });
+    }
 
     // MED-08: use validated origin for redirect URLs
     const origin = getValidatedOrigin(req);
 
-    const session = await stripe.checkout.sessions.create({
+    const checkoutPriceId = await resolveCheckoutPriceId(supabaseAdmin, stripe, {
+      id: pkg.id,
+      stripe_price_id: pkg.stripe_price_id,
+      unlimited_credits: isUnlimited,
+    });
+
+    const commonSessionParams = {
       customer: customerId,
       client_reference_id: user.id,
-      line_items: [{ price: pkg.stripe_price_id, quantity: 1 }],
-      mode: "payment",
-      // Generates a Stripe Invoice + hosted invoice / PDF for one-time payments
-      invoice_creation: {
-        enabled: true,
-        invoice_data: {
-          metadata: {
-            user_id: user.id,
-            package_id: pkg.id,
-            credits: String(creditsMeta),
-            package_name: pkg.name,
-            unlimited_credits: isUnlimited ? "true" : "false",
-          },
-        },
-      },
-      // `{CHECKOUT_SESSION_ID}` is replaced by Stripe so the app can poll DB until the webhook records the purchase.
+      line_items: [{ price: checkoutPriceId, quantity: 1 }],
       success_url: isUnlimited
         ? `${origin}/dashboard?payment=success&unlimited=1&session_id={CHECKOUT_SESSION_ID}`
         : `${origin}/dashboard?payment=success&credits=${pkg.credits}&session_id={CHECKOUT_SESSION_ID}`,
@@ -118,7 +158,32 @@ Deno.serve(async (req) => {
         package_name: pkg.name,
         unlimited_credits: isUnlimited ? "true" : "false",
       },
-    });
+    } satisfies Pick<
+      Stripe.Checkout.SessionCreateParams,
+      "customer" | "client_reference_id" | "line_items" | "success_url" | "cancel_url" | "metadata"
+    >;
+
+    const session = await stripe.checkout.sessions.create(
+      isUnlimited
+        ? {
+            ...commonSessionParams,
+            mode: "subscription",
+            subscription_data: {
+              metadata: commonSessionParams.metadata,
+            },
+          }
+        : {
+            ...commonSessionParams,
+            mode: "payment",
+            // Generates a Stripe Invoice + hosted invoice / PDF for one-time payments.
+            invoice_creation: {
+              enabled: true,
+              invoice_data: {
+                metadata: commonSessionParams.metadata,
+              },
+            },
+          },
+    );
 
     return new Response(JSON.stringify({ url: session.url }), { status: 200, headers });
   } catch (error) {

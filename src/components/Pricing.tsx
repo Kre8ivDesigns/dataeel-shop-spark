@@ -100,7 +100,7 @@ export const Pricing = () => {
                     </div>
                     <div className="text-sm mt-2 text-muted-foreground">
                       {isUnlimited ? (
-                        <>Unlimited RaceCard PDF downloads · one-time purchase</>
+                        <>Unlimited RaceCard PDF downloads · monthly subscription</>
                       ) : (
                         <>
                           {pkg.credits} credits

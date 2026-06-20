@@ -72,7 +72,7 @@ const PricingPage = () => {
             Credit Packages for <span className="text-neon">Every Bettor</span>
           </>
         }
-        subtitle="Buy credits, use them anytime. One credit = one full day of predictions for any track. No subscriptions, no hidden fees."
+        subtitle="Buy credits when you need them, or subscribe for unlimited RaceCard PDF access."
       />
 
       <section className="py-4 md:py-5 bg-card border-b border-border">

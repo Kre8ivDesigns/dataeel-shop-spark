@@ -286,7 +286,7 @@ const AdminCreditPackages = () => {
                 }
               />
               <Label htmlFor="pkg-unlimited" className="text-sm font-normal cursor-pointer">
-                Unlimited RaceCard PDF downloads (no credit balance; fair-use policy applies)
+                Unlimited RaceCard PDF downloads (monthly Stripe subscription; fair-use policy applies)
               </Label>
             </div>
 
@@ -320,8 +320,8 @@ const AdminCreditPackages = () => {
 
             <p className="text-xs text-muted-foreground">
               {editingPackage
-                ? "Saving updates Stripe automatically — you never paste a Stripe Price ID. If the USD amount changes, the previous Stripe price is archived and a new one is created."
-                : "You only fill in name, credits, and price here. Stripe Product + Price are created in your Stripe account when you save — no Dashboard lookup."}
+                ? "Saving updates Stripe automatically — unlimited packages use a monthly recurring Stripe price, while credit packages stay one-time prices."
+                : "You only fill in name, credits, and price here. Stripe Product + Price are created automatically; unlimited packages become monthly subscriptions."}
             </p>
 
             <div className="flex gap-3 pt-2">

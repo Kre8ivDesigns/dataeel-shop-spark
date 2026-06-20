@@ -3,6 +3,22 @@ import Stripe from "https://esm.sh/stripe@18.5.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { resolveStripeConfig } from "../_shared/stripe_config.ts";
 
+function createPriceParams(productId: string, unitAmount: number, isUnlimited: boolean): Stripe.PriceCreateParams {
+  const params: Stripe.PriceCreateParams = {
+    product: productId,
+    unit_amount: unitAmount,
+    currency: "usd",
+  };
+  if (isUnlimited) {
+    params.recurring = { interval: "month" };
+  }
+  return params;
+}
+
+function priceMatchesPackageType(price: Stripe.Price, isUnlimited: boolean): boolean {
+  return isUnlimited ? price.recurring?.interval === "month" : price.recurring == null;
+}
+
 Deno.serve(async (req) => {
   const cors = getCorsHeaders(req);
 
@@ -69,18 +85,12 @@ Deno.serve(async (req) => {
 
       const creditUnits = isUnlimited ? 0 : Number(credits);
 
-      // Create Stripe product
       const product = await stripe.products.create({
         name,
         description: description || undefined,
       });
 
-      // Create Stripe price (one-time payment)
-      const stripePrice = await stripe.prices.create({
-        product: product.id,
-        unit_amount: unitAmount,
-        currency: "usd",
-      });
+      const stripePrice = await stripe.prices.create(createPriceParams(product.id, unitAmount, isUnlimited));
 
       // Insert into DB
       const { data: pkg, error: dbErr } = await supabaseAdmin
@@ -173,34 +183,22 @@ Deno.serve(async (req) => {
             description: description || undefined,
           });
 
-          // Prices are immutable — archive old and create new if amount changed
-          if (existingStripePrice.unit_amount !== unitAmount) {
+          // Prices are immutable — archive old and create new if amount or payment type changed.
+          if (existingStripePrice.unit_amount !== unitAmount || !priceMatchesPackageType(existingStripePrice, isUnlimited)) {
             await stripe.prices.update(existing.stripe_price_id, { active: false });
-            const newStripePrice = await stripe.prices.create({
-              product: productId,
-              unit_amount: unitAmount,
-              currency: "usd",
-            });
+            const newStripePrice = await stripe.prices.create(createPriceParams(productId, unitAmount, isUnlimited));
             newPriceId = newStripePrice.id;
           }
         } else {
           // Price was not found — create a fresh Stripe product and price
           const product = await stripe.products.create({ name, description: description || undefined });
-          const newStripePrice = await stripe.prices.create({
-            product: product.id,
-            unit_amount: unitAmount,
-            currency: "usd",
-          });
+          const newStripePrice = await stripe.prices.create(createPriceParams(product.id, unitAmount, isUnlimited));
           newPriceId = newStripePrice.id;
         }
       } else {
         // No existing Stripe price — create from scratch
         const product = await stripe.products.create({ name, description: description || undefined });
-        const newStripePrice = await stripe.prices.create({
-          product: product.id,
-          unit_amount: unitAmount,
-          currency: "usd",
-        });
+        const newStripePrice = await stripe.prices.create(createPriceParams(product.id, unitAmount, isUnlimited));
         newPriceId = newStripePrice.id;
       }
 
