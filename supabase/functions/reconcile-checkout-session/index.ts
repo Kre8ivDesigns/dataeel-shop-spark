@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
 
     let session: Stripe.Checkout.Session;
     try {
-      session = await stripe.checkout.sessions.retrieve(sessionId, { expand: ["payment_intent"] });
+      session = await stripe.checkout.sessions.retrieve(sessionId, { expand: ["payment_intent", "subscription"] });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error("[reconcile-checkout-session] retrieve session failed:", msg);

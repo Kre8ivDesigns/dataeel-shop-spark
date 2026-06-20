@@ -81,6 +81,7 @@ export function exportTransactionsCsv(
     status: string;
     stripe_payment_intent_id?: string | null;
     stripe_session_id?: string | null;
+    stripe_subscription_id?: string | null;
     user_id: string;
     user_display_name?: string;
   }[],
@@ -89,6 +90,7 @@ export function exportTransactionsCsv(
     "id",
     "stripe_payment_intent_id",
     "stripe_session_id",
+    "stripe_subscription_id",
     "created_at",
     "package_name",
     "credits",
@@ -104,6 +106,7 @@ export function exportTransactionsCsv(
         r.id,
         r.stripe_payment_intent_id ?? "",
         r.stripe_session_id ?? "",
+        r.stripe_subscription_id ?? "",
         r.created_at,
         JSON.stringify(r.package_name),
         r.credits,

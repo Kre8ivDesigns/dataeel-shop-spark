@@ -22,6 +22,14 @@ export function customerIdFromSession(session: Stripe.Checkout.Session | null | 
   return null;
 }
 
+export function subscriptionIdFromSession(session: Stripe.Checkout.Session | null | undefined): string | null {
+  if (!session || typeof session !== "object") return null;
+  const subscription = session.subscription;
+  if (typeof subscription === "string") return subscription;
+  if (subscription && typeof subscription === "object" && "id" in subscription) return subscription.id;
+  return null;
+}
+
 /** Expanded PaymentIntent status when `payment_intent` is expanded on the Session. */
 export function paymentIntentStatusFromSession(session: Stripe.Checkout.Session | null | undefined): string | null {
   if (!session || typeof session !== "object") return null;
@@ -135,6 +143,18 @@ async function fulfillCheckoutSessionCompletedInner(
   const packageName = session.metadata?.package_name || "Unknown";
   const amount = (session.amount_total || 0) / 100;
   const customerId = customerIdFromSession(session);
+  let subscriptionId = subscriptionIdFromSession(session);
+
+  if (isUnlimited && !subscriptionId) {
+    try {
+      session = await stripe.checkout.sessions.retrieve(session.id, {
+        expand: ["payment_intent", "subscription"],
+      });
+      subscriptionId = subscriptionIdFromSession(session);
+    } catch (e) {
+      console.error("[fulfillCheckoutSessionCompleted] subscription retrieve failed:", e instanceof Error ? e.message : e);
+    }
+  }
 
   if (!userId || (!isUnlimited && credits <= 0)) {
     console.error(
@@ -142,6 +162,13 @@ async function fulfillCheckoutSessionCompletedInner(
       session.id,
     );
     return { outcome: "skipped_metadata" };
+  }
+  if (isUnlimited && !subscriptionId) {
+    console.error(
+      "[fulfillCheckoutSessionCompleted] unlimited checkout missing Stripe subscription, session=",
+      session.id,
+    );
+    return { outcome: "fulfillment_error", error: new Error("Unlimited checkout did not create a Stripe subscription") };
   }
 
   if (customerId) {
@@ -164,6 +191,7 @@ async function fulfillCheckoutSessionCompletedInner(
       user_id: userId,
       stripe_session_id: session.id,
       stripe_payment_intent_id: paymentIntentId,
+      stripe_subscription_id: subscriptionId,
       amount,
       credits: isUnlimited ? 0 : credits,
       package_name: packageName,
@@ -234,6 +262,7 @@ async function fulfillCheckoutSessionCompletedInner(
   const purchaseMeta = {
     stripe_session_id: session.id,
     stripe_payment_intent_id: paymentIntentId,
+    stripe_subscription_id: subscriptionId,
     package_name: packageName,
     amount,
   };
@@ -293,6 +322,7 @@ async function fulfillCheckoutSessionCompletedInner(
     resource_id: userId,
     detail: {
       stripe_session_id: session.id,
+      stripe_subscription_id: subscriptionId,
       credits: isUnlimited ? 0 : credits,
       amount,
       package_name: packageName,

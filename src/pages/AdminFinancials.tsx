@@ -51,6 +51,7 @@ type Tx = {
   status: string;
   stripe_payment_intent_id: string | null;
   stripe_session_id: string | null;
+  stripe_subscription_id: string | null;
   unlimited_credits: boolean;
   user_id: string;
   user_display_name?: string;
@@ -78,6 +79,7 @@ function getTransactionTitle(tx: Tx): string {
   return [
     tx.stripe_payment_intent_id ? `Payment intent: ${tx.stripe_payment_intent_id}` : null,
     tx.stripe_session_id ? `Checkout session: ${tx.stripe_session_id}` : null,
+    tx.stripe_subscription_id ? `Subscription: ${tx.stripe_subscription_id}` : null,
     `App transaction: ${tx.id}`,
   ]
     .filter((line): line is string => line !== null)
@@ -204,6 +206,7 @@ const AdminFinancials = () => {
         userId: tx.user_id,
         transactionId: tx.id,
         stripeSessionId: tx.stripe_session_id,
+        stripeSubscriptionId: tx.stripe_subscription_id,
         paymentIntentId: tx.stripe_payment_intent_id,
       },
     });
@@ -431,6 +434,11 @@ const AdminFinancials = () => {
                             title={getTransactionTitle(t)}
                           >
                             {getTransactionDisplayId(t)}
+                            {t.stripe_subscription_id && (
+                              <span className="block text-[10px] text-muted-foreground/80">
+                                Sub: {t.stripe_subscription_id}
+                              </span>
+                            )}
                           </TableCell>
                           <TableCell className="font-medium text-foreground">{t.package_name}</TableCell>
                           <TableCell className="font-mono-data text-primary">{t.credits}</TableCell>

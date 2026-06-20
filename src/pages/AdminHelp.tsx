@@ -232,7 +232,7 @@ const consoleMap: RouteRef[] = [
   { screen: "Dashboard", path: "/admin", summary: "Home base: top-line stats plus searchable tables of customers, RaceCards, and transactions." },
   { screen: "Settings", path: "/admin/settings", summary: "API keys, SMTP, broadcast email, breaking-news ticker, AI assistant, racetrack profiles, and webhooks." },
   { screen: "Credit packages", path: "/admin/credit-packages", summary: "Create, edit, price, and retire the credit bundles customers buy." },
-  { screen: "Financial dashboard", path: "/admin/financials", summary: "Revenue charts, transaction analysis, refunds, and trends over time." },
+  { screen: "Financial dashboard", path: "/admin/financials", summary: "Revenue charts, transaction analysis, subscription cancellations, and trends over time." },
   { screen: "Site analytics", path: "/admin/analytics", summary: "Visitors, sources, funnels, CTA map, UTM coverage, AI analyst, Facebook Ads, and a print report." },
   { screen: "Reports", path: "/admin/reports", summary: "RaceCard downloads by user, racecard, and track, plus the credit ledger — all exportable to CSV." },
   { screen: "Support inbox", path: "/admin/support", summary: "Contact-form submissions and support requests from customers." },
@@ -251,7 +251,7 @@ type SystemRef = {
 const systemsMap: SystemRef[] = [
   { subject: "Customer logins & profiles", system: "Supabase (Auth)", note: "The admin role is set here. Passwords and 2FA are managed by Supabase Auth." },
   { subject: "Credit balances & ledger", system: "Supabase (Database)", note: "Surfaced in Reports. Updated automatically after purchases." },
-  { subject: "Payments, invoices, refunds", system: "Stripe", note: "Checkout, the billing portal, and invoices are Stripe. The site reflects what Stripe reports." },
+  { subject: "Payments, invoices, subscriptions", system: "Stripe", note: "Checkout, subscription billing, and invoices are Stripe. The site reflects what Stripe reports." },
   { subject: "RaceCard PDF files", system: "AWS S3", note: "Customers receive temporary, expiring download links; files are never public." },
   { subject: "RaceCard catalog entries", system: "Supabase (Database)", note: "The list customers browse — populated by syncing the S3 bucket." },
   { subject: "Settings & secrets", system: "Supabase (encrypted)", note: "SMTP, API keys, and Stripe secrets are stored encrypted and edited in Settings." },

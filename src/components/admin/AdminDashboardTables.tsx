@@ -278,7 +278,7 @@ export function AdminTransactionsTab({
                 </TableCell>
                 <TableCell className="text-muted-foreground">{t.status}</TableCell>
                 <TableCell className="hidden lg:table-cell text-xs text-muted-foreground font-mono max-w-[140px] truncate">
-                  {t.stripe_session_id || "—"}
+                  {t.stripe_subscription_id || t.stripe_session_id || "—"}
                 </TableCell>
               </TableRow>
             ))}

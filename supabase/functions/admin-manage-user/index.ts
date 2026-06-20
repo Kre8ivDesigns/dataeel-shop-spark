@@ -17,6 +17,7 @@ type Action =
 const UUID_STRING_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const RANDOM_TWO_TOKEN_NAME_RE = /^[A-Za-z]{16,32}\s+[A-Za-z]{16,32}$/;
 const STRIPE_CUSTOMER_ID_RE = /^cus_[A-Za-z0-9]+$/;
+const STRIPE_SUBSCRIPTION_ID_RE = /^sub_[A-Za-z0-9]+$/;
 
 function normalizeUserId(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -46,6 +47,11 @@ function normalizeNonEmptyString(value: unknown): string | null {
   return s ? s : null;
 }
 
+function normalizeStripeSubscriptionId(value: unknown): string | null {
+  const s = normalizeNonEmptyString(value);
+  return s && STRIPE_SUBSCRIPTION_ID_RE.test(s) ? s : null;
+}
+
 function stripeObjectId(value: unknown): string | null {
   if (typeof value === "string") return value;
   if (!value || typeof value !== "object") return null;
@@ -62,6 +68,13 @@ async function findStripeCustomerIdsByEmail(stripe: Stripe, email: string): Prom
 
 function isCancellableSubscription(subscription: Stripe.Subscription): boolean {
   return ["active", "trialing", "past_due", "unpaid", "paused", "incomplete"].includes(subscription.status);
+}
+
+async function cancelSubscriptionOnly(stripe: Stripe, subscriptionId: string): Promise<void> {
+  await stripe.subscriptions.cancel(subscriptionId, {
+    invoice_now: false,
+    prorate: false,
+  });
 }
 
 async function resolveCheckoutSessionSubscriptionRefs(
@@ -161,6 +174,9 @@ Deno.serve(async (req) => {
       transaction_id?: unknown;
       stripeSessionId?: unknown;
       stripe_session_id?: unknown;
+      subscriptionId?: unknown;
+      stripeSubscriptionId?: unknown;
+      stripe_subscription_id?: unknown;
       paymentIntentId?: unknown;
       stripe_payment_intent_id?: unknown;
       full_name?: string;
@@ -359,16 +375,20 @@ Deno.serve(async (req) => {
         normalizeNonEmptyString(body.transaction_id);
       let stripeSessionId = normalizeNonEmptyString(body.stripeSessionId) ??
         normalizeNonEmptyString(body.stripe_session_id);
+      let stripeSubscriptionId = normalizeStripeSubscriptionId(body.subscriptionId) ??
+        normalizeStripeSubscriptionId(body.stripeSubscriptionId) ??
+        normalizeStripeSubscriptionId(body.stripe_subscription_id);
       let paymentIntentId = normalizeNonEmptyString(body.paymentIntentId) ??
         normalizeNonEmptyString(body.stripe_payment_intent_id);
 
       if (transactionId?.startsWith("cs_")) stripeSessionId = transactionId;
+      if (transactionId?.startsWith("sub_")) stripeSubscriptionId = normalizeStripeSubscriptionId(transactionId);
       if (transactionId?.startsWith("pi_")) paymentIntentId = transactionId;
 
-      if (transactionId && !transactionId.startsWith("cs_") && !transactionId.startsWith("pi_")) {
+      if (transactionId && !transactionId.startsWith("cs_") && !transactionId.startsWith("sub_") && !transactionId.startsWith("pi_")) {
         const { data: txRow, error: txErr } = await supabaseAdmin
           .from("transactions")
-          .select("id, user_id, stripe_session_id, stripe_payment_intent_id")
+          .select("id, user_id, stripe_session_id, stripe_payment_intent_id, stripe_subscription_id")
           .eq("id", transactionId)
           .maybeSingle();
         if (txErr) return respond({ error: txErr.message }, 500);
@@ -378,6 +398,7 @@ Deno.serve(async (req) => {
             return respond({ error: "Transaction does not belong to the requested user" }, 400);
           }
           stripeSessionId = normalizeNonEmptyString(txRow.stripe_session_id) ?? stripeSessionId;
+          stripeSubscriptionId = normalizeStripeSubscriptionId(txRow.stripe_subscription_id) ?? stripeSubscriptionId;
           paymentIntentId = normalizeNonEmptyString(txRow.stripe_payment_intent_id) ?? paymentIntentId;
         }
       }
@@ -385,6 +406,7 @@ Deno.serve(async (req) => {
       const customerIds = new Set<string>();
       const exactSubscriptionIds = new Set<string>();
       if (stripeCustomerId) customerIds.add(stripeCustomerId);
+      if (stripeSubscriptionId) exactSubscriptionIds.add(stripeSubscriptionId);
 
       if (stripeSessionId) {
         const refs = await resolveCheckoutSessionSubscriptionRefs(stripe, stripeSessionId);
@@ -416,7 +438,7 @@ Deno.serve(async (req) => {
             nonCancellableSubscriptionIds.push(subscription.id);
             continue;
           }
-          await stripe.subscriptions.cancel(subscription.id);
+          await cancelSubscriptionOnly(stripe, subscription.id);
           canceledSubscriptionCount++;
           canceledSubscriptionIds.push(subscriptionId);
         }
@@ -433,7 +455,7 @@ Deno.serve(async (req) => {
               nonCancellableSubscriptionIds.push(subscription.id);
               continue;
             }
-            await stripe.subscriptions.cancel(subscription.id);
+            await cancelSubscriptionOnly(stripe, subscription.id);
             canceledSubscriptionCount++;
             canceledSubscriptionIds.push(subscription.id);
           }
@@ -499,6 +521,7 @@ Deno.serve(async (req) => {
           invalid_stripe_customer_id: invalidStripeCustomerId,
           transaction_id: transactionId,
           stripe_session_id: stripeSessionId,
+          stripe_subscription_id: stripeSubscriptionId,
           stripe_payment_intent_id: paymentIntentId,
           stripe_customer_ids: uniqueCustomerIds,
           exact_subscription_ids: [...exactSubscriptionIds],
@@ -517,6 +540,7 @@ Deno.serve(async (req) => {
         invalid_stripe_customer_id: invalidStripeCustomerId,
         transaction_id: transactionId,
         stripe_session_id: stripeSessionId,
+        stripe_subscription_id: stripeSubscriptionId,
         stripe_payment_intent_id: paymentIntentId,
         stripe_customer_count: uniqueCustomerIds.length,
         canceled_subscription_count: canceledSubscriptionCount,
