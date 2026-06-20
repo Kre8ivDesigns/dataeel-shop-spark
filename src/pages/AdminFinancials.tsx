@@ -22,6 +22,7 @@ import {
 import { AlertCircle, Download, Loader2, TrendingUp, CreditCard, Receipt } from "lucide-react";
 import { PageHero } from "@/components/PageHero";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
 import {
   Area,
   AreaChart,
@@ -83,11 +84,13 @@ function getTransactionTitle(tx: Tx): string {
 }
 
 const AdminFinancials = () => {
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [queryError, setQueryError] = useState<string | null>(null);
   const [period, setPeriod] = useState<string>("30");
   const [transactions, setTransactions] = useState<Tx[]>([]);
   const [creditsOutstanding, setCreditsOutstanding] = useState<number | null>(null);
+  const [cancellingTransactionId, setCancellingTransactionId] = useState<string | null>(null);
 
   const days = period === "0" ? 0 : parseInt(period, 10);
 
@@ -181,6 +184,52 @@ const AdminFinancials = () => {
     a.download = `transactions-${period}d.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleCancelSubscription = async (tx: Tx) => {
+    const displayId = getTransactionDisplayId(tx);
+    if (
+      !confirm(
+        `Cancel the active Stripe subscription tied to transaction ${displayId}? This keeps the Stripe customer record and removes unlimited DATAEEL access only if a subscription is cancelled.`,
+      )
+    ) {
+      return;
+    }
+
+    setCancellingTransactionId(tx.id);
+    const { data, error } = await supabase.functions.invoke("admin-manage-user", {
+      body: {
+        action: "cancel_stripe_subscription",
+        userId: tx.user_id,
+        transactionId: tx.id,
+        stripeSessionId: tx.stripe_session_id,
+        paymentIntentId: tx.stripe_payment_intent_id,
+      },
+    });
+    setCancellingTransactionId(null);
+
+    if (error || data?.error) {
+      toast({
+        title: "Subscription cancellation failed",
+        description: typeof data?.error === "string" ? data.error : error?.message ?? "Unknown error",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: data?.cancelled ? "Stripe subscription cancelled" : "No active Stripe subscription found",
+      description:
+        data?.cancelled && Number(data?.canceled_subscription_count ?? 0) > 1
+          ? `${data.canceled_subscription_count} subscriptions were cancelled.`
+          : data?.cancelled
+            ? "Unlimited DATAEEL access was removed for this customer."
+            : "The transaction resolved, but Stripe did not return a cancellable subscription.",
+    });
+
+    if (data?.cancelled) {
+      void fetchAll();
+    }
   };
 
   return (
@@ -367,6 +416,7 @@ const AdminFinancials = () => {
                         <TableHead>Amount</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>User</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -398,11 +448,23 @@ const AdminFinancials = () => {
                           <TableCell className="text-muted-foreground max-w-[220px] truncate" title={t.user_id}>
                             {t.user_display_name ?? t.user_id}
                           </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="border-destructive/40 text-destructive hover:bg-destructive/10"
+                              disabled={cancellingTransactionId === t.id}
+                              onClick={() => void handleCancelSubscription(t)}
+                            >
+                              {cancellingTransactionId === t.id ? "Cancelling..." : "Cancel sub"}
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))}
                       {completedInRange.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
+                          <TableCell colSpan={8} className="text-center text-muted-foreground py-10">
                             No transactions in this range
                           </TableCell>
                         </TableRow>
