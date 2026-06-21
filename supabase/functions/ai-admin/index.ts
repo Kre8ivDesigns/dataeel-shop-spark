@@ -214,7 +214,7 @@ Deno.serve(async (req) => {
         if (p === "anthropic") return respond({ models: await fetchAnthropicModels(key.trim()) });
         return respond({ models: await fetchOpenAiModels(key.trim()) });
       } catch (e) {
-        return respond({ error: e instanceof Error ? e.message : "List failed" }, 502);
+        return respond({ error: e instanceof Error ? e.message : "List failed" });
       }
     }
 
@@ -297,7 +297,6 @@ Deno.serve(async (req) => {
       if (!hasProviderApiKey(settings, provider)) {
         return respond(
           { error: "No AI provider is configured. Add an API key in Admin → Settings → AI." },
-          503,
         );
       }
 
@@ -347,12 +346,12 @@ Deno.serve(async (req) => {
           model = r.model;
         }
 
-        if (!text.trim()) return respond({ error: "Empty response from model" }, 502);
+        if (!text.trim()) return respond({ error: "Empty response from model", provider, model });
         return respond({ analysis: text, provider, model });
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Provider error";
         console.error("[ai-admin] analyze_funnel:", msg);
-        return respond({ error: msg.slice(0, 280) }, 502);
+        return respond({ error: msg.slice(0, 280), provider });
       }
     }
 
