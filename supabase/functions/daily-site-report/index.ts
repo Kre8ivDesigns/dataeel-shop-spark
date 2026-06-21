@@ -44,6 +44,11 @@ type AiConfig = {
   openai_model?: string;
 };
 
+function usesOpenAIMaxCompletionTokens(model: string): boolean {
+  const normalized = model.trim().toLowerCase();
+  return /^o\d/.test(normalized) || normalized.startsWith("gpt-5");
+}
+
 type PageSeoResult = {
   path: string;
   title: string;
@@ -349,6 +354,8 @@ async function completeAiAnalysis(settings: AiConfig, reportData: unknown): Prom
   const prompt = `Analyze this daily DATAEEL site analytics and SEO report JSON:\n${JSON.stringify(reportData, null, 2)}`;
 
   if (provider === "openai" && settings.openai_api_key?.trim()) {
+    const model = settings.openai_model?.trim() || "gpt-4o-mini";
+    const useMaxCompletionTokens = usesOpenAIMaxCompletionTokens(model);
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -356,9 +363,8 @@ async function completeAiAnalysis(settings: AiConfig, reportData: unknown): Prom
         Authorization: `Bearer ${settings.openai_api_key.trim()}`,
       },
       body: JSON.stringify({
-        model: settings.openai_model?.trim() || "gpt-4o-mini",
-        temperature: 0.25,
-        max_tokens: 1400,
+        model,
+        ...(useMaxCompletionTokens ? { max_completion_tokens: 1400 } : { max_tokens: 1400, temperature: 0.25 }),
         messages: [
           { role: "system", content: system },
           { role: "user", content: prompt },

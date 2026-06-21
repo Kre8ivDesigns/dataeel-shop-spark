@@ -4,6 +4,10 @@ import {
   isOpenRouterRetryableStatus,
   OPENROUTER_DEFAULT_FREE_MODELS,
 } from "./openrouter_chain.ts";
+import {
+  buildOpenAIChatCompletionPayload,
+  usesOpenAIMaxCompletionTokens,
+} from "./llm_providers.ts";
 
 describe("buildOpenRouterModelChain", () => {
   it("puts env primary first then defaults without duplicates", () => {
@@ -42,5 +46,26 @@ describe("isOpenRouterRetryableStatus", () => {
     expect(isOpenRouterRetryableStatus(503)).toBe(true);
     expect(isOpenRouterRetryableStatus(400)).toBe(false);
     expect(isOpenRouterRetryableStatus(401)).toBe(false);
+  });
+});
+
+describe("buildOpenAIChatCompletionPayload", () => {
+  const messages = [{ role: "user", content: "Analyze funnel metrics." }];
+
+  it("uses max_tokens for legacy chat models", () => {
+    const payload = buildOpenAIChatCompletionPayload("gpt-4o-mini", messages, 1200, 0.35);
+    expect(payload.max_tokens).toBe(1200);
+    expect(payload.max_completion_tokens).toBeUndefined();
+    expect(payload.temperature).toBe(0.35);
+  });
+
+  it("uses max_completion_tokens for reasoning and GPT-5 models", () => {
+    expect(usesOpenAIMaxCompletionTokens("o3-mini")).toBe(true);
+    expect(usesOpenAIMaxCompletionTokens("gpt-5-mini")).toBe(true);
+
+    const payload = buildOpenAIChatCompletionPayload("o3-mini", messages, 1200, 0.35);
+    expect(payload.max_completion_tokens).toBe(1200);
+    expect(payload.max_tokens).toBeUndefined();
+    expect(payload.temperature).toBeUndefined();
   });
 });

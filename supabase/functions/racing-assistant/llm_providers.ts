@@ -85,6 +85,37 @@ function messageContentToText(content: unknown): string {
   return "";
 }
 
+type OpenAIChatMessage = ReturnType<typeof messagesToOpenAiFormat>[number];
+
+export type OpenAIChatCompletionPayload = {
+  model: string;
+  messages: OpenAIChatMessage[];
+  temperature?: number;
+  max_tokens?: number;
+  max_completion_tokens?: number;
+};
+
+export function usesOpenAIMaxCompletionTokens(model: string): boolean {
+  const normalized = model.trim().toLowerCase();
+  return /^o\d/.test(normalized) || normalized.startsWith("gpt-5");
+}
+
+export function buildOpenAIChatCompletionPayload(
+  model: string,
+  messages: OpenAIChatMessage[],
+  maxTokens: number,
+  temperature: number,
+): OpenAIChatCompletionPayload {
+  const payload: OpenAIChatCompletionPayload = { model, messages };
+  if (usesOpenAIMaxCompletionTokens(model)) {
+    payload.max_completion_tokens = maxTokens;
+  } else {
+    payload.max_tokens = maxTokens;
+    payload.temperature = temperature;
+  }
+  return payload;
+}
+
 /**
  * Build the OpenRouter model list (free-tier defaults, env/admin overrides).
  * Call from the Edge Function after reading `Deno.env` and admin settings.
@@ -198,12 +229,7 @@ export async function completeOpenAI(
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      model,
-      max_tokens: MAX_OUT,
-      temperature: 0.35,
-      messages,
-    }),
+    body: JSON.stringify(buildOpenAIChatCompletionPayload(model, messages, MAX_OUT, 0.35)),
   });
   if (!res.ok) {
     const t = await res.text();
