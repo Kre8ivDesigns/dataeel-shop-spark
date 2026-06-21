@@ -10,6 +10,12 @@ import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { fulfillCheckoutSessionCompleted } from "../_shared/fulfill_checkout_session.ts";
 import { acknowledgeOnlyDbError, jsonErrBody } from "../_shared/stripe_webhook_errors.ts";
+import {
+  shouldRemoveUnlimitedForSubscription,
+  subscriptionCustomerId,
+  subscriptionMetadataMarksUnlimited,
+  subscriptionMetadataUserId,
+} from "../_shared/stripe_subscription_status.ts";
 import { resolveStripeConfig } from "../_shared/stripe_config.ts";
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
@@ -36,6 +42,104 @@ function paymentIntentIdFromInvoice(invoice: Stripe.Invoice): string | null {
   if (typeof pi === "string") return pi;
   if (pi && typeof pi === "object" && "id" in pi) return pi.id;
   return null;
+}
+
+async function removeUnlimitedForInactiveSubscription(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  subscription: Stripe.Subscription,
+  eventType: string,
+): Promise<
+  | { outcome: "removed"; user_id: string }
+  | { outcome: "already_removed"; user_id: string }
+  | { outcome: "skipped"; reason: string }
+  | { outcome: "db_error"; error: unknown }
+> {
+  const subscriptionId = typeof subscription.id === "string" ? subscription.id : "";
+  if (!subscriptionId) return { outcome: "skipped", reason: "missing_subscription_id" };
+
+  const customerId = subscriptionCustomerId(subscription);
+  const metadataUserId = subscriptionMetadataUserId(subscription);
+  const metadataUnlimited = subscriptionMetadataMarksUnlimited(subscription);
+  let userId = metadataUserId;
+  let matchedUnlimitedTransaction = false;
+
+  const { data: txRow, error: txError } = await supabaseAdmin
+    .from("transactions")
+    .select("user_id, unlimited_credits")
+    .eq("stripe_subscription_id", subscriptionId)
+    .eq("unlimited_credits", true)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (txError) return { outcome: "db_error", error: txError };
+  if (txRow?.user_id) {
+    userId = String(txRow.user_id);
+    matchedUnlimitedTransaction = txRow.unlimited_credits === true;
+  }
+
+  if (!userId && customerId) {
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .select("user_id")
+      .eq("stripe_customer_id", customerId)
+      .maybeSingle();
+    if (profileError) return { outcome: "db_error", error: profileError };
+    if (profile?.user_id) userId = String(profile.user_id);
+  }
+
+  if (!userId) return { outcome: "skipped", reason: "subscription_user_not_found" };
+  if (!metadataUnlimited && !matchedUnlimitedTransaction && !customerId) {
+    return { outcome: "skipped", reason: "subscription_not_identified_as_unlimited" };
+  }
+
+  const { data: balance, error: balanceError } = await supabaseAdmin
+    .from("credit_balances")
+    .select("credits, unlimited_credits")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (balanceError) return { outcome: "db_error", error: balanceError };
+  if (!balance?.unlimited_credits) return { outcome: "already_removed", user_id: userId };
+
+  const { error: updateError } = await supabaseAdmin
+    .from("credit_balances")
+    .update({ unlimited_credits: false, updated_at: new Date().toISOString() })
+    .eq("user_id", userId);
+  if (updateError) return { outcome: "db_error", error: updateError };
+
+  const detail = {
+    unlimited_credits: false,
+    stripe_subscription_id: subscriptionId,
+    stripe_customer_id: customerId,
+    stripe_subscription_status: subscription.status,
+    stripe_event_type: eventType,
+    reason: "stripe_subscription_inactive",
+  };
+
+  const { error: ledgerError } = await supabaseAdmin.from("credit_ledger").insert({
+    user_id: userId,
+    delta: 0,
+    balance_after: Number(balance.credits ?? 0),
+    entry_type: "adjustment",
+    ref_id: null,
+    meta: detail,
+  });
+  if (ledgerError) {
+    console.error("[stripe-webhook] subscription entitlement ledger insert failed:", ledgerError.message);
+  }
+
+  const { error: auditError } = await supabaseAdmin.from("audit_log").insert({
+    actor_id: null,
+    action: "stripe.subscription.unlimited_credits.remove",
+    resource: "stripe.subscriptions",
+    resource_id: subscriptionId,
+    detail,
+  });
+  if (auditError) {
+    console.error("[stripe-webhook] subscription entitlement audit insert failed:", auditError.message);
+  }
+
+  return { outcome: "removed", user_id: userId };
 }
 
 Deno.serve(async (req) => {
@@ -233,6 +337,52 @@ async function handleStripeWebhook(req: Request): Promise<Response> {
         return jsonResponse(jsonErrBody("Unexpected fulfillment outcome", unknown), 500);
       }
     }
+  }
+
+  const subscriptionLifecycleEvents = new Set([
+    "customer.subscription.deleted",
+    "customer.subscription.updated",
+  ]);
+
+  if (subscriptionLifecycleEvents.has(event.type)) {
+    const subscription = event.data.object as Stripe.Subscription;
+    const shouldRemove = event.type === "customer.subscription.deleted" ||
+      shouldRemoveUnlimitedForSubscription(subscription);
+
+    if (!shouldRemove) {
+      return jsonResponse(
+        {
+          received: true,
+          fulfilled: false,
+          skipped: true,
+          duplicate: false,
+          reason: "subscription_still_active",
+          stripe_subscription_id: subscription.id,
+          stripe_subscription_status: subscription.status,
+        },
+        200,
+      );
+    }
+
+    const result = await removeUnlimitedForInactiveSubscription(supabaseAdmin, subscription, event.type);
+    if (result.outcome === "db_error") {
+      return jsonResponse(jsonErrBody("Subscription entitlement update failed", result.error), 500);
+    }
+
+    return jsonResponse(
+      {
+        received: true,
+        fulfilled: result.outcome === "removed",
+        skipped: result.outcome === "skipped",
+        duplicate: false,
+        reason: result.outcome === "skipped" ? result.reason : result.outcome,
+        stripe_subscription_id: subscription.id,
+        stripe_subscription_status: subscription.status,
+        unlimited_credits_removed: result.outcome === "removed",
+        user_id: "user_id" in result ? result.user_id : null,
+      },
+      200,
+    );
   }
 
   // Subscription invoices / unrelated billing — skip.

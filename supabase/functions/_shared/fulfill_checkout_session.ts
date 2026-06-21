@@ -87,6 +87,28 @@ function isMissingStripeSubscriptionIdColumn(error: unknown): boolean {
   );
 }
 
+async function backfillExistingTransactionStripeRefs(
+  supabaseAdmin: SupabaseClient,
+  tx: { id: string; stripe_session_id?: string | null; stripe_subscription_id?: string | null },
+  sessionId: string,
+  subscriptionId: string | null,
+) {
+  const patch: { stripe_session_id?: string; stripe_subscription_id?: string } = {};
+  if (!tx.stripe_session_id?.trim()) patch.stripe_session_id = sessionId;
+  if (subscriptionId && !tx.stripe_subscription_id?.trim()) patch.stripe_subscription_id = subscriptionId;
+  if (!Object.keys(patch).length) return;
+
+  const { error } = await supabaseAdmin
+    .from("transactions")
+    .update(patch)
+    .eq("id", tx.id);
+  if (error) {
+    console.error("[fulfillCheckoutSessionCompleted] backfill transaction Stripe refs failed:", error.message);
+  } else {
+    console.log("[fulfillCheckoutSessionCompleted] backfilled transaction Stripe refs:", tx.id);
+  }
+}
+
 /**
  * Ensures payment intent is expanded, then records the transaction and grants credits / unlimited.
  * Idempotent: duplicate stripe_session_id returns duplicate outcome (no second grant).
@@ -240,36 +262,21 @@ async function fulfillCheckoutSessionCompletedInner(
       );
       const { data: existingBySession } = await supabaseAdmin
         .from("transactions")
-        .select("id")
+        .select("id, stripe_session_id, stripe_subscription_id")
         .eq("stripe_session_id", session.id)
         .maybeSingle();
       if (existingBySession) {
+        await backfillExistingTransactionStripeRefs(supabaseAdmin, existingBySession, session.id, subscriptionId);
         return { outcome: "duplicate" };
       }
       if (paymentIntentId) {
         const { data: existingByPi } = await supabaseAdmin
           .from("transactions")
-          .select("id, stripe_session_id")
+          .select("id, stripe_session_id, stripe_subscription_id")
           .eq("stripe_payment_intent_id", paymentIntentId)
           .maybeSingle();
         if (existingByPi) {
-          if (!existingByPi.stripe_session_id?.trim()) {
-            const { error: updErr } = await supabaseAdmin
-              .from("transactions")
-              .update({ stripe_session_id: session.id })
-              .eq("id", existingByPi.id);
-            if (updErr) {
-              console.error(
-                "[fulfillCheckoutSessionCompleted] backfill stripe_session_id failed:",
-                updErr.message,
-              );
-            } else {
-              console.log(
-                "[fulfillCheckoutSessionCompleted] backfilled stripe_session_id for invoice-first row:",
-                session.id,
-              );
-            }
-          }
+          await backfillExistingTransactionStripeRefs(supabaseAdmin, existingByPi, session.id, subscriptionId);
           return { outcome: "duplicate" };
         }
       }
