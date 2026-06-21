@@ -217,7 +217,7 @@ const App = () => (
                 }
               />
               <Route
-                path="/admin/help"
+                path="/admin/help/:topicSlug?"
                 element={
                   <ProtectedRoute requireAdmin>
                     <Suspense fallback={adminChartFallback}>

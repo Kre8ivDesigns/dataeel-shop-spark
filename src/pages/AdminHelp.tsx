@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Link, useParams } from "react-router-dom";
 import {
   BarChart3,
   Book,
@@ -31,6 +32,18 @@ type GuideCard = {
 type Workflow = {
   title: string;
   steps: string[];
+};
+
+type HelpTopic = {
+  slug: string;
+  title: string;
+  summary: string;
+  icon: typeof Users;
+  sections: {
+    title: string;
+    body?: string;
+    bullets: string[];
+  }[];
 };
 
 const overviewCards: GuideCard[] = [
@@ -290,6 +303,277 @@ const dependencyNotes = [
   "The DATAEEL assistant requires a configured provider key or a usable environment secret.",
 ];
 
+const helpTopics: HelpTopic[] = [
+  {
+    slug: "customers",
+    title: "Customers and Accounts",
+    summary: "Create users, review customer details, adjust credits, and handle account problems.",
+    icon: Users,
+    sections: [
+      {
+        title: "What admins can do",
+        bullets: [
+          "Search customers by name or email from the Admin Dashboard.",
+          "Open the customer detail sheet to review profile data, purchases, downloads, and current credit state.",
+          "Create a user when support needs to provision an account manually.",
+          "Send password recovery, ban or unban an account, delete a user, or toggle unlimited credits when appropriate.",
+        ],
+      },
+      {
+        title: "Credit adjustments",
+        body: "Credits affect real customer access. Treat manual grants like production financial adjustments.",
+        bullets: [
+          "Use Give Credits for verified purchase recovery, goodwill adjustments, or staff-approved comps.",
+          "Check the credit ledger and transactions before granting credits for a missing-payment report.",
+          "Use unlimited credits only for staff, test accounts, or deliberate VIP access.",
+          "Record the support reason in admin notes when the customer flow requires follow-up.",
+        ],
+      },
+      {
+        title: "Common checks",
+        bullets: [
+          "If an admin page is blank, confirm the signed-in user has the admin role in the active Supabase project.",
+          "If a customer cannot download, check their balance, previous downloads, unlock state, and download window.",
+          "If deletion fails, check related app rows and Supabase Auth behavior before retrying.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "racecards",
+    title: "RaceCard Operations",
+    summary: "Upload PDFs, sync S3 inventory, verify metadata, and understand customer unlock behavior.",
+    icon: FileText,
+    sections: [
+      {
+        title: "Publishing flow",
+        bullets: [
+          "Use the Admin Dashboard RaceCards tab to upload RaceCard PDFs.",
+          "The upload flow generates a signed upload URL, stores the file, parses track/date metadata, and inserts the RaceCard row.",
+          "Use S3 sync when files already exist in the bucket but are not yet listed in Supabase.",
+          "After upload or sync, verify track name, track code, race date, file name, metadata, and public availability.",
+        ],
+      },
+      {
+        title: "Digital RaceCard behavior",
+        bullets: [
+          "Public visitors can see basic RaceCard context and locked previews.",
+          "Admins and purchasers unlock protected selections, predictions, and official results when digitization/results data exists.",
+          "Digitization status explains whether a PDF has been processed into structured picks and results.",
+          "If a digital detail page looks sparse, check the RaceCard metadata and prediction rows before assuming the frontend is broken.",
+        ],
+      },
+      {
+        title: "Operational rules",
+        bullets: [
+          "Keep track codes consistent so browse search, track profiles, weather badges, and reports stay readable.",
+          "Avoid deleting RaceCards that customers already downloaded unless the file is truly invalid.",
+          "Check /racecards by date after any inventory update.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "payments",
+    title: "Payments, Credits, and Billing",
+    summary: "Operate Stripe checkout, credit packages, invoices, and billing portal support.",
+    icon: CreditCard,
+    sections: [
+      {
+        title: "How checkout works",
+        bullets: [
+          "Customers choose a credit package on Buy Credits.",
+          "The app calls create-checkout-session and redirects the customer to Stripe.",
+          "Stripe webhook and post-payment confirmation logic reconcile the purchase back into Supabase.",
+          "Credits appear after the transaction and ledger rows are written.",
+        ],
+      },
+      {
+        title: "Admin pricing",
+        bullets: [
+          "Use Admin -> Credit packages to create, edit, activate, deactivate, and sort packages.",
+          "Unlimited packages grant ongoing access instead of a finite credit count.",
+          "Deactivate old offers instead of deleting packages referenced by previous transactions.",
+          "After major pricing changes, test Pricing, Buy Credits, and a Stripe test-mode checkout.",
+        ],
+      },
+      {
+        title: "Billing support",
+        bullets: [
+          "Invoices and billing management use the customer-portal Edge Function.",
+          "If billing management fails, confirm the app Vite environment and Supabase linked project point to the same project.",
+          "If credits are missing after payment, ask for a Stripe receipt or checkout session id and compare Stripe, transactions, and credit ledger.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "analytics",
+    title: "Analytics and Funnel Diagnosis",
+    summary: "Understand visitors, sources, checkout drop-off, CTA clicks, audit logs, and Meta Ads.",
+    icon: BarChart3,
+    sections: [
+      {
+        title: "What the page shows",
+        bullets: [
+          "Visitors, new visitors, returning visitors, bounce rate, pageviews, top source, pricing-to-buy rate, and checkout starts.",
+          "Daily traffic, signups, RaceCard downloads, purchase funnel steps, top exit pages, and CTA click map.",
+          "UTM coverage and source attribution show where visitors came from.",
+          "Audit log and error panels show recent admin/security events.",
+        ],
+      },
+      {
+        title: "AI funnel analyst",
+        body: "Use this as a plain-English diagnosis of first-party behavior, not as a replacement for checking the raw numbers.",
+        bullets: [
+          "Read conversion issues for where users slow down before purchase.",
+          "Prioritize fixes when high-traffic sources fail to reach pricing, Buy Credits, or checkout.",
+          "Use Print report when you need a share-ready snapshot.",
+        ],
+      },
+      {
+        title: "Dependencies",
+        bullets: [
+          "site_analytics_events must exist for first-party analytics.",
+          "fb_ads_insights and Meta server secrets are required for Facebook Ads panels.",
+          "UTM tags must be present on ad links for campaign reporting to be useful.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "settings",
+    title: "Settings and Integrations",
+    summary: "Configure AI providers, SMTP, broadcasts, CAPTCHA, Stripe, analytics, racetracks, and ticker content.",
+    icon: Settings,
+    sections: [
+      {
+        title: "Encrypted settings",
+        bullets: [
+          "Settings are managed through the manage-app-settings Edge Function.",
+          "Secrets are encrypted at rest; leave a field blank to keep the existing value.",
+          "Do not paste secrets into source files, screenshots, support messages, or commits.",
+        ],
+      },
+      {
+        title: "Integration tabs",
+        bullets: [
+          "AI providers controls the DATAEEL assistant provider, model, keys, and daily cost cap.",
+          "SMTP powers admin notifications and broadcast email.",
+          "CAPTCHA protects public forms.",
+          "Stripe controls test/live mode display, but Edge Function secrets must also be configured server-side.",
+          "Analytics & site, Racetracks, and Breaking news ticker control public-site behavior.",
+        ],
+      },
+      {
+        title: "When settings do not take effect",
+        bullets: [
+          "Confirm the Edge Function is deployed.",
+          "Confirm the active Supabase project is the same one the frontend is using.",
+          "For Stripe, confirm both Supabase secrets and Admin Settings values when applicable.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "support",
+    title: "Support and Communications",
+    summary: "Handle contact submissions, admin notes, statuses, SMTP, and broadcast email.",
+    icon: Inbox,
+    sections: [
+      {
+        title: "Support inbox",
+        bullets: [
+          "Public contact form submissions appear in Admin -> Support inbox.",
+          "Set status to open, in progress, or closed as the ticket moves through support.",
+          "Use admin notes to record what was checked and what response was given.",
+        ],
+      },
+      {
+        title: "Broadcast email",
+        bullets: [
+          "Broadcast email sends plain-text messages to confirmed users.",
+          "Preview recipient count before sending.",
+          "Use SMTP settings for the actual provider credentials and sender details.",
+        ],
+      },
+      {
+        title: "Support habits",
+        bullets: [
+          "For billing problems, check Stripe, transactions, and credit ledger before granting credits.",
+          "For RaceCard access issues, check downloads, credit balance, unlock state, and race date.",
+          "Close submissions only after the issue is resolved or no further action is needed.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "reports",
+    title: "Reports and Financial Review",
+    summary: "Use reports, download logs, credit ledger, and financial dashboard exports.",
+    icon: Table2,
+    sections: [
+      {
+        title: "Reports page",
+        bullets: [
+          "By user shows who downloaded what.",
+          "By racecard shows which PDFs have the most demand.",
+          "By track aggregates demand by track label.",
+          "Credit ledger shows purchases, downloads, grants, balance changes, and references.",
+        ],
+      },
+      {
+        title: "Financial dashboard",
+        bullets: [
+          "Use this for revenue, completed purchases, package mix, credits sold, and average order value.",
+          "Use CSV exports for reconciliation and accountant handoff.",
+          "If revenue looks incomplete, check Stripe mode, webhook delivery, transaction status, and Supabase project targeting.",
+        ],
+      },
+      {
+        title: "Audit use cases",
+        bullets: [
+          "Missing credits: compare transactions and credit ledger.",
+          "Unexpected download: check download log and customer detail.",
+          "Price question: compare historical transaction records to current package setup.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "pages-seo",
+    title: "Pages and SEO Tools",
+    summary: "Operate editable pages, the visual page editor, and SEO/performance utilities.",
+    icon: Compass,
+    sections: [
+      {
+        title: "Editable pages",
+        bullets: [
+          "Admin -> Pages lists editable site pages and their publish state.",
+          "Unpublished pages fall back to built-in React pages.",
+          "Admin -> Page editor opens the visual editor for page content.",
+        ],
+      },
+      {
+        title: "SEO tools",
+        bullets: [
+          "Use SEO tools to inspect page coverage, keywords, speed, audits, and meta description opportunities.",
+          "Treat SEO output as current situational awareness; re-check after content or performance changes.",
+          "Customer-facing copy should remain accurate to RaceCards, credits, and responsible-use disclaimers.",
+        ],
+      },
+      {
+        title: "Publishing checklist",
+        bullets: [
+          "Preview the page before publishing.",
+          "Check mobile layout and text overflow.",
+          "Confirm legal, pricing, and credit claims match the actual app behavior.",
+        ],
+      },
+    ],
+  },
+];
+
 function GuideCards({ cards }: { cards: GuideCard[] }) {
   return (
     <div className="grid gap-4 lg:grid-cols-3">
@@ -315,6 +599,109 @@ function GuideCards({ cards }: { cards: GuideCard[] }) {
 }
 
 const AdminHelp = () => {
+  const { topicSlug } = useParams();
+  const selectedTopic = topicSlug ? helpTopics.find((topic) => topic.slug === topicSlug) : undefined;
+
+  if (topicSlug && !selectedTopic) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main className="pb-16">
+          <PageHero
+            backTo="/admin/help"
+            backLabel="Back to Help"
+            badge="Admin"
+            title="Help topic not found"
+            subtitle="That help page does not exist. Return to the Help Center to choose an available topic."
+            align="left"
+            containerClassName="max-w-[1400px]"
+            sectionClassName="pb-8"
+          />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (selectedTopic) {
+    const Icon = selectedTopic.icon;
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main className="pb-16">
+          <PageHero
+            backTo="/admin/help"
+            backLabel="Back to Help"
+            badge="Admin Help"
+            title={
+              <>
+                {selectedTopic.title.split(" ")[0]}{" "}
+                <span className="text-neon">{selectedTopic.title.split(" ").slice(1).join(" ")}</span>
+              </>
+            }
+            subtitle={selectedTopic.summary}
+            align="left"
+            containerClassName="max-w-[1400px]"
+            sectionClassName="pb-8"
+          />
+          <div className="container mx-auto max-w-[1400px] px-4 pt-6 md:pt-8">
+            <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+              <aside className="space-y-3">
+                <div className="rounded-lg border border-border bg-card p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/15 flex items-center justify-center">
+                      <Icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Detailed page</p>
+                      <p className="text-xs text-muted-foreground">/{selectedTopic.slug}</p>
+                    </div>
+                  </div>
+                </div>
+                <nav className="rounded-lg border border-border bg-card p-2">
+                  {helpTopics.map((topic) => (
+                    <Link
+                      key={topic.slug}
+                      to={`/admin/help/${topic.slug}`}
+                      className={`block rounded-md px-3 py-2 text-sm transition-colors ${
+                        topic.slug === selectedTopic.slug
+                          ? "bg-primary/15 text-primary"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}
+                    >
+                      {topic.title}
+                    </Link>
+                  ))}
+                </nav>
+              </aside>
+
+              <div className="space-y-5">
+                {selectedTopic.sections.map((section) => (
+                  <Card key={section.title} className="bg-card border-border">
+                    <CardHeader>
+                      <CardTitle className="text-foreground">{section.title}</CardTitle>
+                      {section.body ? <CardDescription>{section.body}</CardDescription> : null}
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-3 text-sm leading-relaxed text-muted-foreground">
+                        {section.bullets.map((bullet) => (
+                          <li key={bullet} className="border-l-2 border-primary/30 pl-3">
+                            {bullet}
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -336,22 +723,20 @@ const AdminHelp = () => {
 
         <div className="container mx-auto max-w-[1400px] px-4 pt-6 md:pt-8">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 mb-8">
-            {[
-              { label: "Customers", icon: Users },
-              { label: "RaceCards", icon: FileText },
-              { label: "Credits", icon: CreditCard },
-              { label: "Settings", icon: Settings },
-              { label: "Support", icon: Inbox },
-              { label: "Reports", icon: Table2 },
-              { label: "Analytics", icon: BarChart3 },
-              { label: "AI", icon: Bot },
-            ].map((item) => (
-              <div key={item.label} className="rounded-lg border border-border bg-card px-4 py-3 flex items-center gap-3">
+            {helpTopics.map((item) => (
+              <Link
+                key={item.slug}
+                to={`/admin/help/${item.slug}`}
+                className="rounded-lg border border-border bg-card px-4 py-3 flex items-center gap-3 transition-colors hover:border-primary/50 hover:bg-primary/5"
+              >
                 <div className="h-9 w-9 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
                   <item.icon className="h-4 w-4 text-primary" />
                 </div>
-                <span className="text-sm font-medium text-foreground">{item.label}</span>
-              </div>
+                <div className="min-w-0">
+                  <span className="block text-sm font-medium text-foreground truncate">{item.title}</span>
+                  <span className="block text-xs text-muted-foreground truncate">{item.summary}</span>
+                </div>
+              </Link>
             ))}
           </div>
 
