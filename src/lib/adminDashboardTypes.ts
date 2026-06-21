@@ -1,4 +1,5 @@
 import type { Tables } from "@/integrations/supabase/types";
+import { isUnlimitedActive } from "@/lib/creditDisplay";
 
 export type AdminProfile = Tables<"profiles">;
 export type AdminCustomer = AdminProfile & { credits: number; unlimitedCredits: boolean };
@@ -22,12 +23,12 @@ export type AdminRacecard = Pick<
 
 export function mergeProfilesWithCredits(
   profiles: AdminProfile[] | null | undefined,
-  balances: Pick<Tables<"credit_balances">, "user_id" | "credits" | "unlimited_credits">[] | null | undefined,
+  balances: Pick<Tables<"credit_balances">, "user_id" | "credits" | "unlimited_credits" | "unlimited_expires_at">[] | null | undefined,
 ): AdminCustomer[] {
   const map = new Map(
     (balances ?? []).map((b) => [
       b.user_id,
-      { credits: b.credits, unlimitedCredits: b.unlimited_credits ?? false },
+      { credits: b.credits, unlimitedCredits: isUnlimitedActive(b.unlimited_credits, b.unlimited_expires_at) },
     ]),
   );
   return (profiles ?? []).map((p) => {

@@ -103,7 +103,7 @@ const AdminDashboard = () => {
     setLoading(true);
     const [custRes, balRes, txRes, rcRes, supportRes] = await Promise.all([
       supabase.from("profiles").select("*").order("created_at", { ascending: false }),
-      supabase.from("credit_balances").select("user_id, credits, unlimited_credits"),
+      supabase.from("credit_balances").select("user_id, credits, unlimited_credits, unlimited_expires_at"),
       supabase.from("transactions").select("*").order("created_at", { ascending: false }),
       supabase.from("racecards").select(ADMIN_RACECARD_COLUMNS).order("race_date", { ascending: false }),
       supabase.from("contact_submissions").select("id", { count: "exact", head: true }).eq("status", "open"),

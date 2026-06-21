@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { isUnlimitedActive } from "@/lib/creditDisplay";
 import { userDashboardKeys } from "@/lib/queryKeys";
 
 export type RecentDownloadRow = {
@@ -68,7 +69,7 @@ export async function fetchUserDashboard(userId: string): Promise<UserDashboardD
     purchasesRes,
     tracksTodayRes,
   ] = await Promise.all([
-    supabase.from("credit_balances").select("credits, unlimited_credits").eq("user_id", userId).maybeSingle(),
+    supabase.from("credit_balances").select("credits, unlimited_credits, unlimited_expires_at").eq("user_id", userId).maybeSingle(),
     supabase
       .from("racecard_downloads")
       .select("id", { count: "exact", head: true })
@@ -151,7 +152,7 @@ export async function fetchUserDashboard(userId: string): Promise<UserDashboardD
 
   return {
     credits: balRes.data?.credits ?? 0,
-    unlimitedCredits: balRes.data?.unlimited_credits ?? false,
+    unlimitedCredits: isUnlimitedActive(balRes.data?.unlimited_credits, balRes.data?.unlimited_expires_at),
     downloadsThisMonth: thisMonthRes.count ?? 0,
     downloadsLastMonth: lastMonthRes.count ?? 0,
     totalDownloads: totalRes.count ?? 0,

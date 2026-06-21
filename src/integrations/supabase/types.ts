@@ -73,6 +73,7 @@ export type Database = {
           credits: number
           id: string
           unlimited_credits: boolean
+          unlimited_expires_at: string | null
           updated_at: string
           user_id: string
         }
@@ -80,6 +81,7 @@ export type Database = {
           credits?: number
           id?: string
           unlimited_credits?: boolean
+          unlimited_expires_at?: string | null
           updated_at?: string
           user_id: string
         }
@@ -87,6 +89,7 @@ export type Database = {
           credits?: number
           id?: string
           unlimited_credits?: boolean
+          unlimited_expires_at?: string | null
           updated_at?: string
           user_id?: string
         }

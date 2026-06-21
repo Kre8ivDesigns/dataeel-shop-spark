@@ -103,7 +103,7 @@ async function removeUnlimitedForInactiveSubscription(
 
   const { error: updateError } = await supabaseAdmin
     .from("credit_balances")
-    .update({ unlimited_credits: false, updated_at: new Date().toISOString() })
+    .update({ unlimited_credits: false, unlimited_expires_at: null, updated_at: new Date().toISOString() })
     .eq("user_id", userId);
   if (updateError) return { outcome: "db_error", error: updateError };
 

@@ -109,6 +109,6 @@ export function popularPackageIndex(count: number): number {
 }
 
 export function packageCtaLabel(pkg: CreditPackageRow): string {
-  if (pkg.unlimited_credits) return "Subscribe for unlimited PDF access";
+  if (pkg.unlimited_credits) return "Subscribe";
   return `Buy ${pkg.credits} credit${pkg.credits !== 1 ? "s" : ""}`;
 }

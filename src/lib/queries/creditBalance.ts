@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { EMPTY_CREDIT_SNAPSHOT, type CreditBalanceSnapshot } from "@/lib/creditDisplay";
+import { EMPTY_CREDIT_SNAPSHOT, isUnlimitedActive, type CreditBalanceSnapshot } from "@/lib/creditDisplay";
 
 export type { CreditBalanceSnapshot };
 
@@ -11,12 +11,13 @@ export function useCreditBalance(userId: string | undefined) {
       if (!userId) return EMPTY_CREDIT_SNAPSHOT;
       const { data } = await supabase
         .from("credit_balances")
-        .select("credits, unlimited_credits")
+        .select("credits, unlimited_credits, unlimited_expires_at")
         .eq("user_id", userId)
         .maybeSingle();
       return {
         credits: data?.credits ?? 0,
-        unlimited: data?.unlimited_credits ?? false,
+        unlimited: isUnlimitedActive(data?.unlimited_credits, data?.unlimited_expires_at),
+        unlimitedExpiresAt: data?.unlimited_expires_at ?? null,
       };
     },
     enabled: !!userId,

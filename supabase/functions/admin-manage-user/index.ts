@@ -318,13 +318,17 @@ Deno.serve(async (req) => {
       if (balance) {
         const { error } = await supabaseAdmin
           .from("credit_balances")
-          .update({ unlimited_credits: body.unlimited, updated_at: new Date().toISOString() })
+          .update({
+            unlimited_credits: body.unlimited,
+            unlimited_expires_at: null,
+            updated_at: new Date().toISOString(),
+          })
           .eq("user_id", userId);
         if (error) return respond({ error: error.message }, 500);
       } else {
         const { error } = await supabaseAdmin
           .from("credit_balances")
-          .insert({ user_id: userId, credits: 0, unlimited_credits: body.unlimited });
+          .insert({ user_id: userId, credits: 0, unlimited_credits: body.unlimited, unlimited_expires_at: null });
         if (error) return respond({ error: error.message }, 500);
       }
 
@@ -481,13 +485,13 @@ Deno.serve(async (req) => {
         if (balance) {
           const { error } = await supabaseAdmin
             .from("credit_balances")
-            .update({ unlimited_credits: false, updated_at: new Date().toISOString() })
+            .update({ unlimited_credits: false, unlimited_expires_at: null, updated_at: new Date().toISOString() })
             .eq("user_id", userId);
           if (error) return respond({ error: error.message }, 500);
         } else {
           const { error } = await supabaseAdmin
             .from("credit_balances")
-            .insert({ user_id: userId, credits: 0, unlimited_credits: false });
+            .insert({ user_id: userId, credits: 0, unlimited_credits: false, unlimited_expires_at: null });
           if (error) return respond({ error: error.message }, 500);
         }
 
