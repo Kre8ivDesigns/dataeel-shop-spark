@@ -33,6 +33,7 @@ import { DataeelAiAssistant } from "./components/DataeelAiAssistant";
 import { SiteAnalyticsTracker } from "./components/SiteAnalyticsTracker";
 import { NewVisitorRacecardOffer } from "./components/NewVisitorRacecardOffer";
 import { EditablePage } from "./pages/EditablePage";
+import { SeoHead } from "./components/SeoHead";
 
 const AdminFinancials = lazy(() => import("./pages/AdminFinancials"));
 const AdminAnalytics = lazy(() => import("./pages/AdminAnalytics"));
@@ -122,6 +123,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <ScrollToTop />
+          <SeoHead />
           <AuthProvider>
             <HomeSectionHashRedirect />
             <SiteAnalyticsTracker />

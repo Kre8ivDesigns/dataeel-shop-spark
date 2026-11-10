@@ -8,11 +8,13 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
-type FaqItem = { question: string; answer: ReactNode };
+/** `text` is the plain-text answer used for FAQPage structured data when `answer` contains markup. */
+type FaqItem = { question: string; answer: string } | { question: string; answer: ReactNode; text: string };
 
 const faqs: FaqItem[] = [
   {
     question: "What is DATAEEL™?",
+    text: "DATAEEL™ delivers algorithms for thoroughbred racing like no other. You get predictions via downloadable EEL RaceCards with Concert™ and Aptitude™ picks for every race at a track on a given day. Content is for entertainment and information—past performance does not guarantee future results; see our Disclaimer for details.",
     answer: (
       <>
         DATAEEL™ delivers algorithms for thoroughbred racing like no other. You get predictions via
@@ -63,6 +65,7 @@ const faqs: FaqItem[] = [
   },
   {
     question: "How do payments, receipts, and refunds work?",
+    text: "Purchases run through Stripe. We accept major cards (Visa, Mastercard, American Express, Discover) in US dollars. Per our Terms & Conditions, all sales are final. For billing discrepancies or account problems, email support@dataeel.com. Optionally review invoices or payment history in your account where available.",
     answer: (
       <>
         Purchases run through Stripe. We accept major cards (Visa, Mastercard, American Express, Discover)
@@ -77,6 +80,7 @@ const faqs: FaqItem[] = [
   },
   {
     question: "How do I contact support?",
+    text: "Email support@dataeel.com or use our Contact page for billing, downloads, and account questions. We aim to respond within one business day.",
     answer: (
       <>
         Email support@dataeel.com or use our{" "}
@@ -89,12 +93,23 @@ const faqs: FaqItem[] = [
   },
 ];
 
+const faqJsonLd = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faqs.map((faq) => ({
+    "@type": "Question",
+    name: faq.question,
+    acceptedAnswer: { "@type": "Answer", text: "text" in faq ? faq.text : faq.answer },
+  })),
+}).replace(/</g, "\\u003c");
+
 const midFaq = Math.ceil(faqs.length / 2);
 const faqColumns = [faqs.slice(0, midFaq), faqs.slice(midFaq)] as const;
 
 export const FAQ = () => {
   return (
     <section id="faq" className="py-24 bg-card">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: faqJsonLd }} />
       <div className="container mx-auto max-w-[1400px] px-4 sm:px-6">
         {/* Header */}
         <motion.div
