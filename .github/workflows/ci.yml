@@ -25,6 +25,10 @@ jobs:
 
       - name: Test
         run: npm test
+        env:
+          # Placeholders so modules that create the Supabase client can be imported; no network calls are made.
+          VITE_SUPABASE_URL: http://localhost:54321
+          VITE_SUPABASE_PUBLISHABLE_KEY: test-key
 
   deploy-supabase:
     runs-on: ubuntu-latest
